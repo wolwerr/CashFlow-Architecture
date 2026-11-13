@@ -1,0 +1,164 @@
+# Requisitos funcionais do fluxo de caixa
+
+> **Projeto:** CashFlow Architecture  
+> **Issue:** #3 | **Milestone:** M1 - Descoberta e requisitos  
+> **Status:** proposta para revisão  
+> **Referências:** enunciado do desafio e [mapeamento de domínios](../domain/business-capabilities-and-context-map.md)
+
+## 1. Objetivo
+
+Descrever, de forma simples e verificável, o que o sistema precisa fazer para que um comerciante registre lançamentos financeiros e consulte o saldo diário consolidado.
+
+**Regra de leitura:** o que aparece como **exigido** foi solicitado diretamente no desafio. O que aparece como **proposto** é uma sugestão para tornar a aplicação utilizável e deverá ser validado antes de entrar no escopo definitivo. Não foram definidos endpoints, tecnologias ou estruturas de banco nesta etapa.
+
+## 2. Quem utiliza o sistema
+
+**Ator principal:** comerciante.
+
+**Situações de uso:**
+1. O comerciante informa um crédito ou débito.
+2. O sistema registra a movimentação.
+3. O comerciante consulta o resultado financeiro de uma determinada data.
+
+Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a validar, não exigências expressas.
+
+## 3. Requisitos funcionais
+
+| ID | Requisito | Descrição | Origem | Prioridade sugerida |
+| --- | --- | --- | --- | --- |
+| RF-01 | Registrar crédito | Permitir que o comerciante registre uma movimentação classificada como crédito. | Exigido | Essencial |
+| RF-02 | Registrar débito | Permitir que o comerciante registre uma movimentação classificada como débito. | Exigido | Essencial |
+| RF-03 | Consultar consolidado diário | Permitir consultar o saldo consolidado referente a um dia. | Exigido | Essencial |
+| RF-04 | Validar dados do lançamento | Recusar lançamentos incompletos ou inválidos e informar o problema ao comerciante. | Proposto | Essencial para o MVP |
+| RF-05 | Consultar histórico | Permitir visualizar os lançamentos registrados para conferência. | Proposto | Desejável |
+| RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
+
+**Importante:** a existência do consolidado implica alguma regra de cálculo, mas o enunciado **não define** a fórmula de saldo nem o tratamento de saldo inicial. Isso será registrado como decisão de negócio pendente.
+
+## 4. Histórias de usuário e critérios de aceite
+
+### HU-01: Registrar crédito (RF-01)
+
+**Como** comerciante, **quero** registrar um crédito **para** acompanhar as entradas financeiras do negócio.
+
+**Critérios de aceite:**
+- Dado um crédito com dados válidos, quando o registro for solicitado, então o sistema deverá confirmar que o lançamento foi registrado.
+- O lançamento registrado deverá permanecer disponível para compor o consolidado, de acordo com a regra de data que será definida.
+- Dados inválidos não devem produzir um lançamento confirmado (validação proposta em RF-04).
+
+### HU-02: Registrar débito (RF-02)
+
+**Como** comerciante, **quero** registrar um débito **para** acompanhar as saídas financeiras do negócio.
+
+**Critérios de aceite:**
+- Dado um débito com dados válidos, quando o registro for solicitado, então o sistema deverá confirmar que o lançamento foi registrado.
+- O lançamento registrado deverá permanecer disponível para compor o consolidado.
+- Dados inválidos não devem produzir um lançamento confirmado (validação proposta em RF-04).
+
+### HU-03: Consultar consolidado diário (RF-03)
+
+**Como** comerciante, **quero** consultar o saldo consolidado de uma data **para** acompanhar o resultado financeiro do negócio.
+
+**Critérios de aceite:**
+- Dada uma data válida, quando o comerciante solicitar o consolidado, então o sistema deverá apresentar um resultado referente à data informada.
+- O cálculo deverá respeitar a definição de saldo diário que for aprovada no refinamento.
+- Para um dia sem lançamentos, a resposta deverá seguir a regra a ser definida (por exemplo, movimento zero ou manutenção do saldo anterior).
+
+### HU-04: Validar lançamento (RF-04, proposto)
+
+**Como** comerciante, **quero** receber uma explicação quando um lançamento não puder ser registrado **para** corrigir a informação.
+
+**Critérios de aceite:**
+- O sistema deverá exigir os campos mínimos definidos para o lançamento.
+- Um valor inválido não poderá ser registrado.
+- O comerciante deverá receber uma mensagem compreensível sem que um lançamento rejeitado seja contabilizado.
+
+**Campos mínimos sugeridos, ainda sujeitos a confirmação:** valor, tipo de movimentação e data de referência. Identificador do lançamento pode ser gerado pelo sistema. Precisão monetária, sinal de valor e data padrão serão refinados.
+
+### HU-05: Consultar histórico (RF-05, proposto)
+
+**Como** comerciante, **quero** visualizar lançamentos anteriores **para** conferir o que contribuiu para o consolidado.
+
+**Critérios de aceite propostos:**
+- Permitir localizar os lançamentos de um intervalo de datas.
+- Apresentar as informações necessárias para reconhecer cada lançamento.
+
+### HU-06: Estornar lançamento (RF-06, proposto)
+
+**Como** comerciante, **quero** corrigir o efeito de um lançamento incorreto **para** manter o resultado financeiro confiável.
+
+**Critérios de aceite propostos:**
+- O estorno deverá referenciar o lançamento original.
+- O histórico deverá permitir identificar o lançamento e sua correção.
+- A regra de qual dia recebe o efeito do estorno deverá ser definida pelo negócio.
+
+## 5. Fluxos principais
+
+### Registro de lançamento
+
+1. O comerciante informa um crédito ou débito.
+2. O sistema verifica as informações exigidas.
+3. Se as informações forem válidas, registra o lançamento e informa o resultado.
+4. O lançamento passa a estar disponível para a composição do consolidado.
+
+**Fluxo alternativo:** caso as informações estejam inválidas, o sistema informa o erro e não registra a movimentação.
+
+**Condição não funcional do desafio:** uma falha no consolidado não pode impedir o registro de lançamentos. A estratégia técnica será detalhada na arquitetura e verificada nos testes.
+
+### Consulta do consolidado diário
+
+1. O comerciante informa a data desejada.
+2. O sistema localiza o consolidado correspondente.
+3. O sistema apresenta o resultado segundo a regra de cálculo aprovada.
+
+**Fluxos alternativos a detalhar:** dia sem lançamentos, consulta de data inválida, consolidado ainda não atualizado e indisponibilidade temporária.
+
+## 6. Exemplo para discutir com o negócio
+
+Considere que, em um mesmo dia, sejam registrados:
+
+| Movimentação | Valor |
+| --- | ---: |
+| Crédito | R$ 200,00 |
+| Débito | R$ 50,00 |
+| **Movimento líquido do dia** | **R$ 150,00** |
+
+Esse exemplo pressupõe, **apenas para ilustração**, que crédito soma e débito subtrai.
+
+O **movimento líquido** é R$ 150,00, mas o **saldo consolidado** poderá ser diferente se precisar considerar um saldo anterior. Precisamos validar essa diferença antes de fixar o comportamento do sistema.
+
+## 7. Regras e dúvidas que precisam de decisão
+
+| ID | Pergunta | Por que importa |
+| --- | --- | --- |
+| RN-01 | Crédito aumenta e débito diminui o saldo? | Define a interpretação das movimentações. |
+| RN-02 | Saldo diário é o movimento líquido ou o saldo acumulado? | Define o cálculo do consolidado. |
+| RN-03 | Existe saldo inicial? | Pode alterar o saldo apresentado. |
+| RN-04 | Qual data deve ser considerada? | Determina a que dia um lançamento pertence. |
+| RN-05 | Um lançamento pode ser excluído, editado ou estornado? | Define correções e preservação do histórico. |
+| RN-06 | É necessário separar dados de diferentes comerciantes? | Define o escopo da consulta e da identificação. |
+| RN-07 | Qual moeda e quais regras de arredondamento? | Evita divergências de valor. |
+| RN-08 | Quanto tempo após o registro o consolidado precisa refletir o lançamento? | Define a expectativa funcional de atualização; a meta técnica será tratada na Issue #4. |
+| RN-09 | Como deve aparecer um dia sem lançamentos? | Define um caso de consulta frequente. |
+
+**Tratamento proposto:** caso não seja possível obter respostas da empresa, documentar as premissas adotadas para o MVP, explicitar seus impactos e evitar apresentá-las como requisitos fornecidos pela banca.
+
+## 8. Rastreabilidade e conclusão
+
+| Requisito | Contexto responsável | Validação prevista |
+| --- | --- | --- |
+| RF-01 / RF-02 / RF-04 | Lançamentos | Testes de registro válido e inválido |
+| RF-03 | Consolidado diário | Testes de consulta e cálculo com regra aprovada |
+| RF-05 / RF-06 (se aprovados) | Lançamentos | Testes de histórico e estorno |
+
+### Checklist da Issue #3
+
+- [x] Ator principal e jornadas de uso descritos.
+- [x] Requisitos funcionais identificados e numerados.
+- [x] Histórias de usuário e critérios de aceite documentados.
+- [x] Fluxos principais e alternativos descritos.
+- [x] Exigências separadas de propostas e dúvidas em aberto.
+- [x] Documento versionado no repositório.
+- [ ] Validar premissas e aprovar escopo final para o MVP.
+
+**Próximo passo após revisão:** Issue #4, requisitos não funcionais e SLOs.
