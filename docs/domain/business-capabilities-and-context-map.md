@@ -1,131 +1,130 @@
-# Mapeamento de capacidades de negócio e Bounded Contexts
+# Entendimento do negócio e organização dos domínios
 
-> Projeto: CashFlow Architecture  
-> Issue: #2 | Milestone: M1 - Descoberta e requisitos  
-> Status: Proposta inicial para refinamento  
-> Fonte: "Desafio - Arq. Soluções.pdf", seção "Descritivo da Solução" e requisitos relacionados.
+> **Projeto:** CashFlow Architecture  
+> **Issue:** #2 | **Milestone:** M1 - Descoberta e requisitos  
+> **Situação:** proposta para revisão  
+> **Base:** enunciado do desafio de Arquitetura de Soluções
 
-## 1. Contexto e objetivo
+## 1. O problema que precisamos resolver
 
-**Requisito expresso no desafio:** um comerciante necessita registrar lançamentos financeiros de **débito e crédito** e consultar um relatório com o **saldo diário consolidado**.
+Um comerciante precisa acompanhar a movimentação de dinheiro do negócio. Para isso, o sistema deverá:
 
-O desafio cita expressamente dois serviços de negócio: **controle de lançamentos** e **consolidado diário**. Também determina que a indisponibilidade do consolidado não interrompa o serviço de lançamentos.
+1. Registrar entradas e saídas de valores, chamadas no desafio de **créditos** e **débitos**.
+2. Disponibilizar um **consolidado diário** para consulta do saldo.
 
-**Objetivo deste documento:** mapear o que o negócio precisa fazer, delimitar responsabilidades e estabelecer as relações conceituais entre domínios. A solução tecnológica, as regras financeiras ainda não especificadas e os contratos de integração serão detalhados em issues posteriores.
+Há uma condição essencial: **se o consolidado diário estiver fora do ar, o comerciante ainda precisa conseguir registrar lançamentos**.
 
-## 2. Atores e partes interessadas
+O desafio não especifica todas as regras financeiras. Onde houver dúvidas, vamos registrá-las e defini-las no refinamento de requisitos, sem inventar comportamentos.
 
-| Ator / stakeholder | Papel no contexto | Origem |
+## 2. Quem utiliza ou participa
+
+| Participante | Necessidade |
+| --- | --- |
+| **Comerciante** | Registrar lançamentos e consultar o consolidado diário. |
+| **Equipe de suporte (possível)** | Investigar falhas ou divergências, caso exista operação assistida. |
+
+O comerciante é o único ator explicitamente descrito no desafio. Equipes de suporte, integrações externas e outros usuários são possibilidades, não requisitos confirmados.
+
+## 3. Capacidades do negócio
+
+Capacidade de negócio é **o que o negócio precisa conseguir fazer**, independentemente da tecnologia usada.
+
+| Capacidade | O que permite fazer | Origem |
 | --- | --- | --- |
-| Comerciante | Registra débitos/créditos e consulta o saldo consolidado diário | Expresso no desafio |
-| Operação / suporte | Diagnostica falhas, divergências e atrasos | Proposta a validar |
-| Equipe de segurança / governança | Define controles para dados e acesso | Proposta a validar |
-| Sistemas externos | Possíveis fontes de lançamentos ou consumidores de relatórios | Não informado; não assumir integração |
+| **Registrar movimentações financeiras** | Informar um débito ou crédito e manter o lançamento registrado. | Solicitada no desafio |
+| **Consultar o resultado financeiro diário** | Visualizar o saldo consolidado referente a um dia. | Solicitada no desafio |
+| **Consultar o histórico das movimentações** | Identificar os registros que contribuíram para um resultado e investigar divergências. | Sugestão a validar |
 
-Não se presume sistema legado, conta bancária, múltiplas lojas, usuários distintos ou integração com meios de pagamento.
+A última capacidade é útil para um sistema financeiro, mas não foi exigida expressamente.
 
-## 3. Mapa de capacidades de negócio
+## 4. Divisão das responsabilidades (domínios)
 
-| ID | Capacidade | Descrição | Classificação | Evidência / limite |
-| --- | --- | --- | --- | --- |
-| CAP-01 | Gestão de lançamentos financeiros | Registrar lançamentos de débito e crédito | Essencial | Requisito expresso |
-| CAP-02 | Consolidação financeira diária | Disponibilizar saldo consolidado por dia | Essencial | Requisito expresso |
-| CAP-03 | Rastreabilidade de lançamentos | Identificar lançamentos que contribuíram para um saldo e apoiar auditoria/reconciliação | Apoio (proposta) | Inferida da criticidade financeira; confirmar profundidade exigida |
+Para manter as responsabilidades claras, propomos dois **contextos de negócio (Bounded Contexts)**. Um contexto é uma área em que termos e regras possuem um significado bem definido. Ele não precisa corresponder obrigatoriamente a um microsserviço.
 
-### Decomposição funcional preliminar
+### 4.1. Lançamentos
 
-- **CAP-01:** receber lançamento; validar os dados e regras aplicáveis; persistir lançamento aceito; sinalizar sua ocorrência a consumidores autorizados (mecanismo ainda não decidido).
-- **CAP-02:** obter os lançamentos relevantes; calcular ou atualizar resultado diário; consultar saldo de um dia; lidar com atualização atrasada.
-- **CAP-03:** consultar histórico e identificar origem/identificador do lançamento; permitir investigação de divergências. O escopo de auditoria e eventuais correções será refinado.
+Cuida do registro das movimentações financeiras.
 
-## 4. Domínios e Bounded Contexts propostos
+**Responsabilidades:**
+- Receber um lançamento de débito ou crédito.
+- Verificar se os dados necessários foram preenchidos corretamente.
+- Registrar e preservar os lançamentos aceitos.
+- Disponibilizar os dados necessários à consolidação, sem depender de ela estar funcionando.
 
-### BC-01: Transactions (Lançamentos)
+**Não é responsável por:** montar o resultado diário consolidado.
 
-**Responsabilidade:** ser a autoridade sobre o registro e o histórico de lançamentos financeiros aceitos.
+### 4.2. Consolidado diário
 
-**Dentro do contexto:** identificação do lançamento; dados do débito/crédito; validação; persistência; sinalização de lançamentos registrados.
+Cuida de reunir os lançamentos e apresentar o resultado de um dia.
 
-**Fora do contexto:** cálculo e disponibilização do saldo consolidado diário; apresentação de relatório consolidado.
+**Responsabilidades:**
+- Considerar os lançamentos registrados para uma data.
+- Calcular ou atualizar o consolidado diário conforme as regras que ainda serão refinadas.
+- Disponibilizar a consulta desse resultado.
 
-**Linguagem ubíqua provisória:** Lançamento, Débito, Crédito, Valor, Data de referência, Lançamento registrado. A semântica de “débito” e “crédito” será validada antes de qualquer regra contábil.
+**Não é responsável por:** criar, aprovar ou alterar lançamentos financeiros.
 
-### BC-02: Daily Consolidation (Consolidado diário)
-
-**Responsabilidade:** produzir e consultar uma visão agregada do saldo por dia, a partir dos lançamentos registrados.
-
-**Dentro do contexto:** consumo/obtenção de fatos de lançamentos; projeção ou cálculo do saldo do dia; consulta do consolidado; controle de atualização da projeção.
-
-**Fora do contexto:** aceitar ou rejeitar lançamentos; alterar o histórico de lançamentos.
-
-**Linguagem ubíqua provisória:** Saldo diário, Data de referência, Consolidação, Atualização do consolidado.
-
-### Observações sobre a fronteira
-
-- Dois Bounded Contexts representam separação semântica e de responsabilidades; **não obrigam** a utilização de microsserviços.
-- O enunciado demanda dois serviços e independência de disponibilidade. A correspondência de um serviço por contexto é uma **hipótese arquitetural** a avaliar, não consequência obrigatória de DDD.
-- Rastreabilidade (CAP-03) é transversal às capacidades, **não** foi promovida a terceiro Bounded Context sem justificativa de autonomia funcional.
-
-## 5. Context Map preliminar
+### 4.3. Como os contextos se relacionam
 
 ```mermaid
 flowchart LR
-    M["Comerciante"]
-    T["BC-01: Transactions<br/>Autoridade dos lançamentos"]
-    C["BC-02: Daily Consolidation<br/>Projeção e consulta do saldo diário"]
-    M -->|"Registra débito/crédito"| T
-    M -->|"Consulta saldo diário"| C
-    T -.->|"Fatos de lançamentos registrados<br/>(contrato e transporte a definir)"| C
+    A["Comerciante"]
+    B["Lançamentos"]
+    C["Consolidado diário"]
+    A -->|"Registra débitos e créditos"| B
+    A -->|"Consulta resultado diário"| C
+    B -.->|"Informa lançamentos registrados"| C
 ```
 
-**Relação entre contextos:** Transactions é **upstream** e Daily Consolidation é **downstream** em relação aos fatos financeiros. A proposta é uma integração assíncrona para preservar o isolamento de falhas, mas broker, formato, entrega e padrões de consistência serão decididos nas ADRs.
+O consolidado utiliza as informações registradas em **Lançamentos**. A forma de transmitir essas informações será definida mais adiante, na arquitetura da solução.
 
-**Regra de dependência:** o caminho crítico de aceitar um lançamento **não deve exigir** que Daily Consolidation esteja disponível.
+**Regra fundamental:** uma falha no consolidado não pode impedir o registro de um novo lançamento.
 
-## 6. Responsabilidades e invariantes preliminares
+## 5. Linguagem ubíqua: glossário do negócio
 
-| Responsabilidade / invariante | Dono proposto | Situação |
+Em DDD, *linguagem ubíqua* é o vocabulário compartilhado entre negócio e equipe técnica. Não basta listar palavras: precisamos definir o que cada uma significa, como é usada e quais dúvidas ainda existem.
+
+As definições abaixo são **propostas iniciais**. Elas deverão ser validadas durante o refinamento para que todos usem os termos da mesma forma.
+
+| Termo | Significado no projeto | Exemplo de uso |
 | --- | --- | --- |
-| Aceitar/rejeitar lançamento após validação | Transactions | Proposta baseada na separação |
-| Preservar lançamentos aceitos | Transactions | Proposta baseada na criticidade do dado |
-| Calcular e expor saldo consolidado diário | Daily Consolidation | Exigência de negócio |
-| Impedir que falha do consolidado bloqueie registro | Fronteira entre contextos | Exigência não funcional |
-| Evitar contabilização duplicada ao reprocessar | Daily Consolidation | Requisito derivado, a detalhar |
-| Definir saldo inicial, dia financeiro e política de correção | Negócio, com apoio da arquitetura | **Pendente de refinamento** |
+| **Comerciante** | Pessoa ou negócio que utiliza o sistema para acompanhar suas movimentações financeiras. | “O comerciante consulta o resultado de hoje.” |
+| **Lançamento** | Registro individual de uma movimentação financeira que deve ser considerada pelo sistema. | “Foi registrado um lançamento de R$ 80,00.” |
+| **Crédito** | Tipo de lançamento que, na convenção inicialmente proposta, aumenta o saldo. **A confirmar com o negócio.** | “Uma entrada de R$ 200,00 foi registrada como crédito.” |
+| **Débito** | Tipo de lançamento que, na convenção inicialmente proposta, diminui o saldo. **A confirmar com o negócio.** | “Uma saída de R$ 50,00 foi registrada como débito.” |
+| **Data do lançamento** | Dia ao qual uma movimentação pertence para fins de consolidação. É necessário definir se corresponde à ocorrência ou ao registro no sistema. | “Esse lançamento pertence ao dia 13/11.” |
+| **Saldo diário** | Valor apresentado para um dia. **Ainda é necessário decidir** se representa apenas o resultado líquido daquele dia ou o saldo acumulado até a data. | “Qual é o saldo diário de 13/11?” |
+| **Consolidado diário** | Resultado da reunião dos lançamentos considerados para uma data, conforme regras de cálculo definidas pelo negócio. | “O consolidado de ontem já está disponível.” |
+| **Histórico de lançamentos** | Conjunto de movimentações registradas que permite consultar e conferir o que aconteceu. **Capacidade sugerida, não confirmada.** | “Vamos conferir o histórico para explicar a diferença no consolidado.” |
 
-## 7. Questões em aberto para a Issue #3 e #4
+**Exemplo ilustrativo, ainda não aprovado como regra de cálculo:** se o comerciante registrar um crédito de R$ 200,00 e um débito de R$ 50,00 no mesmo dia, o movimento líquido desse dia será de R$ 150,00. Isso **não define**, por si só, como será calculado o saldo diário exibido, pois pode existir saldo anterior.
 
-1. Débito reduz e crédito aumenta o saldo? Existe convenção contábil específica?
-2. O consolidado representa movimento líquido do dia ou saldo acumulado incluindo dias anteriores?
-3. Existe saldo inicial? Quem o fornece?
-4. Qual data prevalece: data da operação, data informada, processamento ou liquidação? Qual fuso horário?
-5. É permitido excluir, corrigir ou estornar lançamentos? Como preservar histórico?
-6. Um único comerciante ou vários? É necessário isolamento por comerciante/conta?
-7. Há moeda única? Como tratar precisão decimal e arredondamento?
-8. A consulta precisa refletir lançamentos imediatamente ou aceita consistência eventual? Qual atraso máximo?
-9. Como interpretar “até 5% de perda de requisições” do consolidado? Não confundir com perda de dados financeiros.
-10. Existem exigências específicas de retenção, auditoria e tratamento de dados pessoais?
+Este glossário deve ser atualizado sempre que o significado de algum termo for esclarecido pelo negócio.
 
-As questões são **lacunas identificadas**, não funcionalidades já aprovadas.
+## 6. Decisões pendentes para o refinamento
 
-## 8. Rastreabilidade com o desafio e próximas etapas
+As perguntas abaixo serão tratadas nas Issues #3 e #4:
 
-| Evidência do desafio | Resposta no mapeamento |
-| --- | --- |
-| Serviço de controle de lançamentos | CAP-01 / BC-01 |
-| Serviço do consolidado diário | CAP-02 / BC-02 |
-| Lançamentos permanecem disponíveis em falha do consolidado | Regra de isolamento entre contextos |
-| Mapeamento de domínios funcionais e capacidades de negócio | Seções 3 a 5 |
-| Refinamento de requisitos | Questões destinadas às Issues #3 e #4 |
-| Escolha de padrões e ferramentas | Adiada para ADRs da Milestone M2 |
+1. O débito diminui e o crédito aumenta o saldo, conforme a convenção proposta?
+2. O consolidado apresenta o movimento do dia ou o saldo acumulado?
+3. Existe um saldo inicial?
+4. Qual data conta para a consolidação? Há um fuso horário definido?
+5. É possível corrigir ou estornar um lançamento?
+6. O sistema atende um ou vários comerciantes?
+7. Qual moeda será utilizada?
+8. Quanto tempo o consolidado pode levar para refletir um novo lançamento?
+9. O que significa “até 5% de perda de requisições” no enunciado? Isso não deve ser confundido com perda de lançamentos financeiros.
+10. Existem regras de retenção ou tratamento de dados pessoais?
 
-## 9. Critérios de aceite da Issue #2
+## 7. Resultado desta etapa
 
-- [x] Atores e capacidades de negócio identificados.
-- [x] Domínios e Bounded Contexts propostos com justificativa.
-- [x] Responsabilidades delimitadas.
-- [x] Relacionamentos entre contextos mapeados.
-- [x] Documento versionado no repositório.
-- [ ] Revisão do conteúdo e validação das premissas com o responsável pelo desafio.
+- [x] Ator principal identificado.
+- [x] Capacidades essenciais do negócio mapeadas.
+- [x] Dois contextos de negócio definidos e responsabilidades separadas.
+- [x] Relação entre os contextos representada.
+- [x] Glossário inicial com definições e exemplos.
+- [x] Questões ainda não esclarecidas registradas.
+- [x] Documento salvo no repositório.
+- [ ] Revisar e validar as definições propostas antes de encerrar a Issue #2.
 
-**Nota:** a revisão final é necessária para encerrar a issue; nenhuma decisão tecnológica foi consolidada nesta etapa.
+**Próximo passo:** Issue #3, *Refinar requisitos funcionais*. Nela, vamos transformar as dúvidas em regras e critérios de aceite, sem antecipar tecnologias nesta etapa.
