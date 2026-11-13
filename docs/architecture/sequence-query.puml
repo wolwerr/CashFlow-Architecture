@@ -1,0 +1,15 @@
+@startuml CashFlow_Query
+title CashFlow | Sequência: consulta do consolidado
+autonumber
+actor Comerciante
+participant "Serviço de consolidado" as C
+database "Banco do consolidado" as B
+Comerciante -> C: Consulta saldo por data
+C -> B: Localiza resultado da data
+B --> C: Projeção disponível
+C --> Comerciante: Retorna consolidado diário
+note over Comerciante,C
+Fórmula do saldo e indicação do atraso
+dependem do refinamento da Issue #3.
+end note
+@enduml
