@@ -1,0 +1,23 @@
+@startuml CashFlow_Consolidation_Failure
+title CashFlow | Sequência: falha do consolidado
+autonumber
+actor Comerciante
+participant "Serviço de lançamentos" as L
+database "Banco de lançamentos" as BL
+queue "Mensageria" as M
+participant "Serviço de consolidado" as C
+note over C: Temporariamente indisponível
+Comerciante -> L: Solicita novo lançamento
+L -> BL: Salva lançamento + evento pendente
+BL --> L: Transação confirmada
+L --> Comerciante: Registro confirmado
+M ->x C: Não consegue entregar evento
+note over M,C
+Evento permanece pendente para nova tentativa
+segundo a política da mensageria.
+end note
+... Serviço de consolidado se recupera ...
+M -> C: Reentrega evento
+C --> M: Confirma após processamento idempotente
+note over L,C: O registro não depende da disponibilidade do consolidado.
+@enduml
