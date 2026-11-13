@@ -1,0 +1,22 @@
+@startuml CashFlow_Containers
+!include <C4/C4_Container>
+title CashFlow | C4 Nível 2: Contêineres
+LAYOUT_LEFT_RIGHT()
+Person(comerciante, "Comerciante", "Registra lançamentos e consulta o saldo diário")
+System_Boundary(cashflow, "CashFlow") {
+  Container(lancamentos, "Serviço de lançamentos", "API", "Valida e registra débitos e créditos")
+  ContainerDb(db_lancamentos, "Dados de lançamentos", "Banco transacional", "Registros financeiros e eventos pendentes (Outbox)")
+  Container(publicador, "Publicador de eventos", "Processo em segundo plano", "Publica eventos registrados e pendentes")
+  ContainerQueue(mensageria, "Mensageria", "Broker de eventos", "Entrega eventos de lançamentos")
+  Container(consolidado, "Serviço de consolidado", "API + consumidor", "Calcula e disponibiliza o saldo diário")
+  ContainerDb(db_consolidado, "Dados do consolidado", "Banco de projeções", "Saldos por data e eventos já processados")
+}
+Rel(comerciante, lancamentos, "Registra débito/crédito", "HTTPS")
+Rel(comerciante, consolidado, "Consulta saldo diário", "HTTPS")
+Rel(lancamentos, db_lancamentos, "Grava lançamento e evento pendente", "Transação atômica")
+Rel(publicador, db_lancamentos, "Busca pendências e atualiza status", "Conexão de dados")
+Rel(publicador, mensageria, "Publica lançamentos registrados", "Assíncrono")
+Rel(mensageria, consolidado, "Entrega eventos", "Assíncrono")
+Rel(consolidado, db_consolidado, "Atualiza projeção e consulta saldo", "Conexão de dados")
+SHOW_LEGEND()
+@enduml
