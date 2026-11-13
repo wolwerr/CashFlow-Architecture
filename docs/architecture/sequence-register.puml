@@ -1,0 +1,30 @@
+@startuml CashFlow_Register
+title CashFlow | Sequência: registro de lançamento
+autonumber
+actor Comerciante
+participant "Serviço de lançamentos" as L
+database "Banco de lançamentos" as BL
+participant "Publicador" as P
+queue "Mensageria" as M
+participant "Serviço de consolidado" as C
+database "Banco do consolidado" as BC
+Comerciante -> L: Solicita registro (crédito ou débito)
+L -> L: Valida dados
+L -> BL: Inicia transação e grava lançamento + Outbox
+BL --> L: Transação confirmada
+L --> Comerciante: Lançamento registrado
+... Processo assíncrono ...
+P -> BL: Busca eventos pendentes
+BL --> P: Evento de lançamento
+P -> M: Publica evento
+M --> P: Confirma recebimento
+P -> BL: Marca evento como publicado
+M -> C: Entrega evento
+C -> BC: Atualiza saldo e registra ID processado (atômico)
+BC --> C: Confirmado
+C --> M: Confirma processamento
+note over M,C
+Reentregas podem ocorrer.
+Idempotência impede contabilização duplicada.
+end note
+@enduml
