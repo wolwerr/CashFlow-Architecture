@@ -1,0 +1,81 @@
+@startuml CashFlow_Data_Model
+title CashFlow | Modelo lógico preliminar de dados
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam entity {
+ BackgroundColor #E8F2FA
+ BorderColor #39779B
+ FontColor #1F4259
+}
+package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
+  entity "Transaction" as T {
+    * id : UUID <<PK>>
+    --
+    type : CREDIT | DEBIT
+    amount : DECIMAL
+    reference_date : DATE
+    created_at : TIMESTAMP
+    actor_id : STRING (opcional)
+    reversal_of_id : UUID (opcional)
+  }
+  entity "OutboxEvent" as O {
+    * id : UUID <<PK>>
+    --
+    transaction_id : UUID <<referência>>
+    event_type : STRING
+    payload : JSON
+    created_at : TIMESTAMP
+    published_at : TIMESTAMP (opcional)
+    status : STRING
+  }
+  entity "AuditEvent" as A {
+    * id : UUID <<PK>>
+    --
+    transaction_id : UUID (opcional)
+    actor_id : STRING (opcional)
+    action : STRING
+    occurred_at : TIMESTAMP
+    correlation_id : STRING
+    outcome : STRING
+    details : JSON mínimo
+  }
+}
+package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
+  entity "DailyBalance" as D {
+    * reference_date : DATE <<PK proposta>>
+    --
+    credit_total : DECIMAL
+    debit_total : DECIMAL
+    net_amount : DECIMAL
+    updated_at : TIMESTAMP
+  }
+  entity "ProcessedEvent" as P {
+    * event_id : UUID <<PK>>
+    --
+    transaction_id : UUID
+    processed_at : TIMESTAMP
+  }
+}
+T ||--o{ O : "origina"
+T |o--o{ A : "pode ser auditada"
+O ..> P : "mesmo ID de evento\nvia mensageria"
+P ..> D : "atualização atômica\nna projeção"
+note right of A
+  Auditoria append-only:
+  registra quem, o quê e quando.
+  Não substitui lançamentos financeiros.
+  Escritas críticas de negócio podem
+  compartilhar a transação com Transaction.
+  Logs de acesso não precisam fazê-lo.
+end note
+note bottom of D
+  Saldo acumulado, saldo inicial,
+  comerciante, moeda e regras de
+  estorno seguem pendentes na Issue #3.
+end note
+note bottom of P
+  Sem FK entre os bancos:
+  comunicação por contrato de evento.
+end note
+@enduml
