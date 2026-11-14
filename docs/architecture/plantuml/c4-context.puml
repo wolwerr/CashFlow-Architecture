@@ -4,7 +4,7 @@ title CashFlow | C4 Nível 1: Contexto
 LAYOUT_LEFT_RIGHT()
 Person(comerciante, "Comerciante", "Consulta o caixa e registra créditos e débitos")
 Person(admin, "Administrador de acessos", "Gerencia usuários, vínculos e permissões")
-System(cashflow, "CashFlow", "Aplicação web de gestão financeira, consolidação diária e controle de acessos")
+System(cashflow, "CashFlow", "Solução Web/Mobile de gestão financeira, consolidação diária e controle de acessos")
 Rel(comerciante, cashflow, "Acessa a aplicação e realiza operações", "HTTPS")
 Rel(admin, cashflow, "Acessa o painel e gerencia acessos", "HTTPS")
 SHOW_LEGEND()
