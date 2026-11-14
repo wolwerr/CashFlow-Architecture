@@ -12,8 +12,6 @@ O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos.
 
 [Fonte PlantUML](plantuml/c4-context.puml)
 
-> **Imagem pendente de atualização:** o arquivo PNG ainda representa a versão anterior. Renderize novamente o `.puml`.
-
 ## C4 Nível 2: Contêineres
 
 A **solução completa proposta** contém uma Aplicação Web/Mobile, um API Gateway, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), um serviço transversal de Identidade e Acessos (IAM), bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
@@ -22,7 +20,7 @@ A **solução completa proposta** contém uma Aplicação Web/Mobile, um API Gat
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Imagem pendente de atualização:** o arquivo PNG ainda representa a versão anterior. Renderize novamente o `.puml`.
+> **Imagem:** o PNG correspondente deve ser substituído pela versão de layout vertical aprovada. O arquivo `.puml` é a fonte oficial.
 
 | Bloco | Responsabilidade |
 | --- | --- |
@@ -68,6 +66,26 @@ Os protocolos representam **propostas**, não decisões finais. Produtos e garan
 | Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
 
 O MVP de código pode focar as APIs e o processamento financeiro, enquanto o desenho-alvo documenta a evolução da aplicação. Isso evita confundir a apresentação com uma promessa de implementar todas as interfaces.
+
+## Autenticação, autorização e validação de JWT
+
+A interface Web/Mobile realiza o login pelo serviço IAM utilizando um fluxo seguro de **OpenID Connect (OIDC) sobre HTTPS**. O mecanismo de autenticação, a gestão de credenciais, MFA e o modo de armazenamento dos tokens ainda precisam ser definidos nas Issues #7 e #9.
+
+As APIs de **Lançamentos** e **Consolidado** devem validar os JWTs **localmente**, verificando assinatura, emissor, audiência, validade e permissões. As chaves públicas podem ser obtidas por **JWKS/HTTPS** e mantidas em cache conforme a política de rotação e expiração. Assim, com tokens e chaves válidos, o registro financeiro não precisa chamar o IAM sincronicamente a cada operação.
+
+A verificação de acesso também deve considerar o `merchant_id` autorizado. Uma role como `VIEWER` não concede, por si só, acesso aos dados de outros comerciantes. Política de revogação, propagação de mudanças de permissões e acessos administrativos serão detalhados na Issue #9.
+
+## Telemetria e observabilidade
+
+O **API Gateway**, o **IAM** e os serviços de **Lançamentos** e **Consolidado** emitem telemetria para a infraestrutura de observabilidade. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
+
+| Sinal | Uso esperado |
+| --- | --- |
+| **Logs estruturados** | Diagnóstico de erros, tentativas de acesso e processamento, sem expor tokens, senhas ou dados financeiros sensíveis. |
+| **Métricas** | Taxa de requisições, erros, latência, eventos pendentes na Outbox, tamanho das filas e atraso da consolidação. |
+| **Traces distribuídos** | Acompanhar operações que passam por Gateway, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
+
+**OTLP** é o protocolo proposto para exportação dos sinais; **OpenTelemetry** é a opção de instrumentação/coleta. A escolha de armazenamento, dashboards, alertas e regras de retenção será formalizada nas próximas issues. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
 
 ## Controle de acesso e decisão de tecnologia
 
