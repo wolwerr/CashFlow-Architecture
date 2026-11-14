@@ -1,8 +1,8 @@
 @startuml CashFlow_Consolidation_Failure
-title CashFlow | Registro web com consolidado indisponível
+title CashFlow | Registro Web/Mobile com consolidado indisponível
 autonumber
 actor Comerciante
-participant "Aplicação Web" as W
+participant "Aplicação Web/Mobile" as W
 participant "API Gateway" as G
 participant "Serviço de lançamentos\n(API + Outbox)" as L
 database "Banco de lançamentos" as BL
