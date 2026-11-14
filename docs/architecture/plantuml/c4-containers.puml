@@ -5,7 +5,7 @@ LAYOUT_LEFT_RIGHT()
 Person(comerciante, "Comerciante", "Opera o caixa e consulta saldos")
 Person(admin, "Administrador de acessos", "Gerencia contas e permissões")
 System_Boundary(cashflow, "CashFlow") {
-  Container(web, "Aplicação Web", "SPA (tecnologia a definir)", "Interface para lançamentos, saldos e administração")
+  Container(web, "Aplicação Web/Mobile", "Clientes Web e Mobile (a definir)", "Interfaces Web/Mobile para lançamentos, saldos e administração")
   Container(gateway, "API Gateway", "HTTPS / REST", "Entrada única, roteamento e controles de borda")
   Container(iam, "Serviço de Identidade e Acessos", "IAM / OIDC (a definir)", "Login, cadastro, grupos e vínculos por comerciante")
   ContainerDb(db_iam, "Banco IAM", "Persistência a definir", "Identidades, papéis, permissões e vínculos")
