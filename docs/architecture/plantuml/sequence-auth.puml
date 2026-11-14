@@ -1,32 +1,45 @@
 @startuml CashFlow_Authentication
-title CashFlow | Login e autorização na solução Web/Mobile
+title CashFlow | Login com Keycloak e autorização por comerciante
 autonumber
 actor "Usuário" as U
 participant "Aplicação Web/Mobile" as W
-participant "Serviço de Identidade\ne Acessos (IAM)" as IAM
-database "Banco IAM" as DB
+participant "Keycloak\n(provedor OIDC)" as KC
+database "Banco do Keycloak" as DB
 participant "API Gateway" as G
 participant "API financeira" as API
-U -> W: Solicita acesso à aplicação
-W -> IAM: Inicia autenticação (OIDC/HTTPS proposto)
-IAM -> DB: Consulta identidade, status e vínculos
-DB --> IAM: Dados de identidade e acessos
-IAM -> IAM: Autentica pelo mecanismo IAM\n(implementação a definir)
-IAM --> W: Retorna sessão/tokens via fluxo OIDC seguro
-W -> G: Solicita operação com token (HTTPS)
-G -> API: Encaminha requisição e identidade validável
-API -> API: Valida JWT e autorização por merchant_id
-alt Acesso permitido
+U -> W: Acessa a aplicação
+W -> KC: Inicia Authorization Code + PKCE (OIDC / HTTPS)
+KC -> U: Solicita autenticação
+U -> KC: Envia credenciais por conexão segura
+KC -> DB: Valida identidade, credenciais e estado
+DB --> KC: Resultado da autenticação
+KC --> W: Redireciona com código de autorização
+W -> KC: Troca código + code_verifier por tokens (HTTPS)
+KC --> W: Access token e demais tokens conforme fluxo
+W -> G: Requisição com access token (HTTPS)
+G -> API: Encaminha requisição (Bearer token)
+API -> API: Valida assinatura JWT, issuer, audience e prazo
+API -> API: Verifica permissão e vínculo autorizado ao merchant_id
+alt Autenticado e autorizado
   API --> G: Resposta da operação
   G --> W: Resposta autorizada
-else Sem permissão
+else Token ausente ou inválido
+  API --> G: 401 Unauthorized
+  G --> W: 401 Unauthorized
+else Token válido, sem autorização de comerciante
   API --> G: 403 Forbidden
   G --> W: 403 Forbidden
 end
-W --> U: Mostra resultado
-note over W,IAM
-Fluxo OIDC ilustrativo. Authorization Code + PKCE
-é uma opção para SPA. Avaliar BFF como alternativa
-de proteção de tokens na Issue #7.
+W --> U: Apresenta resultado
+note over W,KC
+Fluxo conceitual para cliente público com PKCE.
+Em Web, avaliar BFF; a gestão segura de tokens
+e callback depende do tipo de cliente (ADR-007).
+end note
+note over API
+As relações usuário/comerciante são regras do
+CashFlow, não dados de negócio do Keycloak.
+Fonte e cache das permissões serão detalhados
+na Issue #9.
 end note
 @enduml
