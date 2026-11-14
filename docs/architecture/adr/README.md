@@ -15,8 +15,8 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 | [ADR-001](ADR-001-language-framework.md) | Linguagem e framework | **C# / ASP.NET Core / .NET 10 LTS** | **Aceita** |
 | [ADR-002](ADR-002-architecture-style-clean-architecture.md) | Estilo arquitetural e Clean Architecture | Dois microsserviços independentes no monorepo, com Clean Architecture | **Aceita** |
 | [ADR-003](ADR-003-persistence.md) | Persistência | PostgreSQL + EF Core 10, banco lógico por serviço e Dapper somente se justificado | **Aceita** |
-| [ADR-004](ADR-004-async-messaging.md) | Comunicação assíncrona | RabbitMQ / AMQP 0-9-1, Outbox e consumidor idempotente | **Proposta para aprovação** |
-| ADR-005 | Consistência e publicação | Transactional Outbox + consumidor idempotente; sem Event Sourcing no MVP | **Proposto** |
+| [ADR-004](ADR-004-async-messaging.md) | Comunicação assíncrona | RabbitMQ / AMQP 0-9-1, publisher confirms e ACK manual | **Aceita** |
+| [ADR-005](ADR-005-outbox-consistency-idempotency.md) | Consistência e publicação | Transactional Outbox, consistência eventual e consumidor idempotente; sem Event Sourcing no MVP | **Proposta para aprovação** |
 | ADR-006 | Autenticação e autorização | OIDC/OAuth 2.0, IAM consolidado, JWT validado localmente e escopo por comerciante | **Proposto** |
 | ADR-007 | Clientes e borda | Web/Mobile e API Gateway na arquitetura-alvo, não necessariamente no MVP | **Proposto** |
 | ADR-008 | Observabilidade | Logs estruturados, métricas e tracing com OpenTelemetry | **Proposto** |
@@ -57,4 +57,4 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 
 ## Próxima decisão
 
-A [ADR-001](ADR-001-language-framework.md) foi **aceita**: C# / ASP.NET Core sobre .NET 10 LTS. A [ADR-002](ADR-002-architecture-style-clean-architecture.md) foi **aceita**: dois microsserviços independentes desde o MVP dentro de uma única solution e monorepo. A [ADR-003](ADR-003-persistence.md) foi **aceita**, com PostgreSQL e EF Core 10, após avaliação do modelo relacional versus NoSQL. A [ADR-004](ADR-004-async-messaging.md) recomenda RabbitMQ para o MVP, aguardando aprovação; a ADR-005 tratará Outbox, consistência e idempotência em detalhe. A ADR-010 formalizará a meta de cobertura mínima de 80%, e a ADR-011 comparará plataformas CI/CD antes da escolha.
+A [ADR-001](ADR-001-language-framework.md) foi **aceita**: C# / ASP.NET Core sobre .NET 10 LTS. A [ADR-002](ADR-002-architecture-style-clean-architecture.md) foi **aceita**: dois microsserviços independentes desde o MVP dentro de uma única solution e monorepo. A [ADR-003](ADR-003-persistence.md) foi **aceita**, com PostgreSQL e EF Core 10, após avaliação do modelo relacional versus NoSQL. A [ADR-004](ADR-004-async-messaging.md) foi **aceita**, com RabbitMQ para o MVP e esclarecimentos de ACK e alta disponibilidade. A [ADR-005](ADR-005-outbox-consistency-idempotency.md) está documentada como proposta para aprovação, tratando Outbox, consistência eventual, consumo idempotente e Event Sourcing. A ADR-010 formalizará a meta de cobertura mínima de 80%, e a ADR-011 comparará plataformas CI/CD antes da escolha.
