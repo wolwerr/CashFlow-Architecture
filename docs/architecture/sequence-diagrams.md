@@ -6,7 +6,7 @@ Este documento reúne os **diagramas de sequência**. Eles detalham em que ordem
 
 ## Autenticação e autorização por comerciante
 
-Fluxo conceitual de login pela aplicação web, obtenção do token, passagem pelo API Gateway e verificação de autorização no serviço financeiro. Ainda não existe PNG para este novo fluxo.
+Fluxo conceitual de login pela aplicação Web/Mobile, obtenção do token, passagem pelo API Gateway e verificação de autorização no serviço financeiro. Ainda não existe PNG para este novo fluxo.
 
 [Fonte PlantUML](plantuml/sequence-auth.puml)
 
@@ -28,7 +28,7 @@ Mesmo com o consolidado indisponível, o serviço de lançamentos consegue regis
 
 ## Consulta do consolidado diário
 
-A aplicação web consulta pelo API Gateway. O serviço de consolidado valida o JWT e as permissões de leitura e acessa sua própria base, filtrando pelo comerciante autorizado. Não precisa consultar o serviço de lançamentos.
+A aplicação Web/Mobile consulta pelo API Gateway. O serviço de consolidado valida o JWT e as permissões de leitura e acessa sua própria base, filtrando pelo comerciante autorizado. Não precisa consultar o serviço de lançamentos.
 
 ![Consulta ao consolidado](images/sequence-query.png)
 
