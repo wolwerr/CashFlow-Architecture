@@ -50,4 +50,4 @@ Se for útil à avaliação, uma futura visão de componentes pode detalhar **AP
 ## Próximas leituras
 
 - [Diagramas de sequência](sequence-diagrams.md), para ver as interações passo a passo.
-- [Visão de Execução](runtime-view.md), para entender o comportamento normal, as falhas e a recuperação.
+- [Casos de Uso](use-cases.md), para entender as ações do comerciante e os fluxos de negócio.
