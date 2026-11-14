@@ -1,26 +1,32 @@
 @startuml CashFlow_Authentication
-title CashFlow | Autenticação e acesso por comerciante (proposta)
+title CashFlow | Login e autorização na solução web
 autonumber
 actor "Usuário" as U
+participant "Aplicação Web" as W
 participant "Serviço de Identidade\ne Acessos (IAM)" as IAM
 database "Banco IAM" as DB
+participant "API Gateway" as G
 participant "API financeira" as API
-U -> IAM: Solicita autenticação (OIDC/HTTPS, proposto)
-IAM -> DB: Localiza usuário e vínculos de acesso
-DB --> IAM: Usuário, status e vínculos
-IAM -> IAM: Autentica e emite token\npor mecanismo IAM maduro (a definir)
-IAM --> U: Token de acesso com escopos apropriados
-U -> API: Acessa operação (HTTPS + Bearer JWT)
-API -> API: Valida assinatura e claims localmente
-API -> API: Verifica permissão e merchant_id autorizado
-alt Permissão válida
-  API --> U: Operação autorizada
-else Acesso não autorizado
-  API --> U: 403 Forbidden
+U -> W: Solicita acesso à aplicação
+W -> IAM: Inicia autenticação (OIDC/HTTPS proposto)
+IAM -> DB: Consulta identidade, status e vínculos
+DB --> IAM: Dados de identidade e acessos
+IAM -> IAM: Autentica pelo mecanismo IAM\n(implementação a definir)
+IAM --> W: Retorna sessão/tokens via fluxo OIDC seguro
+W -> G: Solicita operação com token (HTTPS)
+G -> API: Encaminha requisição e identidade validável
+API -> API: Valida JWT e autorização por merchant_id
+alt Acesso permitido
+  API --> G: Resposta da operação
+  G --> W: Resposta autorizada
+else Sem permissão
+  API --> G: 403 Forbidden
+  G --> W: 403 Forbidden
 end
-note over IAM,API
-Modelo conceitual. Cadastro, associação de papéis,
-MFA, revogação e claims dependem das Issues #7 e #9.
-O usuário nunca escolhe livremente seu escopo de acesso.
+W --> U: Mostra resultado
+note over W,IAM
+Fluxo OIDC ilustrativo. Authorization Code + PKCE
+é uma opção para SPA. Avaliar BFF como alternativa
+de proteção de tokens na Issue #7.
 end note
 @enduml
