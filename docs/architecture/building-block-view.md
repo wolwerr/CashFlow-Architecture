@@ -6,7 +6,7 @@ Esta visão mostra **de que partes o CashFlow é composto** e o papel de cada um
 
 ## C4 Nível 1: Contexto
 
-O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos. O **Administrador de acessos** gerencia usuários e permissões. Ambos utilizam a aplicação web proposta; o C4 de Contexto apresenta o CashFlow como um único sistema e deixa os detalhes internos para o Nível 2.
+O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos. O **Administrador de acessos** gerencia usuários e permissões. Ambos utilizam a aplicação Web/Mobile proposta; o C4 de Contexto apresenta o CashFlow como um único sistema e deixa os detalhes internos para o Nível 2.
 
 ![Contexto do CashFlow](images/c4-context.png)
 
@@ -16,7 +16,7 @@ O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos.
 
 ## C4 Nível 2: Contêineres
 
-A **solução completa proposta** contém uma Aplicação Web, um API Gateway, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), um serviço transversal de Identidade e Acessos (IAM), bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
+A **solução completa proposta** contém uma Aplicação Web/Mobile, um API Gateway, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), um serviço transversal de Identidade e Acessos (IAM), bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
 
 ![Contêineres do CashFlow](images/c4-containers.png)
 
@@ -26,7 +26,7 @@ A **solução completa proposta** contém uma Aplicação Web, um API Gateway, o
 
 | Bloco | Responsabilidade |
 | --- | --- |
-| Aplicação Web (SPA proposta) | Interface para comerciantes e administradores, formulários, consultas e apresentação de erros. |
+| Aplicação Web/Mobile (proposta) | Canais Web e Mobile para comerciantes e administradores, formulários, consultas e apresentação de erros. |
 | API Gateway (proposto) | Ponto de entrada para APIs, roteamento e controles de borda; não substitui autorização nos serviços. |
 | Serviço de lançamentos (API + Outbox worker) | Receber e confirmar movimentações; publicar eventos pendentes em segundo plano. |
 | Banco de lançamentos | Guardar lançamentos e eventos Outbox; manter trilha de auditoria proposta no mesmo domínio. |
@@ -37,12 +37,14 @@ A **solução completa proposta** contém uma Aplicação Web, um API Gateway, o
 | Banco de identidade e acessos | Armazenar usuários, grupos, vínculos e permissões, com mecanismos seguros para informações de autenticação. |
 | Coleta de observabilidade | Receber informações de diagnóstico e desempenho dos serviços. |
 
+**Nota:** o bloco Web/Mobile é uma representação conceitual dos canais de entrada. Se forem aplicações implantadas separadamente, o C4 Nível 2 pode ser desdobrado em contêiner Web e contêiner Mobile após a escolha tecnológica na Issue #7.
+
 ## Protocolos propostos
 
 | Comunicação | Protocolo |
 | --- | --- |
-| Usuários → aplicação web | HTTPS |
-| Aplicação web → API Gateway | HTTPS / REST / JSON, com Bearer JWT |
+| Usuários → aplicação Web/Mobile | HTTPS |
+| Aplicação Web/Mobile → API Gateway | HTTPS / REST / JSON, com Bearer JWT |
 | Gateway → serviços de negócio/IAM | HTTPS / REST / JSON |
 | Login e identificação | OpenID Connect / OAuth 2.0 sobre HTTPS (proposto) |
 | Cadastro, grupos e permissões | API administrativa REST / HTTPS (proposta) |
@@ -60,7 +62,7 @@ Os protocolos representam **propostas**, não decisões finais. Produtos e garan
 | Registro de créditos e débitos | **Exigido pelo desafio** |
 | Consulta ao consolidado diário | **Exigido pelo desafio** |
 | Independência entre registro e consolidação | **Exigida pelo desafio** |
-| Frontend SPA e painel administrativo | **Proposta de solução completa**, não exigida |
+| Interfaces Web/Mobile e painel administrativo | **Proposta de solução completa**, não exigida |
 | API Gateway | **Proposta**, avaliar necessidade e custo |
 | Serviço IAM e banco próprio | **Proposta**, dependente da estratégia de identidade |
 | Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
