@@ -40,11 +40,11 @@ As imagens abaixo são capturas anteriores. **Depois das alterações nos arquiv
 
 | Visão | Pergunta que responde | Fonte |
 | --- | --- | --- |
-| **C4 nível 1: Contexto** | Quem utiliza o CashFlow? | [c4-context.puml](c4-context.puml) |
-| **C4 nível 2: Contêineres** | Como dividimos os serviços e seus dados? | [c4-containers.puml](c4-containers.puml) |
-| **Sequência: registro** | Como registrar e depois consolidar um lançamento? | [sequence-register.puml](sequence-register.puml) |
-| **Sequência: falha** | Por que registrar continua possível com o consolidado fora do ar? | [sequence-failure.puml](sequence-failure.puml) |
-| **Sequência: consulta** | Como o comerciante consulta o resultado do dia? | [sequence-query.puml](sequence-query.puml) |
+| **C4 nível 1: Contexto** | Quem utiliza o CashFlow? | [c4-context.puml](plantuml/c4-context.puml) |
+| **C4 nível 2: Contêineres** | Como dividimos os serviços e seus dados? | [c4-containers.puml](plantuml/c4-containers.puml) |
+| **Sequência: registro** | Como registrar e depois consolidar um lançamento? | [sequence-register.puml](plantuml/sequence-register.puml) |
+| **Sequência: falha** | Por que registrar continua possível com o consolidado fora do ar? | [sequence-failure.puml](plantuml/sequence-failure.puml) |
+| **Sequência: consulta** | Como o comerciante consulta o resultado do dia? | [sequence-query.puml](plantuml/sequence-query.puml) |
 
 ## 4. Responsabilidades na arquitetura proposta
 
@@ -98,7 +98,7 @@ Os arquivos **.puml** são a fonte dos diagramas e podem ser abertos no **VS Cod
 Para gerar imagens localmente com uma instalação do PlantUML, execute a partir da raiz do projeto:
 
 ```bash
-plantuml -tsvg docs/architecture/*.puml
+plantuml -tsvg docs/architecture/plantuml/*.puml
 ```
 
 **Observação:** o GitHub não renderiza automaticamente arquivos `.puml`. Os PNGs devem ser atualizados após cada alteração da fonte. A renderização e conferência visual desta revisão ainda estão pendentes.
