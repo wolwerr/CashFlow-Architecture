@@ -1,0 +1,29 @@
+@startuml CashFlow_Register
+title CashFlow | Registro e publicação assíncrona
+autonumber
+actor Comerciante
+participant "Serviço de lançamentos\n(API + worker Outbox)" as L
+database "Banco de lançamentos" as BL
+queue "Mensageria" as M
+participant "Serviço de consolidado" as C
+database "Banco do consolidado" as BC
+Comerciante -> L: POST lançamento (HTTPS/JSON + JWT)
+L -> L: Valida token, autorização e dados
+L -> BL: Grava lançamento + evento Outbox\n(uma transação SQL)
+BL --> L: Commit confirmado
+L --> Comerciante: 201 - lançamento registrado
+... Em segundo plano, dentro do mesmo serviço ...
+L -> BL: Worker busca eventos pendentes (SQL)
+BL --> L: Eventos pendentes
+L -> M: Publica evento (AMQP, proposto)
+M --> L: Confirma publicação no broker
+L -> BL: Marca evento Outbox como publicado
+M -> C: Entrega evento (AMQP, proposto)
+C -> BC: Atualiza saldo e marca ID processado\n(uma transação)
+BC --> C: Commit confirmado
+C --> M: Confirma processamento
+note over M,C
+O broker pode reentregar eventos.
+A idempotência evita somar o mesmo lançamento duas vezes.
+end note
+@enduml
