@@ -6,7 +6,7 @@ Esta visão mostra **de que partes o CashFlow é composto** e o papel de cada um
 
 ## C4 Nível 1: Contexto
 
-O comerciante utiliza o CashFlow para autenticar-se, registrar movimentações e consultar o consolidado. A gestão de usuários, grupos e permissões é representada como uma capacidade interna, sob responsabilidade do Serviço de Identidade e Acessos.
+O comerciante utiliza o CashFlow para autenticar-se, registrar movimentações e consultar o consolidado. O **Administrador de acessos** gerencia usuários, vínculos com comerciantes, grupos e permissões. Ambas as responsabilidades pertencem ao CashFlow; a implementação da identidade aparece como serviço interno apenas no C4 Nível 2.
 
 ![Contexto do CashFlow](images/c4-context.png)
 
