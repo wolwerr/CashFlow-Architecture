@@ -1,5 +1,5 @@
 @startuml CashFlow_Consolidation_Failure
-title CashFlow | Falha do consolidado sem interromper lançamentos
+title CashFlow | Consolidado indisponível sem bloquear lançamentos
 autonumber
 actor Comerciante
 participant "Serviço de lançamentos\n(API + worker Outbox)" as L
@@ -8,25 +8,27 @@ queue "Mensageria" as M
 participant "Serviço de consolidado" as C
 note over C: Consolidado indisponível
 Comerciante -> L: POST lançamento (HTTPS/JSON + JWT)
+L -> L: Valida JWT localmente, permissão,\nmerchant_id autorizado e dados
 L -> BL: Grava lançamento + evento Outbox\n(uma transação)
 BL --> L: Commit confirmado
 L --> Comerciante: 201 - registro confirmado
-... Publicação assíncrona independente da consulta ...
-L -> BL: Worker lê evento pendente
+... Publicação assíncrona ...
+L -> BL: Worker busca evento pendente
 BL --> L: Evento
 L -> M: Publica (AMQP, proposto)
 M --> L: Confirma publicação
 L -> BL: Marca evento como publicado
 M ->x C: Falha na entrega
 note over M,C
-O broker retém a mensagem para nova tentativa
-conforme política de retry e DLQ a definir.
+A mensagem deve permanecer recuperável
+pela política de retenção, retry e DLQ a definir.
 end note
-... Após recuperação do consolidado ...
+... Consolidado recuperado ...
 M -> C: Reentrega evento
-C --> M: Confirma após persistência idempotente
+C --> M: ACK após persistência idempotente
 note over L,C
-O serviço de lançamentos não chama o consolidado
-para confirmar a gravação.
+O registro não depende do consolidado.
+JWT válido e chaves em cache evitam dependência
+síncrona do IAM na operação normal.
 end note
 @enduml
