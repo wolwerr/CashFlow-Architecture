@@ -8,14 +8,15 @@ skinparam entity {
  BorderColor #39779B
  FontColor #1F4259
 }
-package "Contexto: Identidade e Acessos\nBanco IAM (proposta)" #FDF6EB {
-  entity "User" as U {
-    * id : UUID <<PK>>
+package "Provedor de identidade: Keycloak\\nBanco gerenciado pelo Keycloak" #FDF6EB {
+  entity "Usuario Keycloak (referencia)" as U {
+    * subject_id : STRING <<OIDC sub>>
     --
     login_identifier : STRING
     status : STRING
-    created_at : TIMESTAMP
   }
+}
+package "Contexto: Autorizacao CashFlow\\nPersistencia a definir (Issue #9)" #FDF6EB {
   entity "Merchant" as MT {
     * id : UUID <<PK>>
     --
@@ -25,7 +26,7 @@ package "Contexto: Identidade e Acessos\nBanco IAM (proposta)" #FDF6EB {
   entity "Membership" as MB {
     * id : UUID <<PK>>
     --
-    user_id : UUID
+    subject_id : STRING <<OIDC sub>>
     merchant_id : UUID
     status : STRING
   }
@@ -47,13 +48,13 @@ package "Contexto: Identidade e Acessos\nBanco IAM (proposta)" #FDF6EB {
     * role_id : UUID <<FK>>
     * permission_id : UUID <<FK>>
   }
-  U ||--o{ MB : possui
   MT ||--o{ MB : permite
   MB ||--o{ MR : recebe
   R ||--o{ MR : atribuida
   R ||--o{ RP : concede
   PE ||--o{ RP : corresponde
 }
+U ..> MB : subject_id (sem FK)
 package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
   entity "Transaction" as T {
     * id : UUID <<PK>>
@@ -112,9 +113,10 @@ package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
 O ..> P : evento publicado
 P ..> D : atualiza atomica
 note bottom of MT
-  O IAM e dono do cadastro e dos vinculos.
-  Os demais dominios usam IDs estaveis,
-  sem FK fisica entre bancos.
+  Keycloak autentica e gerencia usuarios.
+  CashFlow gerencia merchants e vinculos.
+  Persistencia de autorizacao a definir.
+  Sem FK fisica entre os dominios.
 end note
 note right of T
   O merchant_id vem do contexto autorizado,
