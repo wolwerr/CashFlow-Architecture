@@ -1,21 +1,22 @@
 @startuml CashFlow_Query
-title CashFlow | Consulta autorizada do consolidado
+title CashFlow | Consulta diária pela aplicação web
 autonumber
 actor Comerciante
+participant "Aplicação Web" as W
+participant "API Gateway" as G
 participant "Serviço de consolidado" as C
-participant "IAM\n(chaves públicas em cache)" as IAM
 database "Banco do consolidado" as B
-Comerciante -> C: GET consolidado por data\n(HTTPS/JSON + JWT)
-opt Cache de chaves públicas vencido
-  C -> IAM: Obtém JWKS (HTTPS)
-  IAM --> C: Chaves públicas
-end
-C -> C: Valida JWT, permissão de leitura,\nmerchant_id autorizado e data
-C -> B: Consulta por merchant_id + data (SQL)
-B --> C: Projeção do comerciante
-C --> Comerciante: 200 - consolidado diário (JSON)
-note over Comerciante,C
-O escopo do comerciante vem do contexto autorizado.
-Definição de saldo e atraso seguem pendentes na Issue #3.
+Comerciante -> W: Seleciona comerciante e data
+W -> G: GET /consolidados?data=... (HTTPS + JWT)
+G -> C: Encaminha consulta
+C -> C: Valida token, permissão de leitura,\nmerchant_id autorizado e data
+C -> B: Busca por merchant_id e data (SQL)
+B --> C: Projeção disponível
+C --> G: 200 (JSON)
+G --> W: 200 (JSON)
+W --> Comerciante: Apresenta consolidado
+note over C,B
+Saldo acumulado, data financeira e
+indicador de atraso dependem da Issue #3.
 end note
 @enduml
