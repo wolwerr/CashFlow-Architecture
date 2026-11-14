@@ -13,8 +13,8 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 | ADR | Tema | Direção inicial | Estado |
 | --- | --- | --- | --- |
 | [ADR-001](ADR-001-language-framework.md) | Linguagem e framework | **C# / ASP.NET Core / .NET 10 LTS** | **Aceita** |
-| [ADR-002](ADR-002-architecture-style-clean-architecture.md) | Estilo arquitetural e Clean Architecture | Dois serviços financeiros independentes, cada um com Domain, Application, Infrastructure e Api | **Proposta para aprovação** |
-| ADR-003 | Persistência | Banco relacional transacional por domínio, PostgreSQL como candidato | **Proposto** |
+| [ADR-002](ADR-002-architecture-style-clean-architecture.md) | Estilo arquitetural e Clean Architecture | Dois microsserviços independentes no monorepo, com Clean Architecture | **Aceita** |
+| [ADR-003](ADR-003-persistence.md) | Persistência | PostgreSQL + EF Core 10, banco lógico por serviço e Dapper somente se justificado | **Proposta para aprovação** |
 | ADR-004 | Comunicação assíncrona | Broker de mensagens, RabbitMQ como candidato | **Proposto** |
 | ADR-005 | Consistência e publicação | Transactional Outbox + consumidor idempotente; sem Event Sourcing no MVP | **Proposto** |
 | ADR-006 | Autenticação e autorização | OIDC/OAuth 2.0, IAM consolidado, JWT validado localmente e escopo por comerciante | **Proposto** |
@@ -57,4 +57,4 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 
 ## Próxima decisão
 
-A [ADR-001](ADR-001-language-framework.md) foi **aceita**: C# / ASP.NET Core sobre .NET 10 LTS. A [ADR-002](ADR-002-architecture-style-clean-architecture.md) está documentada para revisão, com limites de serviços, camadas, dependências, riscos e critérios de validação. A ADR-010 formalizará a meta de cobertura mínima de 80%, e a ADR-011 comparará plataformas CI/CD antes da escolha.
+A [ADR-001](ADR-001-language-framework.md) foi **aceita**: C# / ASP.NET Core sobre .NET 10 LTS. A [ADR-002](ADR-002-architecture-style-clean-architecture.md) foi **aceita**: dois microsserviços independentes desde o MVP dentro de uma única solution e monorepo. A [ADR-003](ADR-003-persistence.md) propõe PostgreSQL com EF Core 10, em revisão antes de aprovar. A ADR-004 avaliará a mensageria. A ADR-010 formalizará a meta de cobertura mínima de 80%, e a ADR-011 comparará plataformas CI/CD antes da escolha.
