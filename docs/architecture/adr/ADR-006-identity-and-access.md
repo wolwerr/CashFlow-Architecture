@@ -1,6 +1,6 @@
 # ADR-006: Identidade, autenticação e autorização por comerciante
 
-> **Status:** proposta para aprovação  
+> **Status:** aceita  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [Building Block View](../building-block-view.md) e Issue #9 (segurança)
@@ -20,11 +20,11 @@ A arquitetura-alvo do CashFlow contempla Web/Mobile, API Gateway e um bloco de i
 
 As comparações tratam de **soluções de identidade**, não de desempenho comprovado. A decisão sobre produto e integração com o ambiente corporativo deve poder ser revisitada.
 
-## Direção proposta
+## Decisão aceita
 
 1. **Protocolos:** utilizar OpenID Connect (OIDC) para autenticação de usuários e OAuth 2.0 para autorização delegada, com fluxos seguros apropriados para o tipo de cliente; para Web/Mobile, avaliar Authorization Code + PKCE. Comunicação via HTTPS.
-2. **Provedor:** preferir **Keycloak para desenvolvimento e demonstração local**, caso o cenário de autenticação seja implementado no MVP; considerar **Microsoft Entra External ID** como alternativa gerenciada na implantação real. A escolha final do produto ainda depende de restrições corporativas, custo e esforço de operação.
-3. **IAM no C4:** interpretar o bloco “Serviço de Identidade e Acessos” como **capacidade/boundary de identidade e administração**, que pode ser implementada por provedor maduro + API de administração de vínculos; **não criar obrigatoriamente um microsserviço próprio que emita tokens nem duplicar uma base de senhas**. Uma futura revisão do C4 poderá distinguir o provedor externo da camada de permissões.
+2. **Provedor:** adotar **Keycloak como provedor de identidade da arquitetura CashFlow**, para desenvolvimento e eventual demonstração local. O **Microsoft Entra External ID** segue como alternativa futura caso políticas corporativas e análise de custo/gestão justifiquem migração. A decisão de adotar Keycloak **não obriga implementar IAM completo no MVP financeiro**.
+3. **IAM no C4:** representar explicitamente o **Keycloak** e o **Banco do Keycloak**; este banco armazena identidade, credenciais e configuração OIDC. **Não criar um microsserviço próprio emissor de tokens nem armazenar cópia de senhas no CashFlow**. Os vínculos usuário/comerciante são regras de negócio do CashFlow; o local de persistência e o modo de consulta serão refinados na Issue #9.
 4. **JWT access tokens:** os serviços Transactions e Consolidation devem validar assinatura e algoritmo permitido, emissor (`iss`), audiência (`aud`), validade (`exp`/`nbf`) e autorização necessária, usando mecanismos suportados por ASP.NET Core. **ID token não é access token** e não deve ser aceito para chamar APIs financeiras.
 5. **JWKS:** obter chaves públicas de forma segura por metadata OIDC/JWKS, mantendo cache e política explícita de renovação/rotação. Com chaves em cache, as APIs podem validar tokens localmente sem chamada ao IAM por requisição.
 6. **Autorização de negócio:** verificar `merchant_id`, associação do sujeito ao comerciante e permissões exigidas no serviço de negócio, não apenas no Gateway. `ADMIN`, `OPERATOR` e `VIEWER` são papéis de referência, sujeitos a refinamento.
@@ -69,15 +69,15 @@ As comparações tratam de **soluções de identidade**, não de desempenho comp
 4. Serviços validam tokens independentemente do Gateway.
 5. Validar continuidade de operações com token válido e chave pública em cache durante falha do IAM, dentro da política de segurança.
 6. Testar rotação/atualização de chaves e política de expiração/revogação.
-7. Documentar configuração local reproduzível caso Keycloak faça parte do MVP; **não aceitar autenticação fictícia como garantia de produção**.
+7. Documentar configuração local reproduzível se Keycloak fizer parte da demonstração do MVP; **não aceitar autenticação fictícia como garantia de produção**.
 
 ## Pontos pendentes
 
 - Confirmar se o desafio requer implementação efetiva de login/gestão de usuários ou somente desenho-alvo (o enunciado prioriza os dois serviços financeiros).
-- Escolher formalmente Keycloak vs. Entra External ID conforme implantação, equipe, disponibilidade e custo.
+- A escolha do Keycloak está aceita; detalhar versão, hardening, operação, backup, HA e eventual migração para um serviço gerenciado conforme implantação e custo.
 - Decidir onde persistir vínculos usuário/comerciante e como refletir a autorização com baixa dependência síncrona.
 - Refinar administração de usuários, MFA, SSO, políticas de senha, revogação, auditoria e LGPD na Issue #9.
-- Alinhar o C4, se necessário, para diferenciar provedor IAM e componente de autorização de domínio.
+- O C4 Nível 2 e a sequência de autenticação foram atualizados para nomear o Keycloak; atualizar as imagens PNG após renderização.
 
 ## Referências
 
