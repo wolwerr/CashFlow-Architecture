@@ -11,6 +11,35 @@ O CashFlow mantém lançamentos de crédito/débito, Outbox transacional, proje�
 
 A ADR-002 define **dois microsserviços com propriedade independente de dados**, sem consultas cruzadas aos bancos alheios. A ADR-001 define C#/.NET 10 LTS. Precisamos selecionar um SGBD e uma estratégia de persistência que favoreçam **transações, integridade, migrations, testes e reprodutibilidade local**.
 
+## Decisão de modelo de dados: relacional versus não relacional
+
+Antes de escolher o produto PostgreSQL, a arquitetura propõe **persistência relacional como modelo primário dos dois serviços financeiros**. Essa é uma decisão de adequação ao domínio, **não uma afirmação de que bancos NoSQL sejam incapazes de garantir transações ou consistência**.
+
+| Critério | Relacional (PostgreSQL / SQL Server) | Não relacional (ex.: MongoDB ou chave-valor) |
+| --- | --- | --- |
+| Lançamento + Outbox no mesmo commit | Transação ACID e constraints naturais para o modelo | Pode ser viável, inclusive com transações em certos produtos, mas exige avaliar modelagem, limites e operação específicos |
+| Integridade e idempotência | Chaves únicas, índices, integridade referencial quando aplicável e transações | Pode oferecer índices únicos e transações; garantias variam por produto e modelo de dados |
+| Saldo diário por comerciante e data | Boa adequação a agregações e consultas SQL com índices | Possível por projeções ou agregações específicas, sem benefício claro demonstrado neste caso |
+| Flexibilidade de esquema | Migrations e esquema explícito | Frequentemente mais flexível para estruturas variáveis |
+| Escalabilidade | Replicação, particionamento e opções gerenciadas, sujeitos a desenho e operação | Alguns produtos priorizam escalabilidade horizontal, com trade-offs próprios |
+| Complexidade neste MVP | Menos decisões adicionais para um domínio financeiro estruturado | Demandaria justificar modelagem e consistência específicas sem ganho comprovado |
+
+### Justificativa arquitetural
+
+1. **Integridade financeira:** crédito/débito confirmado e respectivo evento Outbox devem persistir juntos. A transação no banco de Transactions reduz o risco de registro sem evento para consolidação.
+2. **Atualização idempotente:** no Consolidation, a projeção de saldo e o identificador do evento aplicado devem ser gravados atomicamente, com unicidade verificável para prevenir contabilização duplicada.
+3. **Modelo de dados estruturado:** lançamentos, comerciantes, datas, tipos de movimento e saldos possuem relações e restrições conhecidas. Esquema explícito, constraints e SQL favorecem revisão e auditoria.
+4. **Simplicidade e evidência:** duas bases relacionais por domínio permitem implementar e testar essas garantias sem introduzir complexidade adicional de modelagem NoSQL.
+
+### Trade-offs e condições de revisão
+
+- Um banco relacional **não garante ausência de perda, duplicidade ou corrida por si só**: são necessárias transações corretamente delimitadas, índices/constraints, estratégia de concorrência e testes.
+- Bancos não relacionais **não são descartados por falta genérica de ACID**. MongoDB, por exemplo, oferece transações multi-documento; uma solução NoSQL poderia ser válida com modelo, requisitos e garantias demonstrados.
+- A decisão pode ser revista caso apareçam requisitos de volume, distribuição geográfica, estrutura documental altamente variável ou métricas de operação que justifiquem outro modelo. Adoção pontual de cache, mecanismo de busca ou armazenamento documental não substitui automaticamente o banco transacional de lançamentos.
+- Não propomos **polyglot persistence** no MVP: introduzir outro motor de dados só fará sentido com benefício medido.
+
+Assim, a escolha segue **em duas etapas**: (1) modelo relacional para os registros financeiros; (2) PostgreSQL como SGBD relacional preferido frente ao SQL Server, detalhado abaixo.
+
 ## Alternativas de banco de dados
 
 | Alternativa | Vantagens | Riscos / custos |
