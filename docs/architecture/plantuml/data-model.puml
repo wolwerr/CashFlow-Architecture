@@ -1,5 +1,5 @@
 @startuml CashFlow_Data_Model
-title CashFlow | Modelo lógico preliminar de dados
+title CashFlow | Modelo lógico preliminar por domínio
 hide circle
 skinparam linetype ortho
 skinparam shadowing false
@@ -8,21 +8,68 @@ skinparam entity {
  BorderColor #39779B
  FontColor #1F4259
 }
+package "Contexto: Identidade e Acessos\nBanco IAM (proposta)" #FDF6EB {
+  entity "User" as U {
+    * id : UUID <<PK>>
+    --
+    login_identifier : STRING
+    status : STRING
+    created_at : TIMESTAMP
+  }
+  entity "Merchant" as MT {
+    * id : UUID <<PK>>
+    --
+    display_name : STRING
+    status : STRING
+  }
+  entity "Membership" as MB {
+    * id : UUID <<PK>>
+    --
+    user_id : UUID
+    merchant_id : UUID
+    status : STRING
+  }
+  entity "Role" as R {
+    * id : UUID <<PK>>
+    --
+    code : STRING
+  }
+  entity "MembershipRole" as MR {
+    * membership_id : UUID <<FK>>
+    * role_id : UUID <<FK>>
+  }
+  entity "Permission" as PE {
+    * id : UUID <<PK>>
+    --
+    code : STRING
+  }
+  entity "RolePermission" as RP {
+    * role_id : UUID <<FK>>
+    * permission_id : UUID <<FK>>
+  }
+  U ||--o{ MB : possui
+  MT ||--o{ MB : permite
+  MB ||--o{ MR : recebe
+  R ||--o{ MR : atribuida
+  R ||--o{ RP : concede
+  PE ||--o{ RP : corresponde
+}
 package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
   entity "Transaction" as T {
     * id : UUID <<PK>>
     --
+    merchant_id : UUID <<identificador externo>>
     type : CREDIT | DEBIT
     amount : DECIMAL
     reference_date : DATE
     created_at : TIMESTAMP
-    actor_id : STRING (opcional)
+    actor_id : UUID <<identificador externo>>
     reversal_of_id : UUID (opcional)
   }
   entity "OutboxEvent" as O {
     * id : UUID <<PK>>
     --
-    transaction_id : UUID <<referência>>
+    transaction_id : UUID <<FK>>
     event_type : STRING
     correlation_id : UUID <<metadata>>
     payload : JSON
@@ -34,17 +81,20 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     * id : UUID <<PK>>
     --
     transaction_id : UUID (opcional)
-    actor_id : STRING (opcional)
+    merchant_id : UUID <<identificador externo>>
+    actor_id : UUID <<identificador externo>>
     action : STRING
     occurred_at : TIMESTAMP
     correlation_id : UUID
     outcome : STRING
-    details : JSON mínimo
   }
+  T ||--o{ O : origina
+  T |o--o{ A : auditoria
 }
 package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
   entity "DailyBalance" as D {
-    * reference_date : DATE <<PK proposta>>
+    * merchant_id : UUID <<PK composta>>
+    * reference_date : DATE <<PK composta>>
     --
     credit_total : DECIMAL
     debit_total : DECIMAL
@@ -55,30 +105,25 @@ package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
     * event_id : UUID <<PK>>
     --
     transaction_id : UUID
+    merchant_id : UUID
     processed_at : TIMESTAMP
   }
 }
-T ||--o{ O : "origina"
-T |o--o{ A : "pode ser auditada"
-O ..> P : "mesmo ID de evento\nvia mensageria"
-P ..> D : "atualização atômica\nna projeção"
-note right of A
-  Auditoria append-only:
-  registra quem, o quê e quando.
-  Não substitui lançamentos financeiros.
-  Escritas críticas de negócio podem
-  compartilhar a transação com Transaction.
-  Logs de acesso não precisam fazê-lo.
+O ..> P : evento publicado
+P ..> D : atualiza atomica
+note bottom of MT
+  O IAM e dono do cadastro e dos vinculos.
+  Os demais dominios usam IDs estaveis,
+  sem FK fisica entre bancos.
+end note
+note right of T
+  O merchant_id vem do contexto autorizado,
+  nunca somente de entrada nao confiavel.
+  Actor_id identifica o sujeito autenticado.
 end note
 note bottom of D
-  Saldo acumulado, saldo inicial,
-  comerciante, moeda e regras de
-  estorno seguem pendentes na Issue #3.
-end note
-note bottom of P
-  Sem FK entre os bancos:
-  comunicação por contrato de evento.
-  Correlation ID acompanha a mensagem
-  como header/metadado de transporte.
+  Segregacao por comerciante e proposta.
+  Formula de saldo, data financeira,
+  moeda e estorno dependem da Issue #3.
 end note
 @enduml
