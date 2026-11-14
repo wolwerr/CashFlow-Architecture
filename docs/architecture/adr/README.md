@@ -12,8 +12,8 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 
 | ADR | Tema | Direção inicial | Estado |
 | --- | --- | --- | --- |
-| [ADR-001](ADR-001-language-framework.md) | Linguagem e framework | **C# / ASP.NET Core / .NET 10 LTS**, após comparação com Java/Spring Boot | **Proposta para aprovação** |
-| ADR-002 | Estilo de arquitetura | Dois serviços financeiros independentes, componentes auxiliares sob demanda | **Proposto** |
+| [ADR-001](ADR-001-language-framework.md) | Linguagem e framework | **C# / ASP.NET Core / .NET 10 LTS** | **Aceita** |
+| ADR-002 | Estilo arquitetural e Clean Architecture | Dois serviços financeiros independentes; Clean Architecture dentro de cada serviço | **Proposto** |
 | ADR-003 | Persistência | Banco relacional transacional por domínio, PostgreSQL como candidato | **Proposto** |
 | ADR-004 | Comunicação assíncrona | Broker de mensagens, RabbitMQ como candidato | **Proposto** |
 | ADR-005 | Consistência e publicação | Transactional Outbox + consumidor idempotente; sem Event Sourcing no MVP | **Proposto** |
@@ -21,6 +21,8 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 | ADR-007 | Clientes e borda | Web/Mobile e API Gateway na arquitetura-alvo, não necessariamente no MVP | **Proposto** |
 | ADR-008 | Observabilidade | Logs estruturados, métricas e tracing com OpenTelemetry | **Proposto** |
 | ADR-009 | Implantação e cloud | Docker Compose para avaliação local; cloud de referência a comparar | **Pendente** |
+| ADR-010 | Estratégia de testes e cobertura | Mínimo de **80% de cobertura de linhas**, além de testes de integração, carga e resiliência | **Proposto** |
+| ADR-011 | CI/CD | Comparar GitHub Actions, Azure DevOps Pipelines e Jenkins; automatizar quality gates | **Pendente** |
 
 **Status proposto** significa que o padrão está desenhado, mas ainda não é uma escolha aprovada. Cada ADR será detalhada e terá seu status atualizado após análise dos trade-offs.
 
@@ -55,4 +57,4 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 
 ## Próxima decisão
 
-A [ADR-001](ADR-001-language-framework.md) recomenda **C# / ASP.NET Core sobre .NET 10 LTS** para os serviços financeiros, sujeita à aprovação. Após a revisão, avançar para ADR-002 (estilo arquitetural) e ADR-005 (consistência e Outbox), antes das escolhas definitivas de persistência e mensageria.
+A [ADR-001](ADR-001-language-framework.md) foi **aceita**: C# / ASP.NET Core sobre .NET 10 LTS. A próxima decisão é ADR-002, contemplando Clean Architecture e os limites entre serviços. A ADR-010 formalizará a meta de cobertura mínima de 80%, e a ADR-011 comparará plataformas CI/CD antes da escolha.
