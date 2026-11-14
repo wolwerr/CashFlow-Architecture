@@ -5,7 +5,7 @@
 
 ## 1. Objetivo
 
-Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL de implementação ou escolher um fornecedor de banco. O desafio exige lançamentos e consolidado diário; **auditoria, Outbox e processamento idempotente são decisões de desenho propostas**, motivadas pela proteção de dados financeiros e pela resiliência.
+Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL de implementação ou escolher um fornecedor de banco. O desafio exige lançamentos e consolidado diário; **auditoria, Outbox, processamento idempotente e IAM são decisões de desenho propostas**, motivadas pela proteção de dados financeiros, segregação de acesso e resiliência.
 
 **[Fonte editável do diagrama PlantUML](plantuml/data-model.puml)**
 
@@ -17,15 +17,24 @@ Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL 
 
 | Contexto | Entidade proposta | Para que serve |
 | --- | --- | --- |
+| Identidade e Acessos (IAM) | **User** | Identidade do usuário e status da conta. |
+| Identidade e Acessos (IAM) | **Merchant** | Cadastro do comerciante (proposto). |
+| Identidade e Acessos (IAM) | **Membership** | Vínculo entre usuário e comerciante. |
+| Identidade e Acessos (IAM) | **Role / Permission** | Papéis e permissões e suas associações aos vínculos. |
 | Lançamentos | **Transaction** | Registro financeiro confirmado: tipo, valor, data e identificador. |
 | Lançamentos | **OutboxEvent** | Evento persistido junto ao lançamento, aguardando publicação confiável. |
 | Lançamentos | **AuditEvent** | Trilha de auditoria sobre ações relevantes, especialmente criação, tentativa de correção, estorno e operações administrativas. |
 | Consolidado diário | **DailyBalance** | Visão calculada para consulta dos valores de um dia. |
 | Consolidado diário | **ProcessedEvent** | Identificadores de eventos já aplicados, impedindo contagem dupla. |
 
-O **banco de lançamentos é a fonte de verdade dos registros financeiros**. O consolidado guarda uma visão derivada que deve poder ser reconstruída, conforme estratégia a ser definida na Issue #8.
+O **banco IAM é a fonte de verdade dos vínculos e permissões de acesso**. O `merchant_id` e o `actor_id` em registros financeiros são referências por identificador, **sem FK física** para o IAM. O banco de lançamentos continua sendo a fonte de verdade dos registros financeiros. O consolidado guarda uma visão derivada que deve poder ser reconstruída, conforme estratégia a ser definida na Issue #8.
 
 ### Relações importantes
+
+- A proposta de segregação por comerciante adiciona `merchant_id` em **Transaction**, **AuditEvent**, **DailyBalance** e **ProcessedEvent**. A chave lógica sugerida para **DailyBalance** passa a ser `(merchant_id, reference_date)`.
+- **Membership** associa usuários a comerciantes; os papéis podem ser atribuídos por vínculo, permitindo que a mesma pessoa tenha permissões distintas em estabelecimentos diferentes.
+- O serviço financeiro deve garantir que o `merchant_id` utilizado está **autorizado para o sujeito autenticado**, não apenas aceitar um identificador arbitrário no payload ou na URL.
+- A origem, a validade e o mecanismo de revogação da autorização dependem das Issues #7 e #9. O modelo ainda é preliminar, sem definir se todos os dados de identidade serão armazenados no nosso banco ou geridos por um IAM consolidado.
 
 - Um lançamento pode originar um evento da Outbox; no futuro pode originar outros eventos do ciclo de vida. A Outbox e o lançamento podem ser gravados **na mesma transação**.
 - Um lançamento pode estar relacionado a registros de auditoria. A auditoria de sua criação, quando for requisito de consistência, deve ser persistida **na mesma transação** do lançamento, ou por um mecanismo com garantias equivalentes.
@@ -33,7 +42,7 @@ O **banco de lançamentos é a fonte de verdade dos registros financeiros**. O c
 - O **correlation_id** é um metadado técnico presente em **OutboxEvent** e **AuditEvent**, propagado também nos headers da mensagem. Ele associa registros, eventos e logs da mesma operação; não identifica o lançamento nem substitui o ID do evento.
 - **Transaction** não precisa de correlation_id para representar o fato financeiro. **DailyBalance** não deve receber esse campo, pois agrega várias operações; em **ProcessedEvent** ele é opcional, já que o event_id permite rastrear a origem.
 - **ProcessedEvent e DailyBalance** devem ser atualizados atomicamente ao consumir um evento; em caso de reentrega, o ID já processado impede a soma novamente.
-- **Não existem chaves estrangeiras entre os bancos** de Lançamentos e Consolidado. A ligação ocorre por eventos e identificadores estáveis.
+- **Não existem chaves estrangeiras entre os bancos** de IAM, Lançamentos e Consolidado. A ligação ocorre por eventos e identificadores estáveis.
 
 ## 3. Auditoria financeira proposta
 
@@ -73,7 +82,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 - **Saldo diário:** movimento líquido do dia ou saldo acumulado, incluindo saldo inicial.
 - **Dia financeiro:** definição de data de referência e fuso horário.
-- **Identidade de negócio:** comerciante único ou vários, e necessidade de segregação por comerciante.
+- **Identidade de negócio:** a segregação por comerciante é uma proposta decorrente do IAM; cardinalidades, fluxo de cadastro e dados obrigatórios ainda precisam ser validados.
 - **Moeda e arredondamento:** precisão e convenção.
 - **Correções:** se serão implementadas no MVP e qual regra de estorno.
 - **Auditoria:** quais ações exigem registro transacional, prazo de retenção e quem pode consultar.
@@ -91,6 +100,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 | RNF-04: não perder lançamento confirmado | Transaction + OutboxEvent |
 | RNF-05: idempotência | ProcessedEvent + DailyBalance |
 | R-01 / R-03: perda ou duplicidade | Transações atômicas, Outbox e deduplicação |
-| R-06: dados sensíveis | AuditEvent com campos mínimos e política de acesso |
+| R-06: dados sensíveis | AuditEvent com campos mínimos, IAM e política de acesso |
+| Segregação de comerciantes (proposta) | Merchant, Membership e merchant_id nas projeções e lançamentos |
 
 **Próximos passos:** validar este modelo com as regras de negócio da Issue #3; formalizar decisões de armazenamento e auditoria nas ADRs (#7); detalhar segurança e retenção (#9).
