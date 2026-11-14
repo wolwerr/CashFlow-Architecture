@@ -13,7 +13,7 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 | ADR | Tema | Direção inicial | Estado |
 | --- | --- | --- | --- |
 | [ADR-001](ADR-001-language-framework.md) | Linguagem e framework | **C# / ASP.NET Core / .NET 10 LTS** | **Aceita** |
-| ADR-002 | Estilo arquitetural e Clean Architecture | Dois serviços financeiros independentes; Clean Architecture dentro de cada serviço | **Proposto** |
+| [ADR-002](ADR-002-architecture-style-clean-architecture.md) | Estilo arquitetural e Clean Architecture | Dois serviços financeiros independentes, cada um com Domain, Application, Infrastructure e Api | **Proposta para aprovação** |
 | ADR-003 | Persistência | Banco relacional transacional por domínio, PostgreSQL como candidato | **Proposto** |
 | ADR-004 | Comunicação assíncrona | Broker de mensagens, RabbitMQ como candidato | **Proposto** |
 | ADR-005 | Consistência e publicação | Transactional Outbox + consumidor idempotente; sem Event Sourcing no MVP | **Proposto** |
@@ -57,4 +57,4 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 
 ## Próxima decisão
 
-A [ADR-001](ADR-001-language-framework.md) foi **aceita**: C# / ASP.NET Core sobre .NET 10 LTS. A próxima decisão é ADR-002, contemplando Clean Architecture e os limites entre serviços. A ADR-010 formalizará a meta de cobertura mínima de 80%, e a ADR-011 comparará plataformas CI/CD antes da escolha.
+A [ADR-001](ADR-001-language-framework.md) foi **aceita**: C# / ASP.NET Core sobre .NET 10 LTS. A [ADR-002](ADR-002-architecture-style-clean-architecture.md) está documentada para revisão, com limites de serviços, camadas, dependências, riscos e critérios de validação. A ADR-010 formalizará a meta de cobertura mínima de 80%, e a ADR-011 comparará plataformas CI/CD antes da escolha.
