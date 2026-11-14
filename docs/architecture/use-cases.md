@@ -1,0 +1,107 @@
+# Casos de Uso (Use Case View)
+
+> **Projeto:** CashFlow Architecture · **Milestone:** M2  
+> **Base:** requisitos funcionais da Issue #3 e mapeamento de negócio da Issue #2  
+> **Situação:** versão inicial, com regras de saldo e estorno ainda pendentes
+
+## 1. Objetivo
+
+Esta visão descreve **o que o comerciante deseja fazer no CashFlow**, independentemente de linguagem, framework ou tecnologia de integração.
+
+O desafio exige o registro de débitos e créditos e a consulta ao consolidado diário. Consulta de histórico, validações adicionais e estorno são propostas a serem refinadas, não exigências confirmadas.
+
+## 2. Diagrama de casos de uso
+
+O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos adicionais não foram presumidos.
+
+**Fonte editável:** [use-cases.puml](plantuml/use-cases.puml).
+
+> A imagem PNG será incluída em `images/use-cases.png` após a renderização do novo arquivo PlantUML. O código-fonte é a referência até lá.
+
+## 3. Casos de uso principais
+
+| Código | Caso de uso | Ator | Origem |
+| --- | --- | --- | --- |
+| UC-01 | Registrar crédito | Comerciante | Exigido |
+| UC-02 | Registrar débito | Comerciante | Exigido |
+| UC-03 | Consultar consolidado diário | Comerciante | Exigido |
+| UC-04 | Consultar histórico de lançamentos | Comerciante | Proposto |
+| UC-05 | Estornar lançamento | Comerciante | Proposto |
+
+### UC-01: Registrar crédito
+
+**Objetivo:** registrar uma entrada financeira classificada como crédito.
+
+**Pré-condição proposta:** comerciante autorizado a registrar movimentações.
+
+**Fluxo principal:**
+1. O comerciante informa os dados do crédito.
+2. O sistema valida os dados informados.
+3. O sistema registra o lançamento.
+4. O comerciante recebe a confirmação.
+
+**Alternativa:** se os dados forem inválidos, o sistema informa o problema e não confirma o registro.
+
+**Pós-condição:** crédito registrado e disponível para consolidação.
+
+### UC-02: Registrar débito
+
+**Objetivo:** registrar uma saída financeira classificada como débito.
+
+**Pré-condição proposta:** comerciante autorizado a registrar movimentações.
+
+**Fluxo principal:**
+1. O comerciante informa os dados do débito.
+2. O sistema valida os dados.
+3. O sistema registra o lançamento.
+4. O comerciante recebe a confirmação.
+
+**Alternativa:** dados inválidos impedem a confirmação.
+
+**Pós-condição:** débito registrado e disponível para consolidação.
+
+### UC-03: Consultar consolidado diário
+
+**Objetivo:** consultar o resultado financeiro referente a uma data.
+
+**Pré-condição proposta:** comerciante autorizado a consultar o consolidado.
+
+**Fluxo principal:**
+1. O comerciante informa a data.
+2. O sistema consulta o consolidado disponível.
+3. O sistema apresenta o resultado diário.
+
+**Alternativas:** data inválida; consolidado indisponível; resultado ainda não atualizado.
+
+**Pós-condição:** o comerciante visualiza o resultado ou recebe uma indicação apropriada da indisponibilidade.
+
+**Regra pendente:** definir se “saldo diário” representa movimento líquido ou saldo acumulado, e como tratar dias sem lançamentos.
+
+## 4. Casos de uso sugeridos
+
+### UC-04: Consultar histórico de lançamentos
+
+**Objetivo:** conferir os registros de determinado período.
+
+**Fluxo resumido:** o comerciante escolhe um período e visualiza os lançamentos correspondentes.
+
+**Situação:** sugestão de melhoria, dependente de aprovação do escopo funcional.
+
+### UC-05: Estornar lançamento
+
+**Objetivo:** corrigir o efeito de um lançamento incorreto sem perder sua rastreabilidade.
+
+**Fluxo resumido:** o comerciante identifica o lançamento original, solicita o estorno e recebe a confirmação do ajuste.
+
+**Situação:** proposta para futura definição. A regra de autorização, o dia de efeito e a política de estorno ainda não foram aprovados.
+
+## 5. Relação com a documentação
+
+| Necessidade | Documento |
+| --- | --- |
+| Regras e critérios de aceite | [Requisitos funcionais](../requirements/functional-requirements.md) |
+| Estrutura e responsabilidades dos serviços | [Building Block View](building-block-view.md) |
+| Interações entre serviços | [Diagramas de Sequência](sequence-diagrams.md) |
+| Comportamento em falhas | [Requisitos não funcionais](../requirements/non-functional-requirements.md) e futura estratégia de resiliência (Issue #8) |
+
+Os casos de uso descrevem **ações do comerciante**. A publicação de eventos, a Outbox e a recuperação de falhas são mecanismos internos e não devem ser apresentados como casos de uso do comerciante.
