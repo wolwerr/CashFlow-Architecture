@@ -8,7 +8,7 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 | --- | --- |
 | **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | Estrutura estática da solução: C4 Nível 1 e 2, responsabilidades, protocolos propostos e futura visão de componentes. |
 | **[Diagramas de Sequência](sequence-diagrams.md)** | Interações detalhadas para registro, falha do consolidado e consulta. |
-| **[Visão de Execução (Runtime View)](runtime-view.md)** | Comportamento esperado em operação, falhas, recuperação e relação com requisitos. |
+| **[Casos de Uso (Use Case View)](use-cases.md)** | Ações do comerciante, fluxos principais e alternativas, com requisitos confirmados e propostas separados. |
 
 ## Arquivos editáveis e imagens
 
