@@ -1,0 +1,12 @@
+@startuml CashFlow_Context
+!include <C4/C4_Context>
+title CashFlow | C4 Nível 1: Contexto
+LAYOUT_LEFT_RIGHT()
+Person(comerciante, "Comerciante", "Registra débitos/créditos e consulta o saldo")
+System(cashflow, "CashFlow", "Registra movimentações e disponibiliza o consolidado diário")
+System_Ext(identidade, "Provedor de identidade", "Autentica usuários e emite tokens; solução ainda a escolher")
+Rel(comerciante, cashflow, "Registra lançamentos e consulta saldo", "HTTPS / JSON")
+Rel(comerciante, identidade, "Realiza login", "OIDC / HTTPS (proposto)")
+Rel(cashflow, identidade, "Valida tokens por chaves públicas", "JWKS / HTTPS (proposto)")
+SHOW_LEGEND()
+@enduml
