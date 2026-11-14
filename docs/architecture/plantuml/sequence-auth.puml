@@ -1,0 +1,26 @@
+@startuml CashFlow_Authentication
+title CashFlow | Autenticação e acesso por comerciante (proposta)
+autonumber
+actor "Usuário" as U
+participant "Serviço de Identidade\ne Acessos (IAM)" as IAM
+database "Banco IAM" as DB
+participant "API financeira" as API
+U -> IAM: Solicita autenticação (OIDC/HTTPS, proposto)
+IAM -> DB: Localiza usuário e vínculos de acesso
+DB --> IAM: Usuário, status e vínculos
+IAM -> IAM: Autentica e emite token\npor mecanismo IAM maduro (a definir)
+IAM --> U: Token de acesso com escopos apropriados
+U -> API: Acessa operação (HTTPS + Bearer JWT)
+API -> API: Valida assinatura e claims localmente
+API -> API: Verifica permissão e merchant_id autorizado
+alt Permissão válida
+  API --> U: Operação autorizada
+else Acesso não autorizado
+  API --> U: 403 Forbidden
+end
+note over IAM,API
+Modelo conceitual. Cadastro, associação de papéis,
+MFA, revogação e claims dependem das Issues #7 e #9.
+O usuário nunca escolhe livremente seu escopo de acesso.
+end note
+@enduml
