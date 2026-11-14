@@ -9,6 +9,7 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 | **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | Estrutura estática da solução: C4 Nível 1 e 2, responsabilidades, protocolos propostos e futura visão de componentes. |
 | **[Diagramas de Sequência](sequence-diagrams.md)** | Interações detalhadas para registro, falha do consolidado e consulta. |
 | **[Casos de Uso (Use Case View)](use-cases.md)** | Ações do comerciante, fluxos principais e alternativas, com requisitos confirmados e propostas separados. |
+| **[Modelo de Dados (Data Model View)](data-model.md)** | Entidades por domínio, integridade, Outbox, idempotência e trilha de auditoria financeira. |
 
 ## Arquivos editáveis e imagens
 
@@ -28,7 +29,7 @@ O comando gera PNGs na pasta das fontes; para atualizar as imagens referenciadas
 - **Issue #3:** definição da regra financeira do saldo diário, histórico e correção/estorno.
 - **Issue #7:** ADRs para linguagem, banco de dados, mensageria, autenticação e observabilidade.
 - **Issue #8:** política de falhas, retentativas, DLQ e reconciliação.
-- **Issue #9:** controles de segurança e proteção de dados.
+- **Issue #9:** controles de segurança, retenção, acesso à auditoria e proteção de dados.
 - **Issue #10:** custo, implantação e impactos operacionais.
 
 A descrição da arquitetura não comprova, por si só, a implementação ou a execução de testes. A Issue #6 permanece em revisão visual e funcional.
