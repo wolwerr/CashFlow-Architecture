@@ -11,8 +11,8 @@ Person(admin, "Administrador de acessos", "Gerencia usuários e permissões")
 System_Boundary(cashflow, "CashFlow") {
   Container(web, "Aplicação Web/Mobile", "Web / Mobile", "Interface financeira e administrativa")
   Container(gateway, "API Gateway", "HTTPS / REST", "Roteamento e controles de acesso")
-  Container(iam, "Identidade e Acessos", "IAM / OIDC", "Autenticação, grupos e permissões")
-  ContainerDb(db_iam, "Banco IAM", "Banco de identidade", "Usuários, vínculos e papéis")
+  Container(iam, "Keycloak", "OIDC / OAuth 2.0", "Identidades, login, sessões e tokens")
+  ContainerDb(db_iam, "Banco do Keycloak", "Persistência IAM", "Usuários, credenciais e configuração do provedor")
   Container(lancamentos, "Serviço de lançamentos", "API REST + Outbox", "Registra créditos e débitos")
   ContainerDb(db_lancamentos, "Banco de lançamentos", "Banco transacional", "Movimentações, auditoria e Outbox")
   ContainerQueue(mensageria, "Mensageria", "Broker de eventos", "Distribui eventos financeiros")
@@ -39,8 +39,8 @@ Rel(admin, web, "Administra acessos", "HTTPS")
 Rel_D(web, gateway, "Consome APIs", "HTTPS / JSON")
 
 ' Identidade
-Rel_D(gateway, iam, "Gerencia acessos", "HTTPS / REST")
-Rel_D(iam, db_iam, "Consulta e atualiza usuários", "SQL / TCP")
+Rel_D(gateway, iam, "Administra identidades (proposto)", "HTTPS / REST")
+Rel_D(iam, db_iam, "Persiste identidades e sessões", "SQL / TCP")
 
 ' Fluxo financeiro
 Rel_R(gateway, lancamentos, "Registra movimentações", "HTTPS / REST")
@@ -52,9 +52,10 @@ Rel(gateway, consolidado, "Consulta saldos", "HTTPS / REST")
 
 ' Integrações transversais apresentadas em notas
 note right of iam
-  Login via OIDC / HTTPS.
-  Tokens JWT são validados
-  localmente pelas APIs.
+  Login via Keycloak e OIDC.
+  APIs validam JWT localmente.
+  Vínculos de comerciantes são
+  autorizados no CashFlow.
 end note
 
 note right of telemetria
