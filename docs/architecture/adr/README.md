@@ -12,7 +12,7 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 
 | ADR | Tema | Direção inicial | Estado |
 | --- | --- | --- | --- |
-| ADR-001 | Linguagem e framework | Java 21/Spring Boot **ou** C#/.NET | **Pendente de decisão** |
+| [ADR-001](ADR-001-language-framework.md) | Linguagem e framework | **C# / ASP.NET Core / .NET 10 LTS**, após comparação com Java/Spring Boot | **Proposta para aprovação** |
 | ADR-002 | Estilo de arquitetura | Dois serviços financeiros independentes, componentes auxiliares sob demanda | **Proposto** |
 | ADR-003 | Persistência | Banco relacional transacional por domínio, PostgreSQL como candidato | **Proposto** |
 | ADR-004 | Comunicação assíncrona | Broker de mensagens, RabbitMQ como candidato | **Proposto** |
@@ -55,4 +55,4 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 
 ## Próxima decisão
 
-A primeira discussão detalhada será a **ADR-001: Linguagem e framework**, comparando Java/Spring Boot com C#/.NET para a implementação do MVP. A escolha deve considerar competência disponível, linguagem predominante na empresa, tempo de entrega, testes, operação e qualidade da demonstração.
+A [ADR-001](ADR-001-language-framework.md) recomenda **C# / ASP.NET Core sobre .NET 10 LTS** para os serviços financeiros, sujeita à aprovação. Após a revisão, avançar para ADR-002 (estilo arquitetural) e ADR-005 (consistência e Outbox), antes das escolhas definitivas de persistência e mensageria.
