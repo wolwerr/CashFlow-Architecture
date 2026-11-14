@@ -1,6 +1,6 @@
 # ADR-001: C# e ASP.NET Core para os serviços financeiros
 
-> **Status:** proposta para aprovação  
+> **Status:** aceita  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Escopo da decisão:** linguagem e framework dos serviços de Lançamentos e Consolidado, não dos clientes Web/Mobile.
@@ -44,7 +44,7 @@ Ambas as alternativas são capazes de atender aos requisitos. Não há evidênci
 
 **Referência:** [Política oficial de suporte do .NET](https://dotnet.microsoft.com/pt-br/platform/support/policy), consultada em 14/11/2026.
 
-## Decisão proposta
+## Decisão aceita
 
 Adotar **C# com .NET 10 LTS e ASP.NET Core** nos dois serviços financeiros do MVP:
 
