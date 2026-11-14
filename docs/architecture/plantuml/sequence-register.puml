@@ -1,8 +1,8 @@
 @startuml CashFlow_Register
-title CashFlow | Registro na aplicação web e publicação assíncrona
+title CashFlow | Registro na aplicação Web/Mobile e publicação assíncrona
 autonumber
 actor Comerciante
-participant "Aplicação Web" as W
+participant "Aplicação Web/Mobile" as W
 participant "API Gateway" as G
 participant "Serviço de lançamentos\n(API + worker Outbox)" as L
 database "Banco de lançamentos" as BL
