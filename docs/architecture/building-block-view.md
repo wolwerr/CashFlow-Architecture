@@ -23,7 +23,7 @@ O sistema tem dois serviços de negócio independentes: **Lançamentos** e **Con
 | Bloco | Responsabilidade |
 | --- | --- |
 | Serviço de lançamentos (API + Outbox worker) | Receber e confirmar movimentações; publicar eventos pendentes em segundo plano. |
-| Banco de lançamentos | Guardar lançamentos e eventos Outbox na mesma transação. |
+| Banco de lançamentos | Guardar lançamentos e eventos Outbox; manter trilha de auditoria proposta no mesmo domínio. |
 | Mensageria | Entregar eventos ao serviço de consolidado. |
 | Serviço de consolidado | Atualizar a visão diária e responder consultas de saldo. |
 | Banco do consolidado | Guardar resultados calculados e eventos já processados. |
@@ -51,3 +51,4 @@ Se for útil à avaliação, uma futura visão de componentes pode detalhar **AP
 
 - [Diagramas de sequência](sequence-diagrams.md), para ver as interações passo a passo.
 - [Casos de Uso](use-cases.md), para entender as ações do comerciante e os fluxos de negócio.
+- [Modelo de Dados](data-model.md), para entender os registros financeiros, a Outbox, a projeção e a auditoria.
