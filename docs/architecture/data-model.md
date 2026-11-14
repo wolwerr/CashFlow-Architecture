@@ -28,6 +28,8 @@ O **banco de lançamentos é a fonte de verdade dos registros financeiros**. O c
 - Um lançamento pode originar um evento da Outbox; no futuro pode originar outros eventos do ciclo de vida. A Outbox e o lançamento podem ser gravados **na mesma transação**.
 - Um lançamento pode estar relacionado a registros de auditoria. A auditoria de sua criação, quando for requisito de consistência, deve ser persistida **na mesma transação** do lançamento, ou por um mecanismo com garantias equivalentes.
 - **AuditEvent não substitui Transaction**, e não transforma a solução automaticamente em Event Sourcing.
+- O **correlation_id** é um metadado técnico presente em **OutboxEvent** e **AuditEvent**, propagado também nos headers da mensagem. Ele associa registros, eventos e logs da mesma operação; não identifica o lançamento nem substitui o ID do evento.
+- **Transaction** não precisa de correlation_id para representar o fato financeiro. **DailyBalance** não deve receber esse campo, pois agrega várias operações; em **ProcessedEvent** ele é opcional, já que o event_id permite rastrear a origem.
 - **ProcessedEvent e DailyBalance** devem ser atualizados atomicamente ao consumir um evento; em caso de reentrega, o ID já processado impede a soma novamente.
 - **Não existem chaves estrangeiras entre os bancos** de Lançamentos e Consolidado. A ligação ocorre por eventos e identificadores estáveis.
 
@@ -42,11 +44,19 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 | **Quando** | Instante da ação, em UTC |
 | **Sobre qual registro** | ID do lançamento, quando aplicável |
 | **Resultado** | Sucesso, rejeição ou falha |
-| **Rastreabilidade** | Correlation ID da solicitação |
+| **Rastreabilidade** | Correlation ID da solicitação, também persistido na Outbox e propagado à mensageria |
 
 **Política proposta:** registros de auditoria são **append-only**: não devem ser alterados ou excluídos por usuários da aplicação. Isso **não equivale a armazenamento à prova de adulteração**; proteção contra alteração por administradores exigiria controles adicionais, como armazenamento imutável, trilhas externas, restrições de privilégio e monitoramento.
 
 **Privacidade e segurança:** não copiar tokens, senhas ou dados pessoais desnecessários para `details`. Retenção, acesso à auditoria, criptografia e tratamento de dados pessoais serão definidos na Issue #9. Falhas de autenticação ou solicitações rejeitadas podem ser auditadas fora da transação financeira, sem transformar toda tentativa de acesso em lançamento.
+
+### Metadados de correlação e tracing
+
+- **transaction_id** identifica um lançamento financeiro.
+- **event_id** identifica um evento individual e permite deduplicação no consumidor.
+- **correlation_id** associa requisições, mensagens, auditoria e logs de um mesmo fluxo, inclusive quando há reprocessamentos.
+- O worker publica o correlation_id como **header da mensagem** (proposta de contrato AMQP) e o consumidor preserva o valor em seus logs e telemetria.
+- **trace_id** e **span_id**, quando houver OpenTelemetry, são identificadores de tracing distribuído e não substituem o correlation_id de negócio/operação.
 
 ## 4. Regras de integridade propostas
 
