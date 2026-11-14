@@ -8,7 +8,7 @@ skinparam entity {
  BorderColor #39779B
  FontColor #1F4259
 }
-package "Provedor de identidade: Keycloak\\nBanco gerenciado pelo Keycloak" #FDF6EB {
+package "Provedor de identidade: Keycloak\nBanco gerenciado pelo Keycloak" #FDF6EB {
   entity "Usuario Keycloak (referencia)" as U {
     * subject_id : STRING <<OIDC sub>>
     --
@@ -16,7 +16,7 @@ package "Provedor de identidade: Keycloak\\nBanco gerenciado pelo Keycloak" #FDF
     status : STRING
   }
 }
-package "Contexto: Autorizacao CashFlow\\nPersistencia a definir (Issue #9)" #FDF6EB {
+package "Contexto: Autorizacao CashFlow\nPersistencia a definir (Issue #9)" #FDF6EB {
   entity "Merchant" as MT {
     * id : UUID <<PK>>
     --
