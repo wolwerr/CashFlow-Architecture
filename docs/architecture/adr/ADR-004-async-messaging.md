@@ -1,6 +1,6 @@
 # ADR-004: RabbitMQ para comunicação assíncrona entre serviços financeiros
 
-> **Status:** proposta para aprovação  
+> **Status:** aceita  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), ADR-005 (Outbox, consistência e idempotência)
@@ -22,7 +22,7 @@ Os eventos financeiros devem ser entregues de forma durável e reprocessável ap
 
 Nenhuma alternativa dispensa desenho de consistência e idempotência. A escolha não afirma que RabbitMQ seja intrinsecamente superior a Kafka em toda carga ou integração.
 
-## Decisão proposta
+## Decisão aceita
 
 Utilizar **RabbitMQ com AMQP 0-9-1** no MVP como broker entre Transactions e Consolidation, preservando a propriedade dos eventos em Transactions por meio de **Transactional Outbox**. Executar RabbitMQ no Docker Compose para avaliação. Não fixar uma tecnologia cloud gerenciada nesta ADR.
 
@@ -40,6 +40,12 @@ Transactions Outbox worker
   -> PostgreSQL Consolidation: saldo + event_id processado (mesma transação)
   -> ACK manual após commit
 ```
+
+### Terminologia para implementação e apresentação
+
+- **ACK (acknowledgement):** confirmação do consumidor ao broker. **ACK manual após commit** significa confirmar a mensagem ao RabbitMQ somente depois que a transação no banco do Consolidation gravar, de forma atômica, o saldo e o identificador do evento. Se houver falha antes do ACK, pode ocorrer reentrega e o consumidor deve tratar duplicatas.
+- **Publisher confirm:** confirmação independente, enviada pelo broker ao publicador Outbox. Não é a mesma coisa que ACK do consumidor.
+- **HA (high availability):** alta disponibilidade da infraestrutura. Uma instância RabbitMQ no Docker Compose é um ponto único de falha; Quorum Queues em um cluster com nós e maioria disponíveis são alternativa para produção. Replicação não substitui Outbox, backup e testes de recuperação.
 
 ### Regras de confiabilidade
 
