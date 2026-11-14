@@ -14,9 +14,9 @@ O desafio exige o registro de débitos e créditos e a consulta ao consolidado d
 
 O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos adicionais não foram presumidos.
 
-**Fonte editável:** [use-cases.puml](plantuml/use-cases.puml).
+![Diagrama de casos de uso do CashFlow](images/use-cases.png)
 
-> A imagem PNG será incluída em `images/use-cases.png` após a renderização do novo arquivo PlantUML. O código-fonte é a referência até lá.
+**Fonte editável:** [use-cases.puml](plantuml/use-cases.puml).
 
 ## 3. Casos de uso principais
 
