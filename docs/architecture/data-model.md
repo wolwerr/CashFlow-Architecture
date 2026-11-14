@@ -9,7 +9,9 @@ Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL 
 
 **[Fonte editável do diagrama PlantUML](plantuml/data-model.puml)**
 
-> A imagem `images/data-model.png` será incluída no documento depois que o PlantUML for renderizado e o PNG for enviado ao repositório. O arquivo `.puml` é a fonte oficial.
+![Modelo lógico preliminar de dados do CashFlow](images/data-model.png)
+
+> Imagem renderizada do modelo. O arquivo `.puml` é a fonte editável oficial. Para que a imagem seja exibida no GitHub, envie `data-model.png` para `docs/architecture/images/`.
 
 ## 2. Dados por contexto
 
