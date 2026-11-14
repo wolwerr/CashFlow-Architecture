@@ -6,7 +6,7 @@ Este documento reúne os **diagramas de sequência**. Eles detalham em que ordem
 
 ## Autenticação e autorização por comerciante
 
-Fluxo conceitual de login pela aplicação Web/Mobile, obtenção do token, passagem pelo API Gateway e verificação de autorização no serviço financeiro. Ainda não existe PNG para este novo fluxo.
+Fluxo conceitual de autenticação no **Keycloak** com OIDC (Authorization Code + PKCE para clientes públicos), obtenção do access token, passagem pelo API Gateway e autorização por comerciante no serviço financeiro. O Keycloak não armazena necessariamente os vínculos financeiros entre usuários e comerciantes. A decisão está formalizada na [ADR-006](adr/ADR-006-identity-and-access.md). Ainda não existe PNG deste fluxo.
 
 [Fonte PlantUML](plantuml/sequence-auth.puml)
 
