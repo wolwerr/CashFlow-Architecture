@@ -32,6 +32,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 | RF-04 | Validar dados do lançamento | Recusar lançamentos incompletos ou inválidos e informar o problema ao comerciante. | Proposto | Essencial para o MVP |
 | RF-05 | Consultar histórico | Permitir visualizar os lançamentos registrados para conferência. | Proposto | Desejável |
 | RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
+| RF-07 | Manter trilha de auditoria | Registrar ações financeiras relevantes com autor, operação, horário, resultado e correlação. Não é uma funcionalidade de consulta pública. | Proposto | Importante para integridade |
 
 **Importante:** a existência do consolidado implica alguma regra de cálculo, mas o enunciado **não define** a fórmula de saldo nem o tratamento de saldo inicial. Isso será registrado como decisão de negócio pendente.
 
@@ -91,6 +92,18 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 - O estorno deverá referenciar o lançamento original.
 - O histórico deverá permitir identificar o lançamento e sua correção.
 - A regra de qual dia recebe o efeito do estorno deverá ser definida pelo negócio.
+
+### HU-07: Rastrear ações financeiras (RF-07, proposto)
+
+**Como** responsável pela segurança ou auditoria, **quero** rastrear operações financeiras relevantes **para** investigar alterações e inconsistências.
+
+**Critérios de aceite propostos:**
+- Ações relevantes deixam registro de auditoria com identificador da operação, data/hora, resultado e ator quando conhecido.
+- Um lançamento financeiro confirmado tem rastreabilidade consistente com a gravação.
+- O acesso aos registros é restrito e os detalhes não expõem credenciais ou dados pessoais desnecessários.
+- A consulta administrativa de auditoria, se necessária, será definida separadamente; não foi pedida no desafio.
+
+Veja o [modelo de dados e auditoria](../architecture/data-model.md).
 
 ## 5. Fluxos principais
 
