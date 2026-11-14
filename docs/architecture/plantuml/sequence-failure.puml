@@ -1,34 +1,40 @@
 @startuml CashFlow_Consolidation_Failure
-title CashFlow | Consolidado indisponível sem bloquear lançamentos
+title CashFlow | Registro web com consolidado indisponível
 autonumber
 actor Comerciante
-participant "Serviço de lançamentos\n(API + worker Outbox)" as L
+participant "Aplicação Web" as W
+participant "API Gateway" as G
+participant "Serviço de lançamentos\n(API + Outbox)" as L
 database "Banco de lançamentos" as BL
 queue "Mensageria" as M
 participant "Serviço de consolidado" as C
-note over C: Consolidado indisponível
-Comerciante -> L: POST lançamento (HTTPS/JSON + JWT)
-L -> L: Valida JWT localmente, permissão,\nmerchant_id autorizado e dados
-L -> BL: Grava lançamento + evento Outbox\n(uma transação)
+note over C: Serviço indisponível
+Comerciante -> W: Registra lançamento
+W -> G: POST /lançamentos (HTTPS + JWT)
+G -> L: Encaminha operação
+L -> L: Valida JWT, autorização e dados
+L -> BL: Grava lançamento + Outbox (transação)
 BL --> L: Commit confirmado
-L --> Comerciante: 201 - registro confirmado
-... Publicação assíncrona ...
+L --> G: 201 Created
+G --> W: 201 Created
+W --> Comerciante: Confirma registro
+... Processo assíncrono ...
 L -> BL: Worker busca evento pendente
 BL --> L: Evento
 L -> M: Publica (AMQP, proposto)
 M --> L: Confirma publicação
-L -> BL: Marca evento como publicado
-M ->x C: Falha na entrega
+L -> BL: Marca evento publicado
+M ->x C: Entrega falhou
 note over M,C
-A mensagem deve permanecer recuperável
-pela política de retenção, retry e DLQ a definir.
+O broker deve manter a mensagem recuperável
+conforme política de retry/DLQ a definir.
 end note
 ... Consolidado recuperado ...
 M -> C: Reentrega evento
-C --> M: ACK após persistência idempotente
-note over L,C
-O registro não depende do consolidado.
-JWT válido e chaves em cache evitam dependência
-síncrona do IAM na operação normal.
+C --> M: ACK após processamento idempotente
+note over G,L
+Falha no consolidado não bloqueia registro.
+Gateway e banco de lançamentos precisam
+permanecer disponíveis.
 end note
 @enduml
