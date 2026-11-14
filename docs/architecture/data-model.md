@@ -5,7 +5,7 @@
 
 ## 1. Objetivo
 
-Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL de implementação ou escolher um fornecedor de banco. O desafio exige lançamentos e consolidado diário; **auditoria, Outbox e processamento idempotente são decisões arquiteturais; Keycloak foi escolhido para identidade na ADR-006**, motivadas pela proteção de dados financeiros, segregação de acesso e resiliência.
+Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL de implementação ou escolher um fornecedor de banco. O desafio exige lançamentos e consolidado diário; **auditoria, Outbox e processamento idempotente** foram adotados para proteger os dados financeiros e garantir resiliência. O **Keycloak** foi escolhido para identidade na ADR-006.
 
 **[Fonte editável do diagrama PlantUML](plantuml/data-model.puml)**
 
@@ -42,7 +42,7 @@ O **Keycloak é a fonte de identidade e autenticação**, incluindo o identifica
 - O **correlation_id** é um metadado técnico presente em **OutboxEvent** e **AuditEvent**, propagado também nos headers da mensagem. Ele associa registros, eventos e logs da mesma operação; não identifica o lançamento nem substitui o ID do evento.
 - **Transaction** não precisa de correlation_id para representar o fato financeiro. **DailyBalance** não deve receber esse campo, pois agrega várias operações; em **ProcessedEvent** ele é opcional, já que o event_id permite rastrear a origem.
 - **ProcessedEvent e DailyBalance** devem ser atualizados atomicamente ao consumir um evento; em caso de reentrega, o ID já processado impede a soma novamente.
-- **Não existem chaves estrangeiras entre os dados do Keycloak, os vínculos de autorização do CashFlow, Lançamentos e Consolidado. A ligação ocorre por eventos e identificadores estáveis.
+- **Não existem chaves estrangeiras entre domínios** de Keycloak, autorização CashFlow, Lançamentos e Consolidado. A ligação entre identidades e regras de acesso ocorre por identificadores estáveis; entre os serviços financeiros, também por eventos.
 
 ## 3. Auditoria financeira proposta
 
