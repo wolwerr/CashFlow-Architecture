@@ -1,8 +1,8 @@
 @startuml CashFlow_Query
-title CashFlow | Consulta diária pela aplicação web
+title CashFlow | Consulta diária pela aplicação Web/Mobile
 autonumber
 actor Comerciante
-participant "Aplicação Web" as W
+participant "Aplicação Web/Mobile" as W
 participant "API Gateway" as G
 participant "Serviço de consolidado" as C
 database "Banco do consolidado" as B
