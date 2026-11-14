@@ -32,6 +32,7 @@ Vamos usar a classificação **MoSCoW**:
 | Must Have | RNF-03 No máximo 5% de perda de requisições | Exigência expressa, interpretação a validar. |
 | Must Have | RNF-04 Não perder lançamentos confirmados; RNF-05 não contabilizar em dobro | Propostas para proteger a integridade financeira. |
 | Should Have | RF-05 Consultar histórico de lançamentos | Apoia conferência e investigação; não é exigência expressa. |
+| Should Have | RF-07 Trilha de auditoria financeira | Proposta para rastrear ações sobre dados financeiros; pode ser implementada parcialmente no MVP. |
 | Should Have | RNF-07 Observabilidade e RNF-08 proteção de dados/acessos | Facilitam operação segura e avaliação da arquitetura. |
 | Should Have | RNF-06 Latência previsível e RNF-09 evolução de capacidade | Metas e medidas propostas, a testar. |
 | Could Have | RF-06 Estorno de lançamentos | Importante na operação real, mas depende de regras não fornecidas. |
@@ -55,6 +56,7 @@ Premissa é uma hipótese adotada para seguir com o desenho quando não há info
 | PRE-08 | Não há sistema legado descrito; não presumir migração. | Arquitetura de transição e custos. | Somente se houver contexto adicional. |
 | PRE-09 | Cloud e linguagem não são impostas pelo desafio; linguagem deve ser justificada. | Escolha tecnológica e custos. | Na Milestone M2. |
 | PRE-10 | Regras de correção/estorno, moeda, precisão e retenção ainda não foram definidas. | Integridade e auditoria. | Antes de implementar tais comportamentos. |
+| PRE-11 | Registro de auditoria financeira é uma proteção proposta, não exigência expressa; eventos críticos devem ser íntegros e ter acesso controlado. | Modelo de dados, privacidade e custo operacional. | Issues #7 e #9. |
 
 **Decisões pendentes da Issue #3:** definir modalidade de saldo diário, estorno no MVP e consulta de histórico. Enquanto não forem aprovadas, essas opções permanecem abertas.
 
@@ -77,6 +79,7 @@ Não existe histórico operacional para estimar probabilidades reais. As classif
 | R-06 | Exposição indevida de dados financeiros ou pessoais. | Média | Alto | Alta |
 | R-07 | Recuperação de falha exigir intervenção manual excessiva. | Média | Médio | Média |
 | R-08 | Complexidade de implantação e manutenção acima da necessidade do negócio. | Média | Médio | Média |
+| R-09 | Auditoria incompleta, alterável ou com exposição desnecessária de dados. | Média | Alto | Alta |
 
 ### Como pretendemos reduzir os riscos
 
@@ -90,6 +93,7 @@ Não existe histórico operacional para estimar probabilidades reais. As classif
 | R-06 | Autenticação/autorização, criptografia, segregação de acesso e minimização de dados. | Segurança / Engenharia | Médio |
 | R-07 | Procedimentos de recuperação, métricas, alertas e testes operacionais. | Operação / Engenharia | Médio |
 | R-08 | MVP mínimo, ADRs sobre alternativas e avaliação de custo/complexidade. | Arquitetura | Baixo a médio |
+| R-09 | Registros de auditoria append-only, privilégios mínimos, integridade, retenção e proteção de dados sensíveis. | Segurança / Engenharia | Médio |
 
 *Risco residual **estimado**, condicionado à implementação e à verificação dos controles. As funções são sugestões de responsabilidade, não pessoas ou equipes designadas pela empresa.*
 
