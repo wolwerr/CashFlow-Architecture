@@ -24,6 +24,7 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     --
     transaction_id : UUID <<referência>>
     event_type : STRING
+    correlation_id : STRING <<metadata>>
     payload : JSON
     created_at : TIMESTAMP
     published_at : TIMESTAMP (opcional)
@@ -77,5 +78,7 @@ end note
 note bottom of P
   Sem FK entre os bancos:
   comunicação por contrato de evento.
+  Correlation ID acompanha a mensagem
+  como header/metadado de transporte.
 end note
 @enduml
