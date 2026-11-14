@@ -1,8 +1,8 @@
 @startuml CashFlow_Authentication
-title CashFlow | Login e autorização na solução web
+title CashFlow | Login e autorização na solução Web/Mobile
 autonumber
 actor "Usuário" as U
-participant "Aplicação Web" as W
+participant "Aplicação Web/Mobile" as W
 participant "Serviço de Identidade\ne Acessos (IAM)" as IAM
 database "Banco IAM" as DB
 participant "API Gateway" as G
