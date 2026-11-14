@@ -24,7 +24,7 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     --
     transaction_id : UUID <<referência>>
     event_type : STRING
-    correlation_id : STRING <<metadata>>
+    correlation_id : UUID <<metadata>>
     payload : JSON
     created_at : TIMESTAMP
     published_at : TIMESTAMP (opcional)
@@ -37,7 +37,7 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     actor_id : STRING (opcional)
     action : STRING
     occurred_at : TIMESTAMP
-    correlation_id : STRING
+    correlation_id : UUID
     outcome : STRING
     details : JSON mínimo
   }
