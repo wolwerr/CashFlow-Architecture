@@ -1,6 +1,6 @@
 # ADR-002: Microsserviços financeiros com Clean Architecture
 
-> **Status:** proposta para aprovação  
+> **Status:** aceita  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Decisão relacionada:** [ADR-001: C# / ASP.NET Core / .NET 10 LTS](ADR-001-language-framework.md)
@@ -24,7 +24,7 @@ Esta ADR decide **as fronteiras de implantação e a estrutura interna do backen
 
 **Observação:** separar processos não garante resiliência automaticamente. Ela depende da inexistência de chamadas síncronas ao consolidado no caminho de registro, da persistência confiável e dos testes de falha.
 
-## 3. Decisão proposta
+## 3. Decisão aceita
 
 Adotar **dois serviços financeiros implantáveis de forma independente**:
 
@@ -75,6 +75,8 @@ tests/
   CashFlow.Consolidation.UnitTests/
   CashFlow.Consolidation.IntegrationTests/
 ```
+
+**Uma única `CashFlow.sln` não significa monólito nem uma única aplicação:** ela é apenas o agrupador dos projetos no monorepo. `CashFlow.Transactions.Api` e `CashFlow.Consolidation.Api` são aplicações executáveis distintas, com processos, imagens Docker, bancos lógicos, pipelines e ciclos de implantação independentes. Não há fase planejada de 'extrair módulos' para criar microsserviços: eles já são independentes desde o MVP.**
 
 Os dois projetos `.Api` são os hosts de execução da versão inicial. O `BackgroundService` do Outbox pode ser registrado no host de Transactions com implementação/portas de Infrastructure. **Não criar um terceiro microsserviço apenas para o publisher**. Se a implantação demandar escala ou isolamento adicional, o worker pode ganhar host separado sem mudar a propriedade dos dados ou as regras do Domain.
 
