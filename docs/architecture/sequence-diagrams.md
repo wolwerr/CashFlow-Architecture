@@ -2,7 +2,7 @@
 
 > **Issue #6 · Milestone M2** | Interações da arquitetura proposta
 
-Este documento reúne os **diagramas de sequência**. Eles detalham em que ordem os participantes interagem. São evidências visuais da [Visão de Execução](runtime-view.md).
+Este documento reúne os **diagramas de sequência**. Eles detalham em que ordem os participantes interagem. Complementam os [Casos de Uso](use-cases.md), mostrando como os serviços interagem. Os cenários de resiliência serão detalhados na Issue #8.
 
 ## Registro de lançamento e publicação assíncrona
 
