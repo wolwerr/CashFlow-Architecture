@@ -5,7 +5,7 @@ actor "Usuário" as U
 participant "Aplicação Web/Mobile" as W
 participant "Keycloak\n(provedor OIDC)" as KC
 database "Banco do Keycloak" as DB
-participant "NGINX (proxy opcional)" as G
+participant "NGINX (reverse proxy)" as G
 participant "API financeira" as API
 U -> W: Acessa a aplicação
 W -> KC: Inicia Authorization Code + PKCE (OIDC / HTTPS)
@@ -16,7 +16,7 @@ DB --> KC: Resultado da autenticação
 KC --> W: Redireciona com código de autorização
 W -> KC: Troca código + code_verifier por tokens (HTTPS)
 KC --> W: Access token e demais tokens conforme fluxo
-W -> G: Requisição com access token (se proxy configurado)
+W -> G: Requisição com access token via NGINX
 G -> API: Encaminha Bearer token sem alterar autorização
 API -> API: Valida assinatura JWT, issuer, audience e prazo
 API -> API: Verifica permissão e vínculo autorizado ao merchant_id
@@ -37,8 +37,8 @@ BFF futuro; a gestão segura de tokens
 e callback depende do tipo de cliente (ADR-007).
 end note
 note over G,API
-NGINX e opcional; sem ele, React chama a API
-pela URL permitida no ambiente controlado.
+NGINX faz o proxy das APIs no MVP.
+A API valida o JWT e a autorizacao.
 end note
 note over API
 As relações usuário/comerciante são regras do
