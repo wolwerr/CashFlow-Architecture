@@ -80,7 +80,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 ## 5. Campos ainda não fechados
 
-- **Saldo diário: decidido exibir ambos.** `net_amount = credit_total - debit_total`; `closing_balance` corresponde ao saldo inicial somado aos movimentos líquidos até a data. O saldo inicial e a estratégia física para calcular/materializar o acumulado, incluindo lançamentos retroativos, ainda dependem de definição.
+- **Saldo diário: decidido exibir ambos.** `net_amount = credit_total - debit_total`; `closing_balance` corresponde ao saldo inicial somado aos movimentos líquidos até a data. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**, sem lançamento de abertura ou campo configurável obrigatório. A estratégia física para calcular/materializar o acumulado, incluindo lançamentos retroativos, ainda depende de definição.
 - **Dia financeiro:** definição de data de referência e fuso horário.
 - **Identidade e autorização:** Keycloak é o provedor escolhido para autenticação. `actor_id` representa referência textual ao sujeito OIDC, não UUID obrigatório. Definir issuer/namespace e, se houver ID interno, o mapeamento. A segregação por comerciante é uma regra do CashFlow; armazenamento, cardinalidades e fluxos de cadastro ainda precisam ser validados.
 - **Moeda e arredondamento:** precisão e convenção.
