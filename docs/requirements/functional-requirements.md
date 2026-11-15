@@ -34,7 +34,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 | RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
 | RF-07 | Manter trilha de auditoria | Registrar ações financeiras relevantes com autor, operação, horário, resultado e correlação. Não é uma funcionalidade de consulta pública. | Proposto | Importante para integridade |
 
-**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. **RN-09 decidida:** em dias sem lançamentos, totais de crédito e débito e movimento líquido são zero, e o saldo acumulado é mantido. **RN-04 decidida:** o comerciante informa a data de competência; o sistema registra o instante da criação em UTC. Política para datas retroativas e futuras ainda pendente.
+**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. **RN-09 decidida:** em dias sem lançamentos, totais de crédito e débito e movimento líquido são zero, e o saldo acumulado é mantido. **RN-04 decidida:** o comerciante informa a data de competência; o sistema registra o instante da criação em UTC. **RN-04 complementada:** aceitar competências passadas ou atuais e rejeitar competências futuras; lançamentos retroativos corrigem os saldos acumulados desde a competência afetada.
 
 ## 4. Histórias de usuário e critérios de aceite
 
@@ -44,7 +44,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 
 **Critérios de aceite:**
 - Dado um crédito com dados válidos, quando o registro for solicitado, então o sistema deverá confirmar que o lançamento foi registrado.
-- O lançamento registrado deverá permanecer disponível para compor o consolidado, de acordo com a regra de data que será definida.
+- O lançamento registrado compõe o consolidado de sua data de competência (RN-04); quando retroativo, modifica também os saldos acumulados afetados.
 - Dados inválidos não devem produzir um lançamento confirmado (validação proposta em RF-04).
 
 ### HU-02: Registrar débito (RF-02)
@@ -138,7 +138,7 @@ Considere que, em um mesmo dia, sejam registrados:
 
 Esse exemplo pressupõe, **apenas para ilustração**, que crédito soma e débito subtrai.
 
-O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será o saldo anterior mais R$ 150,00. No MVP, o saldo inicial de cada comerciante será **R$ 0,00**. Em dias sem movimentos, o saldo acumulado permanece inalterado (RN-09). A política para lançamentos retroativos permanece pendente.
+O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será o saldo anterior mais R$ 150,00. No MVP, o saldo inicial de cada comerciante será **R$ 0,00**. Em dias sem movimentos, o saldo acumulado permanece inalterado (RN-09). Competências passadas ou atuais são aceitas, futuras são rejeitadas, e os saldos acumulados são corrigidos a partir da data retroativa (RN-04).
 
 ## 7. Regras e dúvidas que precisam de decisão
 
@@ -147,7 +147,7 @@ O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será
 | RN-01 | Crédito aumenta e débito diminui o saldo? | Define a interpretação das movimentações. |
 | RN-02 | **Decidido: apresentar movimento líquido diário e saldo acumulado.** | Movimento líquido = créditos do dia - débitos do dia; saldo acumulado = saldo inicial + soma dos movimentos líquidos até a data. O saldo inicial no MVP será R$ 0,00 por comerciante (RN-03). |
 | RN-03 | **Decidido: saldo inicial de R$ 0,00 por comerciante no MVP.** | O saldo acumulado parte de zero e soma os movimentos líquidos registrados no CashFlow. Não há ajuste manual de abertura no MVP. |
-| RN-04 | **Decidido: data de competência informada pelo comerciante e instante de registro em UTC.** | `reference_date` representa a data de negócio; `created_at` registra o instante efetivo em UTC. Datas futuras, retroativas e data padrão da interface ainda exigem regras. |
+| RN-04 | **Decidido: data de competência informada pelo comerciante e instante de registro em UTC.** | `reference_date` representa a data de negócio; `created_at` registra o instante efetivo em UTC. Datas passadas ou atuais são aceitas; futuras são rejeitadas. Após registro retroativo, saldos acumulados na data e posteriores devem refletir o movimento. A data padrão da interface e o fuso usado para definir a data atual ainda serão especificados. |
 | RN-05 | Um lançamento pode ser excluído, editado ou estornado? | Define correções e preservação do histórico. |
 | RN-06 | É necessário separar dados de diferentes comerciantes? | Define o escopo da consulta e da identificação. |
 | RN-07 | **Decidido: somente BRL, com duas casas decimais e montantes positivos no MVP.** | Usar `decimal` no .NET e `numeric(19,2)` no PostgreSQL; rejeitar `amount <= 0` e valores com mais de duas casas, sem arredondamento silencioso. `CREDIT`/`DEBIT` define o sinal contábil; saída no consolidado mantém duas casas. |
