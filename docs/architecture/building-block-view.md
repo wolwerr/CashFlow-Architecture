@@ -20,12 +20,12 @@ A **solução completa proposta** contém uma Aplicação Web/Mobile, um API Gat
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> O diagrama apresenta a arquitetura-alvo. A escolha de frontend e Gateway será formalizada na [ADR-007](adr/ADR-007-clients-api-gateway.md).
+> O diagrama representa a **arquitetura-alvo**, não o escopo de implantação do MVP. A [ADR-007](adr/ADR-007-clients-api-gateway.md) aprova React + TypeScript e adia um API Gateway dedicado para evolução futura; NGINX é apenas proxy opcional no MVP. A [ADR-008](adr/ADR-008-observability.md) está em revisão para a estratégia de observabilidade.
 
 | Bloco | Responsabilidade |
 | --- | --- |
-| Aplicação Web/Mobile (proposta) | Canais Web e Mobile para comerciantes e administradores, formulários, consultas e apresentação de erros. |
-| API Gateway (proposto) | Ponto de entrada para APIs, roteamento e controles de borda; não substitui autorização nos serviços. |
+| Aplicação Web/Mobile (arquitetura-alvo) | React + TypeScript responsivo como cliente Web; aplicativo nativo não previsto no MVP. |
+| API Gateway (evolução futura) | Ponto de entrada para roteamento e controles de borda; não será um componente obrigatório do MVP. NGINX é candidato, podendo atuar como proxy simples quando necessário. |
 | Serviço de lançamentos (API + Outbox worker) | Receber e confirmar movimentações; publicar eventos pendentes em segundo plano. |
 | Banco de lançamentos | Guardar lançamentos e eventos Outbox; manter trilha de auditoria proposta no mesmo domínio. |
 | Mensageria | Entregar eventos ao serviço de consolidado. |
@@ -61,7 +61,7 @@ Os protocolos representam **propostas**, não decisões finais. Produtos e garan
 | Consulta ao consolidado diário | **Exigido pelo desafio** |
 | Independência entre registro e consolidação | **Exigida pelo desafio** |
 | Interfaces Web/Mobile e painel administrativo | **Proposta de solução completa**, não exigida |
-| API Gateway | **Proposta**, avaliar necessidade e custo |
+| API Gateway | **Evolução futura**, conforme ADR-007; NGINX pode ser usado como proxy simples sem equivaler a um Gateway dedicado |
 | Keycloak e seu banco | **Escolha arquitetural aceita (ADR-006)**; implantação e administração completas podem ficar fora do MVP financeiro |
 | Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
 
@@ -77,7 +77,7 @@ As APIs de **Lançamentos** e **Consolidado** devem validar os JWTs **localmente
 
 ## Telemetria e observabilidade
 
-O **API Gateway**, o **Keycloak** e os serviços de **Lançamentos** e **Consolidado** emitem telemetria para a infraestrutura de observabilidade. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
+Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak** e um eventual **API Gateway** poderão emitir telemetria quando forem implantados e configurados. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
 
 | Sinal | Uso esperado |
 | --- | --- |
