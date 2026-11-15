@@ -8,7 +8,7 @@ participant "Consolidation API" as C
 database "PostgreSQL\nConsolidation" as DB
 
 U -> W: Seleciona comerciante e data
-W -> G: GET /api/consolidation/*\nBearer JWT; HTTPS :443 publico
+W -> G: GET /api/v1/consolidation/*\nBearer JWT; HTTPS :443 publico
 G -> C: Proxy com Authorization\nHTTP :8080 privado
 C -> C: Valida assinatura JWT, issuer, aud, exp\ne autorizacao por merchant_id
 alt Requisicao nao autenticada ou nao autorizada
@@ -20,13 +20,13 @@ else Consulta autorizada
     C --> G: Resposta de validacao; contrato pendente
     G --> W: Exibe erro
   else Parametros validos
-    C -> DB: Busca DailyBalance por merchant_id e dia\nSQL TCP :5432; banco proprio
+    C -> DB: Consulta totais do dia e soma net_amount\nate a data, no banco proprio
     alt Projecao encontrada
-      DB --> C: DailyBalance
-      C --> G: Resultado diario\ncontrato e semantica ainda pendentes
+      DB --> C: Totais diarios e soma historica
+      C --> G: Creditos, debitos, liquido e acumulado
       G --> W: Apresenta saldo
     else Dia sem movimentacao
-      DB --> C: Sem movimento no dia; consulta ultimo saldo ate a data
+      DB --> C: Sem movimento na data; soma anteriores
       C --> G: Credito 0, debito 0, liquido 0; acumulado anterior
       G --> W: Mostra movimento zero e saldo mantido
     else Dados atrasados ou falha na projecao
@@ -40,6 +40,6 @@ note over C,DB
 Consolidation nao consulta Transactions.
 Liquido e acumulado sao apresentados.
 Dias vazios mantem saldo anterior.
-Retroativos corrigem saldos acumulados.\nAtraso e estrategia de recomposicao pendentes.
+Retroativos atualizam totais do dia.\nAcumulado calculado pela soma historica.\nSLO 95% em 30s, ainda nao testado.
 end note
 @enduml
