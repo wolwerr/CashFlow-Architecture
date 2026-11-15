@@ -75,7 +75,7 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 
 **Pós-condição:** o comerciante visualiza o resultado ou recebe uma indicação apropriada da indisponibilidade.
 
-**RN-02 decidida em 15/11/2026:** a consulta apresenta totais de crédito, débito, **movimento líquido do dia** e **saldo acumulado**. **RN-03 decidida:** o saldo inicial é **R$ 0,00 por comerciante** no MVP. **RN-09 decidida:** em dias sem movimentações, crédito, débito e líquido são R$ 0,00 e o acumulado anterior é mantido; antes do primeiro registro, fica em R$ 0,00. **RN-04 decidida:** data de competência informada pelo comerciante e instante de registro em UTC. **RN-07 decidida:** valores em BRL, positivos e com até duas casas decimais; zero, negativos e precisão excessiva são rejeitados, sem arredondamento automático. Regras de datas retroativas/futuras seguem pendentes.
+**RN-02 decidida em 15/11/2026:** a consulta apresenta totais de crédito, débito, **movimento líquido do dia** e **saldo acumulado**. **RN-03 decidida:** o saldo inicial é **R$ 0,00 por comerciante** no MVP. **RN-09 decidida:** em dias sem movimentações, crédito, débito e líquido são R$ 0,00 e o acumulado anterior é mantido; antes do primeiro registro, fica em R$ 0,00. **RN-04 decidida:** data de competência informada pelo comerciante e instante de registro em UTC. **RN-07 decidida:** valores em BRL, positivos e com até duas casas decimais; zero, negativos e precisão excessiva são rejeitados, sem arredondamento automático. **Complemento da RN-04 decidido:** aceitar competências passadas ou atuais, rejeitar futuras e recompor saldos acumulados afetados. Fuso de referência da data atual e estratégia física de recomposição continuam pendentes.
 
 ## 4. Casos de uso sugeridos
 
