@@ -100,7 +100,7 @@ package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
     credit_total : NUMERIC(19,2)
     debit_total : NUMERIC(19,2)
     net_amount : NUMERIC(19,2)
-    closing_balance : NUMERIC(19,2) <<materializacao a definir>>
+    ' closing_balance calculado na leitura
     updated_at : TIMESTAMP
   }
   entity "ProcessedEvent" as P {
