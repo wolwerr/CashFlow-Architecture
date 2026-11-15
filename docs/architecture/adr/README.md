@@ -21,7 +21,7 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 | [ADR-007](ADR-007-clients-api-gateway.md) | Clientes e borda | React + TypeScript; sem Gateway dedicado no MVP; NGINX incluído no MVP e Gateway/BFF futuros | **Decidida** |
 | [ADR-008](ADR-008-observability.md) | Observabilidade | OpenTelemetry .NET + Collector; Prometheus, Loki, Tempo e Grafana (stack de observabilidade decidida) | **Decidida** |
 | [ADR-009](ADR-009-deployment-cloud.md) | Implantação e cloud | LOCAL Docker; DEV/HOM econômicos e isolados, PROD AKS Standard + PostgreSQL HA; base Azure US$ 1.305,02/mês | **Decidida** |
-| ADR-010 | Estratégia de testes e cobertura | Mínimo de **80% de cobertura de linhas**, além de testes de integração, carga e resiliência | **Proposto** |
+| [ADR-010](ADR-010-testing-strategy.md) | Estratégia de testes e cobertura | **Proposta** de 80% de linhas por microsserviço, testes unitários, integração real, carga e resiliência | **Proposta** |
 | ADR-011 | CI/CD | Comparar GitHub Actions, Azure DevOps Pipelines e Jenkins; automatizar quality gates | **Pendente** |
 
 **Decidida** indica que a decisão arquitetural foi registrada após análise das alternativas e dos trade-offs. Não significa que já foi implementada ou validada por testes. **Proposta** e **Pendente** continuam estados distintos.
