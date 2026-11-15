@@ -3,14 +3,14 @@ title CashFlow | Registro Web/Mobile com consolidado indisponível
 autonumber
 actor Comerciante
 participant "Aplicação Web/Mobile" as W
-participant "NGINX (proxy opcional)" as G
+participant "NGINX (reverse proxy)" as G
 participant "Serviço de lançamentos\n(API + Outbox)" as L
 database "Banco de lançamentos" as BL
 queue "Mensageria" as M
 participant "Serviço de consolidado" as C
 note over C: Serviço indisponível
 Comerciante -> W: Registra lançamento
-W -> G: POST /lançamentos (via proxy, se configurado)
+W -> G: POST /lançamentos (via NGINX)
 G -> L: Encaminha operação
 L -> L: Valida JWT, autorização e dados
 L -> BL: Grava lançamento + Outbox (transação)
@@ -33,9 +33,9 @@ end note
 M -> C: Reentrega evento
 C --> M: ACK após processamento idempotente
 note over G,L
-NGINX e opcional; sem ele, a API e acessada diretamente.
+NGINX encaminha a requisicao para Transactions.
 Falha no consolidado não bloqueia registro.
-Proxy (se utilizado) e banco de lançamentos precisam
+NGINX e banco de lançamentos precisam
 permanecer disponíveis para o acesso correspondente.
 end note
 @enduml
