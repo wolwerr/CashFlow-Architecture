@@ -1,6 +1,6 @@
 # ADR-007: Canais Web/Mobile, API Gateway e proteção da sessão
 
-> **Status:** proposta para aprovação  
+> **Status:** aceita  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Relacionadas:** [ADR-001](ADR-001-language-framework.md), [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-006](ADR-006-identity-and-access.md)
@@ -22,7 +22,7 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Blazor com .NET** | Linguagem C# compartilhada, integração ao ecossistema Microsoft | Equipe precisa dominar modelo de renderização e trade-offs do ambiente Blazor; não há requisito que exija uniformizar a linguagem do frontend |
 | **Sem frontend no MVP** | Prioriza as APIs e os testes fundamentais | Demonstração para usuários menos visuais |
 
-**Proposta:** utilizar **React + TypeScript**, com interface responsiva. **Não criar aplicações Android e iOS nativas no MVP**. Uma PWA pode ser avaliada futuramente se houver requisitos de instalação, offline ou notificações; a simples responsividade não garante capacidades PWA.
+**Decisão aceita:** utilizar **React + TypeScript**, com interface responsiva. **Não criar aplicações Android e iOS nativas no MVP**. Uma PWA pode ser avaliada futuramente se houver requisitos de instalação, offline ou notificações; a simples responsividade não garante capacidades PWA.
 
 ## 2. API Gateway: alternativas
 
@@ -33,7 +33,7 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Gateway gerenciado na cloud** | Operação de borda delegada, funcionalidades condicionadas ao produto | Dependência do provedor e custos variáveis; menor reprodução em Docker Compose |
 | **Acesso direto às duas APIs** | Menos infraestrutura e menor latência inicial | Clientes conhecem múltiplas origens/endereços; políticas de borda dispersas |
 
-**Decisão de escopo proposta:** **não implementar um API Gateway dedicado no MVP**. Para a demonstração, as duas APIs financeiras podem ser acessadas diretamente em ambiente local/controlado e protegidas por seus próprios controles de autenticação e autorização. Um NGINX simples pode ser adicionado somente se for necessário servir o React, concentrar origens ou fazer proxy/TLS; sua presença não deve ser apresentada automaticamente como implantação de uma plataforma completa de API Gateway. **Na arquitetura-alvo**, manter o papel de API Gateway como evolução futura, com **NGINX como tecnologia candidata**, reavaliando necessidade, recursos, custo e operação quando houver múltiplos clientes ou requisitos explícitos de políticas de borda. YARP permanece alternativa se houver necessidade de extensões em C#.
+**Decisão de escopo aceita:** **não implementar um API Gateway dedicado no MVP**. Para a demonstração, as duas APIs financeiras podem ser acessadas diretamente em ambiente local/controlado e protegidas por seus próprios controles de autenticação e autorização. Um NGINX simples pode ser adicionado somente se for necessário servir o React, concentrar origens ou fazer proxy/TLS; sua presença não deve ser apresentada automaticamente como implantação de uma plataforma completa de API Gateway. **Na arquitetura-alvo**, manter o papel de API Gateway como evolução futura, com **NGINX como tecnologia candidata**, reavaliando necessidade, recursos, custo e operação quando houver múltiplos clientes ou requisitos explícitos de políticas de borda. YARP permanece alternativa se houver necessidade de extensões em C#.
 
 Um Gateway futuro pode centralizar TLS (conforme infraestrutura), roteamento `/api/transactions/*` e `/api/consolidation/*`, limites de requisição, correlação e logs. **O Gateway não deve ser a única camada de autenticação/autorização**: cada API financeira valida JWT e verifica escopo do comerciante.
 
