@@ -16,7 +16,7 @@ O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos.
 
 ## C4 Nível 2: Contêineres
 
-A **solução completa proposta** contém uma aplicação React responsiva, NGINX como reverse proxy definido para implementação no MVP, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos. **O React faz login diretamente no Keycloak; o NGINX encaminha o Bearer token e cada API valida JWT localmente com chaves JWKS obtidas sob demanda ou em cache.**
+A **solução completa proposta** contém uma aplicação React responsiva, NGINX como reverse proxy definido para implementação no MVP, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos. **O React faz login diretamente no Keycloak; o NGINX encaminha o Bearer token e cada API valida JWT localmente com chaves JWKS obtidas sob demanda ou em cache.** O diagrama também mostra uma **integração NGINX → Keycloak opcional e futura**, que exigiria um adaptador de autenticação (por exemplo, `auth_request`); **essa integração não existe no template atual nem substitui a validação dos backends**.
 
 ![Contêineres do CashFlow](images/c4-containers.png)
 
@@ -55,6 +55,7 @@ Os números são **portas de destino**, não portas de origem. NGINX :8080 está
 | NGINX → Consolidation | HTTP/TCP | **8080** | Exemplo `consolidation:8080`, rede privada |
 | Navegador → Keycloak | OIDC/HTTPS | **443** | URL pública e terminação TLS a definir |
 | APIs → JWKS Keycloak | HTTPS/TCP | **443** | Endpoint externo/privado conforme implantação; cache local |
+| NGINX → integração IAM opcional | HTTPS/TCP | **443** | **Futura, não implementada**: `auth_request` com adaptador OIDC ou solução equivalente; não é login obrigatório no fluxo atual |
 | NGINX → APIs financeiras | HTTP/TCP | **8080** | Preserva `Authorization: Bearer`; o NGINX não valida JWT no template atual |
 | Keycloak → banco de identidade | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
 | APIs → bancos lógicos próprios | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
