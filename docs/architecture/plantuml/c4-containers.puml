@@ -9,15 +9,15 @@ Person(admin, "Administrador", "Usuários e permissões")
 
 System_Boundary(cashflow, "CashFlow") {
   Container(web, "Frontend", "React / TypeScript", "SPA executada no navegador")
-  Container(nginx, "NGINX", "HTTP interno :8080", "Arquivos estáticos e proxy /api/*")
+  Container(nginx, "NGINX", "HTTP interno :8080", "Arquivos estáticos e proxy /api/v1/*")
   Container(iam, "Keycloak", "OIDC / HTTPS :443", "Login, tokens e chaves JWKS")
-  ContainerDb(db_iam, "Banco IAM", "PostgreSQL / TCP :5432", "Identidades e configuração")
+  ContainerDb(db_iam, "Banco IAM", "PostgreSQL / TCP :5432", "Identidades e configuração")\n  ContainerDb(db_authorization, "Banco Autorização CashFlow", "PostgreSQL / TCP :5432", "Merchant, Membership e ADMIN/OPERATOR")
 
   Container(transactions, "Transactions", ".NET 10 / HTTP :8080", "API de lançamentos e Outbox worker")
   Container(consolidation, "Consolidation", ".NET 10 / HTTP :8080", "API de saldo e consumidor")
   ContainerQueue(rabbitmq, "RabbitMQ", "AMQP / TCP :5672", "Mensagens financeiras")
   ContainerDb(db_transactions, "Banco Transactions", "PostgreSQL / TCP :5432", "Lançamentos e Outbox")
-  ContainerDb(db_consolidation, "Banco Consolidation", "PostgreSQL / TCP :5432", "Saldos e eventos processados")
+  ContainerDb(db_consolidation, "Banco Consolidation", "PostgreSQL / TCP :5432", "Totais diários e eventos processados")
   Container(observability, "Observabilidade", "OTLP :4317 / :4318", "Collector, Prometheus, Loki, Tempo e Grafana")
 }
 
@@ -36,7 +36,7 @@ Lay_D(rabbitmq, observability)
 
 Rel(comerciante, web, "Usa a aplicação", "HTTPS :443")
 Rel(admin, web, "Administra acessos", "HTTPS :443")
-Rel(web, nginx, "Busca assets e acessa /api/*", "HTTPS :443 externo")
+Rel(web, nginx, "Busca assets e acessa /api/v1/*", "HTTPS :443 externo")
 Rel(web, iam, "Login OIDC + PKCE", "HTTPS :443")
 
 ' Integração opcional na borda, NÃO presente no template atual.
@@ -52,8 +52,8 @@ Rel(transactions, iam, "Obtém JWKS; valida JWT localmente", "HTTPS :443")
 Rel(consolidation, iam, "Obtém JWKS; valida JWT localmente", "HTTPS :443")
 
 Rel(iam, db_iam, "Persiste identidades", "TCP :5432")
-Rel(transactions, db_transactions, "Grava lançamento + Outbox", "TCP :5432")
-Rel(consolidation, db_consolidation, "Lê e atualiza projeções", "TCP :5432")
+Rel(transactions, db_transactions, "Grava lançamento, idempotência, auditoria + Outbox", "TCP :5432")\nRel(transactions, db_authorization, "Valida vínculo por interface de autorização a definir", "protocolo a especificar")\nRel(consolidation, db_authorization, "Valida vínculo por interface de autorização a definir", "protocolo a especificar")
+Rel(consolidation, db_consolidation, "Atualiza totais diários; calcula acumulado", "TCP :5432")
 Rel(transactions, rabbitmq, "Publica Outbox", "AMQP :5672")
 Rel(consolidation, rabbitmq, "Consome; ACK após commit", "AMQP :5672")
 
