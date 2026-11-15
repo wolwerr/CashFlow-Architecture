@@ -34,7 +34,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 | RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
 | RF-07 | Manter trilha de auditoria | Registrar ações financeiras relevantes com autor, operação, horário, resultado e correlação. Não é uma funcionalidade de consulta pública. | Proposto | Importante para integridade |
 
-**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. **RN-09 decidida:** em dias sem lançamentos, totais de crédito e débito e movimento líquido são zero, e o saldo acumulado é mantido. Competência e retroatividade continuam pendentes.
+**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. **RN-09 decidida:** em dias sem lançamentos, totais de crédito e débito e movimento líquido são zero, e o saldo acumulado é mantido. **RN-04 decidida:** o comerciante informa a data de competência; o sistema registra o instante da criação em UTC. Política para datas retroativas e futuras ainda pendente.
 
 ## 4. Histórias de usuário e critérios de aceite
 
@@ -74,7 +74,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 - Um valor inválido não poderá ser registrado.
 - O comerciante deverá receber uma mensagem compreensível sem que um lançamento rejeitado seja contabilizado.
 
-**Campos mínimos sugeridos, ainda sujeitos a confirmação:** valor, tipo de movimentação e data de referência. Identificador do lançamento pode ser gerado pelo sistema. Precisão monetária, sinal de valor e data padrão serão refinados.
+**Campos do registro:** valor, tipo de movimentação e data de competência informada pelo comerciante (RN-04). Identificador do lançamento pode ser gerado pelo sistema. Precisão monetária, sinal de valor e data padrão serão refinados.
 
 ### HU-05: Consultar histórico (RF-05, proposto)
 
@@ -147,7 +147,7 @@ O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será
 | RN-01 | Crédito aumenta e débito diminui o saldo? | Define a interpretação das movimentações. |
 | RN-02 | **Decidido: apresentar movimento líquido diário e saldo acumulado.** | Movimento líquido = créditos do dia - débitos do dia; saldo acumulado = saldo inicial + soma dos movimentos líquidos até a data. O saldo inicial no MVP será R$ 0,00 por comerciante (RN-03). |
 | RN-03 | **Decidido: saldo inicial de R$ 0,00 por comerciante no MVP.** | O saldo acumulado parte de zero e soma os movimentos líquidos registrados no CashFlow. Não há ajuste manual de abertura no MVP. |
-| RN-04 | Qual data deve ser considerada? | Determina a que dia um lançamento pertence. |
+| RN-04 | **Decidido: data de competência informada pelo comerciante e instante de registro em UTC.** | `reference_date` representa a data de negócio; `created_at` registra o instante efetivo em UTC. Datas futuras, retroativas e data padrão da interface ainda exigem regras. |
 | RN-05 | Um lançamento pode ser excluído, editado ou estornado? | Define correções e preservação do histórico. |
 | RN-06 | É necessário separar dados de diferentes comerciantes? | Define o escopo da consulta e da identificação. |
 | RN-07 | Qual moeda e quais regras de arredondamento? | Evita divergências de valor. |
