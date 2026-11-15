@@ -129,7 +129,8 @@ note bottom of D
   Segregacao por comerciante e proposta.
   ProcessedEvent exige event_id unico.
   Exibir liquido diario e saldo acumulado.
-  Saldo inicial, recomputacao retroativa,
+  Saldo inicial zero por comerciante no MVP.
+  Dias vazios, recomputacao retroativa,
   data, moeda e estorno pendentes.
 end note
 @enduml
