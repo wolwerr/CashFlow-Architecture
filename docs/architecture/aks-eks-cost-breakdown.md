@@ -164,6 +164,8 @@ Na **Azure Pricing Calculator** e **AWS Pricing Calculator**, informar nós, con
 
 Para a variante HA, rodar outro cenário com múltiplas AZs e dimensionamento N+1, adicionando todas as cópias do RabbitMQ, PostgreSQL HA e storage/banda. Só depois declarar uma previsão de custo total de produção.
 
+> **ATENÇÃO, revisão superveniente:** esta seção conserva a primeira estimativa de DEV/HOM/PROD e os custos históricos de PROD com B2ms. A premissa de PROD com PostgreSQL B2ms **é incompatível com HA zone-redundant**. Para o orçamento de referência atualizado, com DEV e HOM em clusters **separados**, PostgreSQL General Purpose HA em PROD e lista de custos faltantes, consultar [Plano atualizado de custos por ambiente](four-environment-total-cost-plan.md). Os números históricos abaixo **não devem ser usados como total de produção HA**.
+
 ## Quatro ambientes: LOCAL, DEV, HOM e PROD (nova simulação)
 
 > **Revisão 2026-11-15.** A solicitação é representar os **quatro ambientes separadamente**, com capacidade reduzida fora de produção. É um **estudo econômico de cluster isolado por ambiente**: DEV, HOM e PROD têm, cada um, seu próprio AKS/EKS e PostgreSQL; LOCAL não tem cloud e usa Docker Compose. Todos os custos de cloud abaixo são assumidos 24x7 durante 730 h/mês. As reservas não são medições, e a configuração completa deve ser testada antes de fechar as máquinas.
@@ -220,7 +222,7 @@ Para manter rastreabilidade com o refinamento anterior, existem parcelas *já il
 2. **DEV:** cluster pequeno, AKS Free sem SLA ou EKS de um nó com control plane cobrado; 1 réplica; reduzir sampling e retenção, parar workloads e eventualmente a capacidade dos nós fora do expediente **somente quando o pipeline permitir**. Persistência e cobranças do plano de controle EKS continuam mesmo com nós parados. Verificar quais recursos gerenciados podem ser suspensos e cobranças que permanecem.
 3. **HOM:** manter também pequeno, mas reservar janelas de teste de carga e validação. Para executar 50 RPS na arquitetura equivalente a PROD, escalar HOM temporariamente para sizing semelhante ao de PROD e documentar o custo das horas extras.
 4. **PROD:** 3 nós como ponto de partida, 2+ réplicas para APIs e NGINX, HPA, Cluster Autoscaler, topology spread, PDB, PostgreSQL HA e RabbitMQ quorum **a dimensionar**. Uma réplica extra só custa computação adicional se exigir nós extras, mas consome recursos reservados.
-5. **Estratégia ainda mais econômica para DEV/HOM:** compartilhar um cluster não produtivo com namespaces, RBAC e quotas separados. Isso pode reduzir custos de plano de controle EKS e facilitar observabilidade compartilhada, mas adiciona **risco de interferência entre ambientes** e requer governança. **Não está calculado na tabela principal**, que modela clusters separados.
+5. **Decisão de isolamento:** DEV e HOM permanecem **separados**, cada qual com cluster e PostgreSQL próprios. Não compartilhar cluster, pois HOM deve validar uma configuração equivalente à de PROD antes da promoção. [Plano atualizado](four-environment-total-cost-plan.md).
 6. A imagem React é compilada uma vez por versão; as diferenças de configuração por ambiente não exigem replicar toda a estrutura de build. Registry compartilhado não significa dados e segredos compartilhados.
 
 ### Custos que precisam entrar na calculadora para aprovação
