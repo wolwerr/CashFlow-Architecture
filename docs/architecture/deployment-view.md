@@ -21,6 +21,10 @@ O arquivo PlantUML apresenta **LOCAL**, **SHARED**, **DEV**, **HOM** e **PROD**,
 
 A imagem renderizada está disponível em `docs/architecture/images/deployment-view.png`. Ao alterar o PlantUML, renderize novamente o PNG correspondente para manter a documentação sincronizada.
 
+## Complemento aprovado do MVP, 15/11/2026
+
+Cada ambiente terá quatro bancos lógicos em PostgreSQL: **Transactions, Consolidation, Autorização CashFlow e Keycloak**. O desenho de implantação não adiciona um terceiro microsserviço financeiro; a interface de acesso ao contexto de autorização e suas credenciais ainda serão projetadas. O uso do mesmo Flexible Server físico por ambiente é uma **referência de custo**, não prova de capacidade nem isolamento de infraestrutura. A liberação de PROD fica condicionada a **backups automáticos e testes documentados de restauração**, além de **aprovação manual efetiva via GitHub Environments**. A nova fonte PlantUML precisa ser renderizada e substituir a imagem correspondente. [Decisões consolidadas do MVP](mvp-decisions.md).
+
 ## Distribuição dos ambientes
 
 | Grupo | Topologia e função | Isolamento / custo de referência |
