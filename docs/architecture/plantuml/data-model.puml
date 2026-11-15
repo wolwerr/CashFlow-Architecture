@@ -61,7 +61,7 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     --
     merchant_id : UUID <<identificador externo>>
     type : CREDIT | DEBIT
-    amount : DECIMAL
+    amount : NUMERIC(19,2) <<BRL, > 0>>
     reference_date : DATE <<competencia informada>>
     created_at : TIMESTAMPTZ <<instante UTC>>
     actor_id : STRING <<OIDC sub / referencia>>
@@ -97,10 +97,10 @@ package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
     * merchant_id : UUID <<PK composta>>
     * reference_date : DATE <<PK composta>>
     --
-    credit_total : DECIMAL
-    debit_total : DECIMAL
-    net_amount : DECIMAL
-    closing_balance : DECIMAL <<materializacao a definir>>
+    credit_total : NUMERIC(19,2)
+    debit_total : NUMERIC(19,2)
+    net_amount : NUMERIC(19,2)
+    closing_balance : NUMERIC(19,2) <<materializacao a definir>>
     updated_at : TIMESTAMP
   }
   entity "ProcessedEvent" as P {
@@ -133,6 +133,7 @@ note bottom of D
   Dia vazio: movimento zero e saldo mantido.
   Nao exige linha para todo dia sem eventos.
   Recomputacao retroativa,
-  datas retroativas, moeda e estorno pendentes.
+  Datas retroativas e estorno pendentes.
+  BRL duas casas; entradas > 0.
 end note
 @enduml
