@@ -5,12 +5,12 @@ title CashFlow | C4 Nível 3: Serviço Consolidation (Consolidado Diário)
 LAYOUT_LEFT_RIGHT()
 
 Container_Ext(nginx, "NGINX", "HTTP interno :8080", "Encaminha consultas autenticadas")
-Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443 (público previsto)", "Emite tokens; APIs validam JWT localmente")
-ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672 (referência)", "Entrega eventos de Transactions")
+Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443", "Emite tokens; APIs validam JWT localmente")
+ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672", "Entrega eventos de Transactions")
 ContainerDb_Ext(consolidationDb, "Banco de Consolidation", "PostgreSQL / TCP :5432", "DailyBalance e ProcessedEvent")
-Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318 (referência)", "Recebe telemetria técnica")
+Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318", "Recebe telemetria técnica")
 
-Container_Boundary(consolidation, "Consolidation | API + consumidor (.NET 10)") {
+Container_Boundary(consolidation, "Consolidation | API + consumidor") {
   Component(api, "Endpoints de consulta", "ASP.NET Core", "REST: consulta consolidado e validação JWT")
   Component(auth, "Autorização por comerciante", "Application / Policy", "Valida acesso do sujeito ao merchant_id")
   Component(query, "Consultar saldo diário", "Application", "Executa consultas sem acessar Transactions")
@@ -21,35 +21,21 @@ Container_Boundary(consolidation, "Consolidation | API + consumidor (.NET 10)") 
   Component(repo, "Repositórios + Unit of Work", "Infrastructure / EF Core", "Consulta DailyBalance; grava saldo + ProcessedEvent atomicamente")
 }
 
-Rel(nginx, api, "Consulta saldo diário", "HTTP / TCP :8080 privado (referência)")
-Rel(api, keycloak, "Busca chaves públicas quando necessário; valida JWT localmente", "HTTPS / TCP :443 (público previsto)")
+Rel(nginx, api, "Consulta saldo diário", "HTTP / TCP :8080 privado")
+Rel(api, keycloak, "Busca chaves públicas quando necessário; valida JWT localmente", "HTTPS / TCP :443")
 Rel(api, auth, "Verifica acesso do comerciante")
 Rel(auth, query, "Autoriza consulta")
 Rel(api, query, "Consulta")
 Rel(query, ports, "Busca projeção")
-Rel(consumer, rabbit, "Consome eventos", "AMQP / TCP :5672 (referência)")
+Rel(consumer, rabbit, "Consome eventos", "AMQP / TCP :5672")
 Rel(consumer, process, "Entrega evento para aplicação")
 Rel(process, domain, "Calcula atualização do saldo")
 Rel(process, ports, "Exige atualização idempotente")
 Rel(repo, ports, "Implementa interfaces")
 Rel(repo, consolidationDb, "Consulta saldos; grava DailyBalance + ProcessedEvent", "PostgreSQL / TCP :5432")
-Rel(consumer, rabbit, "ACK somente após commit; NACK/retry em falha", "AMQP / TCP :5672 (referência)")
-Rel(api, otel, "Emite sinais técnicos", "OTLP gRPC :4317 ou HTTP :4318 (referência)")
+Rel(consumer, rabbit, "ACK somente após commit; NACK/retry em falha", "AMQP / TCP :5672")
+Rel(api, otel, "Emite sinais técnicos", "OTLP gRPC :4317 ou HTTP :4318")
 Rel(consumer, otel, "Emite sinais técnicos", "OTLP")
-
-note bottom of process
-  A deduplicação por event_id e a
-  atualização de DailyBalance devem
-  ocorrer na mesma transação.
-  Reentregas não podem duplicar saldo.
-end note
-
-note bottom of query
-  O banco de Transactions não é
-  consultado por Consolidation.
-  A projeção pode ficar temporariamente
-  desatualizada, conforme ADR-005.
-end note
 
 SHOW_LEGEND()
 @enduml
