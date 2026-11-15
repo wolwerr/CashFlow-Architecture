@@ -3,18 +3,22 @@ title CashFlow | Consulta diária pela aplicação Web/Mobile
 autonumber
 actor Comerciante
 participant "Aplicação Web/Mobile" as W
-participant "API Gateway" as G
+participant "NGINX (proxy opcional)" as G
 participant "Serviço de consolidado" as C
 database "Banco do consolidado" as B
 Comerciante -> W: Seleciona comerciante e data
-W -> G: GET /consolidados?data=... (HTTPS + JWT)
-G -> C: Encaminha consulta
+W -> G: GET /consolidados?data=... (via proxy opcional)
+G -> C: Encaminha HTTPS + JWT
 C -> C: Valida token, permissão de leitura,\nmerchant_id autorizado e data
 C -> B: Busca por merchant_id e data (SQL)
 B --> C: Projeção disponível
 C --> G: 200 (JSON)
 G --> W: 200 (JSON)
 W --> Comerciante: Apresenta consolidado
+note over G,C
+NGINX e opcional; sem ele, a consulta e direta na API.
+A validacao do JWT permanece em Consolidation.
+end note
 note over C,B
 Saldo acumulado, data financeira e
 indicador de atraso dependem da Issue #3.
