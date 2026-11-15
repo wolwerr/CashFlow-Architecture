@@ -22,7 +22,7 @@ Os eventos financeiros devem ser entregues de forma durável e reprocessável ap
 
 Nenhuma alternativa dispensa desenho de consistência e idempotência. A escolha não afirma que RabbitMQ seja intrinsecamente superior a Kafka em toda carga ou integração.
 
-## Decisão decidida
+## Decisão registrada
 
 Utilizar **RabbitMQ com AMQP 0-9-1** no MVP como broker entre Transactions e Consolidation, preservando a propriedade dos eventos em Transactions por meio de **Transactional Outbox**. Executar RabbitMQ no Docker Compose para avaliação. Não fixar uma tecnologia cloud gerenciada nesta ADR.
 
