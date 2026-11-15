@@ -1,6 +1,6 @@
 # ADR-002: Microsserviços financeiros com Clean Architecture
 
-> **Status:** aceita  
+> **Status:** decidida  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Decisão relacionada:** [ADR-001: C# / ASP.NET Core / .NET 10 LTS](ADR-001-language-framework.md)
@@ -18,13 +18,13 @@ Esta ADR decide **as fronteiras de implantação e a estrutura interna do backen
 | Alternativa | Benefícios | Custos / riscos | Avaliação |
 | --- | --- | --- | --- |
 | **Monólito tradicional em camadas** | Entrega inicial simples e menos serviços | Isolamento da falha do consolidado e escala independente ficam menos explícitos; risco de acoplamento | Não escolhida para o MVP |
-| **Monólito modular com Clean Architecture** | Baixo custo operacional, módulos bem definidos e implantação simples | Processo e ciclo de deploy compartilhados; exige cuidados adicionais para cumprir a independência durante falhas | Viável, mas menos aderente ao desenho aprovado |
+| **Monólito modular com Clean Architecture** | Baixo custo operacional, módulos bem definidos e implantação simples | Processo e ciclo de deploy compartilhados; exige cuidados adicionais para cumprir a independência durante falhas | Viável, mas menos aderente ao desenho decidido |
 | **Dois microsserviços financeiros, cada um com Clean Architecture** | Processos e deploys independentes, isolamento de dados, possibilidade de escalar consultas separadamente | Maior complexidade de integração, observabilidade, testes e operação | **Proposta escolhida** |
 | **Microsserviços com muitas subdivisões e camadas próprias** | Separação detalhada de responsabilidades | Fragmentação, latência, custo e desenvolvimento excessivos para o escopo | Não escolhida |
 
 **Observação:** separar processos não garante resiliência automaticamente. Ela depende da inexistência de chamadas síncronas ao consolidado no caminho de registro, da persistência confiável e dos testes de falha.
 
-## 3. Decisão aceita
+## 3. Decisão decidida
 
 Adotar **dois serviços financeiros implantáveis de forma independente**:
 
