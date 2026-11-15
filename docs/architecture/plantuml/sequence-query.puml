@@ -1,26 +1,40 @@
 @startuml CashFlow_Query
-title CashFlow | Consulta diária pela aplicação Web/Mobile
+title CashFlow | Consulta do consolidado diario
 autonumber
-actor Comerciante
-participant "Aplicação Web/Mobile" as W
-participant "NGINX (reverse proxy)" as G
-participant "Serviço de consolidado" as C
-database "Banco do consolidado" as B
-Comerciante -> W: Seleciona comerciante e data
-W -> G: GET /consolidados?data=... (via NGINX)
-G -> C: Encaminha HTTPS + JWT
-C -> C: Valida token, permissão de leitura,\nmerchant_id autorizado e data
-C -> B: Busca por merchant_id e data (SQL)
-B --> C: Projeção disponível
-C --> G: 200 (JSON)
-G --> W: 200 (JSON)
-W --> Comerciante: Apresenta consolidado
-note over G,C
-NGINX encaminha as consultas no MVP.
-A validacao do JWT permanece em Consolidation.
-end note
-note over C,B
-Saldo acumulado, data financeira e
-indicador de atraso dependem da Issue #3.
+actor Comerciante as U
+participant "React SPA" as W
+participant "NGINX" as G
+participant "Consolidation API" as C
+database "PostgreSQL\nConsolidation" as DB
+
+U -> W: Seleciona comerciante e data
+W -> G: GET /api/consolidation/*\nBearer JWT; HTTPS :443 publico
+G -> C: Proxy com Authorization\nHTTP :8080 privado
+C -> C: Valida assinatura JWT, issuer, aud, exp\ne autorizacao por merchant_id
+alt Requisicao nao autenticada ou nao autorizada
+  C --> G: HTTP 401 ou 403
+  G --> W: HTTP 401 ou 403
+else Consulta autorizada
+  C -> C: Valida data e parametros
+  alt Parametros invalidos
+    C --> G: Resposta de validacao; contrato pendente
+    G --> W: Exibe erro
+  else Parametros validos
+    C -> DB: Busca DailyBalance por merchant_id e dia\nSQL TCP :5432; banco proprio
+    alt Projecao encontrada
+      DB --> C: DailyBalance
+      C --> G: Resultado diario\ncontrato e semantica ainda pendentes
+      G --> W: Apresenta saldo
+    else Dia sem projecao ou dados em atraso
+      DB --> C: Nenhum resultado ou projecao anterior
+      C --> G: Resposta conforme regra de negocio pendente
+      G --> W: Exibe estado apropriado
+    end
+  end
+end
+note over C,DB
+Consolidation nao consulta Transactions.
+Saldo liquido x acumulado, dias vazios
+e indicacao de atraso aguardam decisao.
 end note
 @enduml
