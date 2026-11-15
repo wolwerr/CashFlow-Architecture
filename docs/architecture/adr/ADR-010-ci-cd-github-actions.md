@@ -82,7 +82,11 @@ A estratégia detalhada de **testes, ferramentas de teste e meta de cobertura** 
 6. Uma falha de build, testes exigidos ou deploy interrompe o pipeline e preserva evidências de diagnóstico.
 7. Existe procedimento documentado para reversão de versão, observando as limitações de migrations.
 
-## Complemento de governança, 15/11/2026\n\nO gate de produção via **GitHub Environments com aprovação manual** é obrigatório na arquitetura aprovada. Disponibilidade/configuração do recurso ainda não foram verificadas, portanto o deploy PROD permanece bloqueado até que o ambiente protegido funcione e seja testado. A liberação exige **backups automáticos e execução documentada de teste de restauração** dos dados críticos. [Decisões do MVP](../mvp-decisions.md).\n\n## Detalhes de implantação ainda pendentes
+## Complemento de governança, 15/11/2026
+
+O gate de produção via **GitHub Environments com aprovação manual** é obrigatório na arquitetura aprovada. Disponibilidade/configuração do recurso ainda não foram verificadas, portanto o deploy PROD permanece bloqueado até que o ambiente protegido funcione e seja testado. A liberação exige **backups automáticos e execução documentada de teste de restauração** dos dados críticos. [Decisões do MVP](../mvp-decisions.md).
+
+## Detalhes de implantação ainda pendentes
 
 - Definir os nomes concretos dos workflows, estrutura das pastas, gatilhos e filtros de dependências compartilhadas.
 - Selecionar scripts ou Helm/Kustomize/manifests para implantação no AKS e estratégia para migrations.
