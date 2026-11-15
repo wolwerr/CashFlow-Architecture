@@ -20,7 +20,7 @@ A arquitetura do CashFlow contempla cliente Web responsivo, Keycloak para identi
 
 As comparações tratam de **soluções de identidade**, não de desempenho comprovado. A decisão sobre produto e integração com o ambiente corporativo deve poder ser revisitada.
 
-## Decisão decidida
+## Decisão registrada
 
 1. **Protocolos:** utilizar OpenID Connect (OIDC) para autenticação de usuários e OAuth 2.0 para autorização delegada, com fluxos seguros apropriados para o tipo de cliente; para Web/Mobile, avaliar Authorization Code + PKCE. Comunicação via HTTPS.
 2. **Provedor:** adotar **Keycloak como provedor de identidade da arquitetura CashFlow**, para desenvolvimento e eventual demonstração local. O **Microsoft Entra External ID** segue como alternativa futura caso políticas corporativas e análise de custo/gestão justifiquem migração. A decisão de adotar Keycloak **não obriga implementar IAM completo no MVP financeiro**.
