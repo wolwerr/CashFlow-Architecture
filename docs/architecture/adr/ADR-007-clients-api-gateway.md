@@ -55,7 +55,11 @@ O BFF deve usar OIDC Authorization Code com cliente confidencial, cookies `HttpO
 
 O Keycloak é acessado pelo cliente (ou BFF) para login. **As APIs validam access tokens, não ID tokens**, usando issuer, audience, assinatura, expiração e permissões. `merchant_id` é autorizado por regras do CashFlow, não apenas pela identidade reconhecida no Keycloak.
 
-## Complemento do MVP, 15/11/2026\n\nA React SPA guarda access tokens **somente na memória da aplicação**, sem `localStorage` nem `sessionStorage`, mantendo Authorization Code + PKCE. O formulário de lançamento inicia na data atual de `America/Sao_Paulo` e é editável; a API continua validando competência futura e autorização. Prefixos REST públicos são **`/api/v1/transactions`** e **`/api/v1/consolidation`**, preservados pelo NGINX. Isso não implica BFF nem Gateway dedicado. Conferir XSS/CSP, login/reload/logout e refresh em teste. [Decisões consolidadas](../mvp-decisions.md).\n\n## 4. Fluxo de referência no desenho-alvo
+## Complemento do MVP, 15/11/2026
+
+A React SPA guarda access tokens **somente na memória da aplicação**, sem `localStorage` nem `sessionStorage`, mantendo Authorization Code + PKCE. O formulário de lançamento inicia na data atual de `America/Sao_Paulo` e é editável; a API continua validando competência futura e autorização. Prefixos REST públicos são **`/api/v1/transactions`** e **`/api/v1/consolidation`**, preservados pelo NGINX. Isso não implica BFF nem Gateway dedicado. Conferir XSS/CSP, login/reload/logout e refresh em teste. [Decisões consolidadas](../mvp-decisions.md).
+
+## 4. Fluxo de referência no desenho-alvo
 
 ```text
 Comerciante / Administrador
