@@ -20,7 +20,7 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está em revisão para a estratégia de observabilidade.
+> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) foi **aceita**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
 
 | Bloco | Responsabilidade |
 | --- | --- |
@@ -33,7 +33,11 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 | Banco do consolidado | Guardar resultados calculados e eventos já processados. |
 | Keycloak (provedor IAM adotado) | Gerenciar identidades, autenticação, sessões, emissão de tokens e chaves públicas OIDC/JWKS. Não concentra necessariamente os vínculos de negócio dos comerciantes. |
 | Banco do Keycloak | Persistir usuários, credenciais protegidas, clientes OIDC e configurações do provedor. A autorização por comerciante é responsabilidade do CashFlow. |
-| Coleta de observabilidade | Receber informações de diagnóstico e desempenho dos serviços. |
+| OpenTelemetry Collector | Receber e encaminhar os sinais OTLP produzidos pelas APIs e workers. |
+| Prometheus | Armazenar e consultar métricas, coletadas por scraping de endpoints compatíveis. |
+| Loki | Centralizar logs estruturados, com ingestão OTLP/HTTP configurada. |
+| Tempo | Armazenar traces distribuídos de fluxos HTTP e assíncronos. |
+| Grafana | Dashboards e consulta dos três backends, com data sources configurados. |
 
 **Nota:** o bloco Web/Mobile é uma representação conceitual dos canais de entrada. Se forem aplicações implantadas separadamente, o C4 Nível 2 pode ser desdobrado em contêiner Web e contêiner Mobile após a escolha tecnológica na Issue #7.
 
@@ -49,7 +53,11 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 | Validação de JWT | JWKS / HTTPS, com validação local e cache das chaves |
 | APIs e seus bancos | SQL / TCP, com proteção de conexão |
 | Worker Outbox → broker → consumidor | AMQP 0-9-1 |
-| Serviços → observabilidade | OTLP / gRPC e logs estruturados |
+| APIs e workers → OpenTelemetry Collector | OTLP / gRPC ou HTTP, logs estruturados, métricas e traces |
+| Collector → Prometheus | Exportação de métricas por endpoint de scrape HTTP |
+| Collector → Loki | Logs via OTLP / HTTP |
+| Collector → Tempo | Traces via OTLP / gRPC ou HTTP |
+| Grafana → Prometheus, Loki e Tempo | Consultas às APIs dos backends configurados |
 
 Os protocolos representam **propostas**, não decisões finais. Produtos e garantias serão formalizados nos ADRs da Issue #7. As APIs devem validar assinatura, emissor, audiência, prazo e permissões do token. A autorização também precisa verificar que o usuário possui acesso ao **comerciante/conta consultada**, e não somente que pertence a determinado grupo. Tokens podem ter permissões desatualizadas até sua expiração; revogação e política de atualização serão detalhadas na Issue #9.
 
@@ -77,7 +85,7 @@ As APIs de **Lançamentos** e **Consolidado** devem validar os JWTs **localmente
 
 ## Telemetria e observabilidade
 
-Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak**, o NGINX e um eventual **API Gateway futuro** poderão emitir telemetria quando forem implantados e configurados. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
+Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak**, o NGINX e um eventual **API Gateway futuro** poderão emitir telemetria quando forem implantados e configurados. O C4 apresenta o pipeline em um bloco de plataforma, com seus componentes listados na documentação, para evitar linhas transversais em excesso.
 
 | Sinal | Uso esperado |
 | --- | --- |
@@ -85,7 +93,7 @@ Os serviços de **Lançamentos** e **Consolidado** são prioritários para instr
 | **Métricas** | Taxa de requisições, erros, latência, eventos pendentes na Outbox, tamanho das filas e atraso da consolidação. |
 | **Traces distribuídos** | Acompanhar operações que passam por NGINX, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
 
-**OTLP** é o protocolo proposto para exportação dos sinais; **OpenTelemetry** é a opção de instrumentação/coleta. A escolha de armazenamento, dashboards, alertas e regras de retenção será formalizada nas próximas issues. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
+Conforme a **ADR-008 aceita**, OpenTelemetry instrumenta serviços .NET, OpenTelemetry Collector recebe/encaminha os sinais, **Prometheus** armazena métricas, **Loki** armazena logs, **Tempo** armazena traces e **Grafana** oferece dashboards. Alertas, retenção, volumes, segurança e HA serão detalhados na ADR-009 e nas issues operacionais. A coleta de componentes de terceiros exige exporters/agentes próprios quando aplicável. A falha na stack de observabilidade não pode bloquear a confirmação de lançamentos. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
 
 ## Controle de acesso e decisão de tecnologia
 
