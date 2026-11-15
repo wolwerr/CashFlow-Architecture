@@ -122,7 +122,7 @@ Os dois projetos `.Api` são os hosts de execução da versão inicial. O `Backg
 
 ## 7. Qualidade, operação e verificação
 
-- **ADR-010** definirá a meta mínima de **80% de cobertura de linhas** do código elegível e as ferramentas de medição; esta decisão apenas assegura *testabilidade* por desenho.
+- A estratégia de testes e eventuais metas de cobertura (como 80% de linhas) serão detalhadas no planejamento de desenvolvimento, fora do registro de ADRs; esta decisão assegura *testabilidade* por desenho. A [ADR-010](ADR-010-ci-cd-github-actions.md) define o uso de GitHub Actions para CI/CD.
 - Testes unitários focam Domain e Application; integração comprova transações de banco, Outbox e consumo idempotente; testes de resiliência validam o isolamento; testes de carga validam 50 RPS.
 - **ADR-011** decidirá a ferramenta de CI/CD e os *quality gates*.
 - Traces, métricas e logs devem correlacionar API, worker e consumer. Auditoria financeira persistida é distinta de logs operacionais.
