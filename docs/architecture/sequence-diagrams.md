@@ -30,7 +30,7 @@ Mesmo com o consolidado indisponível, o serviço de lançamentos consegue regis
 
 ## Consulta do consolidado diário
 
-A aplicação React consulta o consolidado por meio do NGINX, que encaminha a chamada ao serviço responsável. O serviço de consolidado valida o JWT e as permissões de leitura e acessa sua própria base, filtrando pelo comerciante autorizado. Não precisa consultar o serviço de lançamentos. Resultados sem projeção, datas inválidas e parâmetros de consulta dependem de contrato e regra de negócio ainda pendentes.
+A aplicação React consulta o consolidado por meio do NGINX, que encaminha a chamada ao serviço responsável. O serviço de consolidado valida o JWT e as permissões de leitura e acessa sua própria base, filtrando pelo comerciante autorizado. Não precisa consultar o serviço de lançamentos. Em dias sem lançamentos, créditos, débitos e movimento líquido são zero, e o saldo acumulado anterior permanece (RN-09). Isso não exige uma projeção persistida para cada dia. Datas inválidas, resposta a dados em atraso e convenções HTTP ainda dependem do contrato.
 
 ![Consulta ao consolidado](images/sequence-query.png)
 
