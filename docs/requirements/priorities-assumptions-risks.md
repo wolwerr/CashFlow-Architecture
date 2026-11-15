@@ -2,7 +2,7 @@
 
 > **Projeto:** CashFlow Architecture  
 > **Issue:** #5 | **Milestone:** M1 - Descoberta e requisitos  
-> **Situação:** proposta para revisão  
+> **Situação:** priorização inicial preservada; premissas do MVP aprovadas em 15/11/2026  
 > **Referências:** [Requisitos funcionais](functional-requirements.md), [Requisitos não funcionais](non-functional-requirements.md) e [domínios de negócio](../domain/business-capabilities-and-context-map.md)
 
 ## 1. Por que este documento existe
@@ -47,18 +47,18 @@ Premissa é uma hipótese adotada para seguir com o desenho quando não há info
 | ID | Premissa proposta / dúvida | Impacto | Quando resolver |
 | --- | --- | --- | --- |
 | PRE-01 | Crédito aumenta e débito reduz o saldo, por convenção inicial. | Regras de cálculo. | Antes da implementação. |
-| PRE-02 | O consolidado diário poderá significar movimento líquido ou saldo acumulado; ainda não decidido. | Cálculo e testes. | Antes da implementação. |
+| PRE-02 | O consolidado exibirá movimento líquido e acumulado; saldo inicial zero; dias vazios mantêm acumulado; aprovado para MVP. | Cálculo e testes. | Antes da implementação. |
 | PRE-03 | Saldo inicial não foi informado. | Resultado do consolidado. | Antes da implementação. |
-| PRE-04 | Data de referência e fuso horário ainda não definidos. | Agrupamento por dia. | Antes da implementação. |
+| PRE-04 | Competência é informada pelo comerciante; dia atual/filtro futuro em `America/Sao_Paulo`; instante de criação UTC. | Agrupamento por dia. | Antes da implementação. |
 | PRE-05 | O enunciado não especifica se existe um ou vários comerciantes. | Identificação e segregação de dados. | Antes do modelo de dados. |
-| PRE-06 | “Até 5% de perda de requisições” será inicialmente medido como consultas válidas sem resposta útil; definição oficial pendente. | Teste de carga e aceite. | Antes do teste de carga. |
-| PRE-07 | A consulta do consolidado pode apresentar dados temporariamente desatualizados; limite tolerável pendente. | Consistência e experiência do usuário. | Antes de fechar a arquitetura. |
+| PRE-06 | “Até 5% de perda de requisições” será inicialmente medido como consultas válidas sem resposta útil; interpretação adotada internamente: consultas válidas sem resposta útil em 50 RPS por 5 minutos; teste pendente. | Teste de carga e aceite. | Antes do teste de carga. |
+| PRE-07 | A consulta do consolidado pode apresentar dados temporariamente desatualizados; SLO interno aprovado: 95% em até 30 segundos; medição pendente. | Consistência e experiência do usuário. | Antes de fechar a arquitetura. |
 | PRE-08 | Não há sistema legado descrito; não presumir migração. | Arquitetura de transição e custos. | Somente se houver contexto adicional. |
 | PRE-09 | Cloud e linguagem não são impostas pelo desafio; linguagem deve ser justificada. | Escolha tecnológica e custos. | Na Milestone M2. |
-| PRE-10 | Regras de correção/estorno, moeda, precisão e retenção ainda não foram definidas. | Integridade e auditoria. | Antes de implementar tais comportamentos. |
+| PRE-10 | Estorno fora do MVP; BRL com duas casas e `amount > 0`; auditoria 365 dias inicial; retenção Outbox/ProcessedEvent configurável. | Integridade e auditoria. | Antes de implementar tais comportamentos. |
 | PRE-11 | Registro de auditoria financeira é uma proteção proposta, não exigência expressa; eventos críticos devem ser íntegros e ter acesso controlado. | Modelo de dados, privacidade e custo operacional. | Issues #7 e #9. |
 
-**Decisões pendentes da Issue #3:** definir modalidade de saldo diário, estorno no MVP e consulta de histórico. Enquanto não forem aprovadas, essas opções permanecem abertas.
+**Decisões aprovadas em 15/11/2026:** movimento diário e acumulado, histórico paginado no MVP, estorno na próxima versão, auditoria básica, multi-comerciante e demais 24 escolhas de [Decisões consolidadas do MVP](../architecture/mvp-decisions.md). A tabela de priorização acima é histórica e deve ser lida com este complemento; testes ainda precisam ocorrer.
 
 ## 4. Registro e classificação de riscos
 
