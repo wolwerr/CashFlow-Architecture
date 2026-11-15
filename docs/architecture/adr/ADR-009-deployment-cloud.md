@@ -3,7 +3,8 @@
 > **Status:** proposta para aprovação  
 > **Data:** 2026-11-15  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Comparativo quantitativo:** [Custos de ACA, AKS e ECS/Fargate](../cloud-cost-comparison.md)  
+> **Comparativo Kubernetes prioritário:** [AKS versus EKS, custo por serviço](../aks-eks-cost-breakdown.md)  
+> **Comparativo original de modelos alternativos:** [ACA, AKS e ECS/Fargate](../cloud-cost-comparison.md)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), [ADR-004](ADR-004-async-messaging.md), [ADR-005](ADR-005-outbox-consistency-idempotency.md), [ADR-006](ADR-006-identity-and-access.md), [ADR-007](ADR-007-clients-api-gateway.md), [ADR-008](ADR-008-observability.md)
 
 ## Contexto
@@ -21,7 +22,8 @@ O desafio não informou região obrigatória, orçamento ou SLA anual. Portanto 
 | **Docker Compose local** | Reprodutibilidade, baixa barreira para demonstração, isolamento lógico entre containers | Sem HA automática, falha do host é falha de toda a solução; backups e secrets precisam definição |
 | **Azure Container Apps (ACA)** | Runtime gerenciado, escalabilidade separada por serviço, menos administração das APIs stateless | RabbitMQ e observabilidade com estado exigem topologia adicional; preço depende da atividade/idle e conexões; arquitetura heterogênea |
 | **Azure Kubernetes Service (AKS)** | Kubernetes padronizado, maior controle dos workloads e possibilidade de operar stack completa em cluster | Nós, SLA do control plane, rede, storage, atualização e gestão de recursos elevam custo fixo e complexidade; Kubernetes não garante HA sozinho |
-| **AWS ECS com Fargate** | Infraestrutura gerenciada para containers stateless, escala independente, modelo pay-per-resource | ALB/NAT/ECR/RDS/storage e operação de componentes com estado precisam ser computados; dependência do ecossistema AWS |
+| **Amazon Elastic Kubernetes Service (EKS) com nós EC2** | Kubernetes gerenciado na AWS; workloads e Helm/manifests semelhantes aos AKS, com PostgreSQL no RDS externo | EC2, plano de controle, EBS/S3, ALB/NAT e operação dos recursos com estado precisam ser cotados |
+| **AWS ECS com Fargate** | Infraestrutura gerenciada para containers stateless, escala independente, modelo pay-per-resource, sem exigir Kubernetes | Não equivale a um cluster Kubernetes e requer componentes stateful adicionais, ALB/NAT/ECR/RDS/storage |
 | **VMs + Docker Compose em cloud** | Familiaridade e menor esforço inicial | Escalabilidade, recuperação, isolamento de falhas e HA exigem engenharia manual; risco de ponto único |
 
 ## Propostas separadas para aprovação
@@ -43,7 +45,7 @@ Não prometer HA em Compose com um nó para cada infraestrutura. Não interpreta
 
 ### 2. Produção de referência: decisão pendente
 
-**Proposta de método:** manter ACA, AKS e ECS/Fargate como alternativas até completar [o comparativo de custos](../cloud-cost-comparison.md), coletar medições da aplicação e definir disponibilidade exigida.
+**Proposta revisada:** priorizar uma comparação direta **AKS x Amazon EKS (managed EC2 node groups)**, pois ambos executam os workloads do CashFlow em nós Kubernetes, com o PostgreSQL externo e gerenciado, respectivamente **Azure Database for PostgreSQL Flexible Server** e **Amazon RDS for PostgreSQL**. Registrar **preferência provisória por AKS**, não aprovação final de cloud, até completar rede, persistência, segurança, HA e custos totais. [Veja o custo por serviço e por linha faturável](../aks-eks-cost-breakdown.md). ACA e ECS/Fargate permanecem alternativas já estudadas, mas são modelos de orquestração diferentes.
 
 | Critério | ACA | AKS | ECS/Fargate |
 | --- | --- | --- | --- |
@@ -55,6 +57,18 @@ Não prometer HA em Compose com um nó para cada infraestrutura. Não interpreta
 | Operação | Simplifica runtime, não elimina operação stateful | Mais trabalho Kubernetes | Simplifica runtime, não elimina operações auxiliares |
 
 A escolha da cloud também deve considerar capacidades e experiência da equipe, requisitos de rede, localização de dados, oferta de broker, acordos comerciais e custos de suporte.
+
+## Comparação homogênea de Kubernetes (AKS x EKS)
+
+| Item | AKS Standard (Azure East US) | Amazon EKS (AWS us-east-1) |
+| --- | ---: | ---: |
+| 3 nós de 4 vCPU e 16 GiB | **US$ 376,68** | **US$ 420,48** |
+| Plano de controle | **US$ 73,00** | **US$ 73,00** |
+| PostgreSQL gerenciado, compute | **US$ 99,28** | **US$ 94,17** |
+| Storage PostgreSQL incluído | **US$ 3,68** | **não cotado** |
+| **Subtotal parcial (USD/mês)** | **US$ 552,64** | **US$ 587,65** |
+
+Os serviços como Transactions, Consolidation, RabbitMQ, Keycloak, NGINX, Collector, Prometheus, Loki, Tempo e Grafana **compartilham nós**. Portanto, seus custos de computação não aparecem separadamente na fatura: o [documento de rateio](../aks-eks-cost-breakdown.md) atribui valores ilustrativos por componente segundo vCPU hipotética e apresenta os recursos efetivamente faturáveis. **Não confundir rateio com cobrança por pod.** O cenário não inclui PVs/EBS, object storage, rede, load balancer, NAT, registry, backups, zonas ou HA.
 
 ## Comparação de custo já calculada
 
@@ -113,11 +127,13 @@ Os totais são **não comparáveis como faturas completas**. Devem ser apresenta
 - Requisitos de RTO/RPO, retenção de dados, backup e disponibilidade.
 - Preços completos de rede, ALB/ingress, storage, observabilidade, banco, broker, certificados, registry, secrets e suporte.
 - Nível de operação aceito pela equipe e uso de serviços gerenciados.
-- Escolher formalmente ACA, AKS ou ECS/Fargate depois dessas premissas, atualizando esta ADR para aceita.
+- Escolher formalmente **AKS ou EKS** após concluir a comparação Kubernetes; ACA e ECS/Fargate são alternativas de outros modelos já avaliadas. Atualizar esta ADR para aceita somente depois da escolha.
 
 ## Referências
 
-- [Comparativo FinOps detalhado](../cloud-cost-comparison.md)
+- [Comparativo Kubernetes AKS versus EKS e custo por serviço](../aks-eks-cost-breakdown.md)
+- [Comparativo FinOps original: ACA, AKS e ECS/Fargate](../cloud-cost-comparison.md)
+- [Preços Amazon EKS](https://aws.amazon.com/eks/pricing/)
 - [Preços Azure Container Apps](https://azure.microsoft.com/en-us/pricing/details/container-apps/)
 - [Preços AKS](https://azure.microsoft.com/en-us/pricing/details/kubernetes-service/)
 - [Preços ECS/Fargate](https://aws.amazon.com/fargate/pricing/)
