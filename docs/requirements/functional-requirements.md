@@ -34,7 +34,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 | RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
 | RF-07 | Manter trilha de auditoria | Registrar ações financeiras relevantes com autor, operação, horário, resultado e correlação. Não é uma funcionalidade de consulta pública. | Proposto | Importante para integridade |
 
-**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. Saldo inicial, dia sem lançamentos, competência e retroatividade continuam pendentes.
+**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. Dia sem lançamentos, competência e retroatividade continuam pendentes.
 
 ## 4. Histórias de usuário e critérios de aceite
 
@@ -138,15 +138,15 @@ Considere que, em um mesmo dia, sejam registrados:
 
 Esse exemplo pressupõe, **apenas para ilustração**, que crédito soma e débito subtrai.
 
-O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será o saldo anterior mais R$ 150,00. Ainda precisamos definir como estabelecer o saldo inicial e tratar dias sem movimento e lançamentos retroativos.
+O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será o saldo anterior mais R$ 150,00. No MVP, o saldo inicial de cada comerciante será **R$ 0,00**. Ainda precisamos decidir a apresentação de dias sem movimento e lançamentos retroativos.
 
 ## 7. Regras e dúvidas que precisam de decisão
 
 | ID | Pergunta | Por que importa |
 | --- | --- | --- |
 | RN-01 | Crédito aumenta e débito diminui o saldo? | Define a interpretação das movimentações. |
-| RN-02 | **Decidido: apresentar movimento líquido diário e saldo acumulado.** | Movimento líquido = créditos do dia - débitos do dia; saldo acumulado = saldo inicial + soma dos movimentos líquidos até a data. A regra para saldo inicial permanece pendente. |
-| RN-03 | Existe saldo inicial? | Pode alterar o saldo apresentado. |
+| RN-02 | **Decidido: apresentar movimento líquido diário e saldo acumulado.** | Movimento líquido = créditos do dia - débitos do dia; saldo acumulado = saldo inicial + soma dos movimentos líquidos até a data. O saldo inicial no MVP será R$ 0,00 por comerciante (RN-03). |
+| RN-03 | **Decidido: saldo inicial de R$ 0,00 por comerciante no MVP.** | O saldo acumulado parte de zero e soma os movimentos líquidos registrados no CashFlow. Não há ajuste manual de abertura no MVP. |
 | RN-04 | Qual data deve ser considerada? | Determina a que dia um lançamento pertence. |
 | RN-05 | Um lançamento pode ser excluído, editado ou estornado? | Define correções e preservação do histórico. |
 | RN-06 | É necessário separar dados de diferentes comerciantes? | Define o escopo da consulta e da identificação. |
