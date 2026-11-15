@@ -1,6 +1,6 @@
 # ADR-007: Canais Web/Mobile, API Gateway e proteção da sessão
 
-> **Status:** aceita  
+> **Status:** decidida  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Relacionadas:** [ADR-001](ADR-001-language-framework.md), [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-006](ADR-006-identity-and-access.md)
@@ -22,7 +22,7 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Blazor com .NET** | Linguagem C# compartilhada, integração ao ecossistema Microsoft | Equipe precisa dominar modelo de renderização e trade-offs do ambiente Blazor; não há requisito que exija uniformizar a linguagem do frontend |
 | **Sem frontend no MVP** | Prioriza as APIs e os testes fundamentais | Demonstração para usuários menos visuais |
 
-**Decisão aceita:** utilizar **React + TypeScript**, com interface responsiva. **Não criar aplicações Android e iOS nativas no MVP**. Uma PWA pode ser avaliada futuramente se houver requisitos de instalação, offline ou notificações; a simples responsividade não garante capacidades PWA.
+**Decisão decidida:** utilizar **React + TypeScript**, com interface responsiva. **Não criar aplicações Android e iOS nativas no MVP**. Uma PWA pode ser avaliada futuramente se houver requisitos de instalação, offline ou notificações; a simples responsividade não garante capacidades PWA.
 
 ## 2. API Gateway: alternativas
 
@@ -33,7 +33,7 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Gateway gerenciado na cloud** | Operação de borda delegada, funcionalidades condicionadas ao produto | Dependência do provedor e custos variáveis; menor reprodução em Docker Compose |
 | **Acesso direto às duas APIs** | Menos infraestrutura e menor latência inicial | Clientes conhecem múltiplas origens/endereços; políticas de borda dispersas |
 
-**Decisão de escopo aceita, revisada em 2026-11-14:** **implementar NGINX como reverse proxy de entrada do MVP**, servindo o React e encaminhando as chamadas de API para Transactions e Consolidation. **Não implementar API Gateway dedicado no MVP**: roteamento via NGINX não equivale automaticamente a uma plataforma completa de API management. O Gateway dedicado permanece evolução futura, após avaliação de políticas de borda, segurança, limites e necessidades reais. YARP permanece alternativa caso haja demanda por extensões em C#.
+**Decisão de escopo decidida, revisada em 2026-11-14:** **implementar NGINX como reverse proxy de entrada do MVP**, servindo o React e encaminhando as chamadas de API para Transactions e Consolidation. **Não implementar API Gateway dedicado no MVP**: roteamento via NGINX não equivale automaticamente a uma plataforma completa de API management. O Gateway dedicado permanece evolução futura, após avaliação de políticas de borda, segurança, limites e necessidades reais. YARP permanece alternativa caso haja demanda por extensões em C#.
 
 Um Gateway futuro pode centralizar TLS (conforme infraestrutura), roteamento `/api/transactions/*` e `/api/consolidation/*`, limites de requisição, correlação e logs. **O Gateway não deve ser a única camada de autenticação/autorização**: cada API financeira valida JWT e verifica escopo do comerciante.
 
@@ -47,7 +47,7 @@ Um Gateway futuro pode centralizar TLS (conforme infraestrutura), roteamento `/a
 | **Backend for Frontend (BFF)** | Backend confidencial realiza OIDC com Keycloak, mantém tokens no servidor e expõe sessão ao navegador por cookie seguro | Protege melhor os tokens da exposição ao JavaScript, mas exige sessão, proteção CSRF, disponibilidade do BFF e uma implantação adicional |
 | **Aplicação Web renderizada no servidor** | Servidor administra autenticação/sessão e gera parte ou toda a interface | Pode reduzir exposição de tokens, com outro modelo de desenvolvimento e renderização |
 
-**Decisão de escopo aceita:** para uma interface React no **MVP**, adotar SPA pública com OIDC Authorization Code + PKCE no Keycloak, controles rigorosos contra XSS e sem armazenamento persistente de tokens em `localStorage`. **BFF fica explicitamente fora do MVP e é evolução futura a avaliar para produção Web financeira**, com ASP.NET Core como candidato e detalhamento na Issue #9. Não confundir BFF com o Gateway: o BFF administra a sessão do navegador; o Gateway fornece roteamento e políticas de borda. Eles podem compartilhar infraestrutura *somente após* desenho explícito e testes, não por pressuposição.
+**Decisão de escopo decidida:** para uma interface React no **MVP**, adotar SPA pública com OIDC Authorization Code + PKCE no Keycloak, controles rigorosos contra XSS e sem armazenamento persistente de tokens em `localStorage`. **BFF fica explicitamente fora do MVP e é evolução futura a avaliar para produção Web financeira**, com ASP.NET Core como candidato e detalhamento na Issue #9. Não confundir BFF com o Gateway: o BFF administra a sessão do navegador; o Gateway fornece roteamento e políticas de borda. Eles podem compartilhar infraestrutura *somente após* desenho explícito e testes, não por pressuposição.
 
 O BFF deve usar OIDC Authorization Code com cliente confidencial, cookies `HttpOnly`, `Secure`, política `SameSite` adequada, proteção anti-CSRF, sessão/expiração, armazenamento seguro de tokens e logout. Não colocar refresh tokens em `localStorage`.
 
@@ -71,7 +71,7 @@ Transactions -> PostgreSQL Transactions (lançamento + Outbox)
 Outbox worker -> RabbitMQ -> Consolidation consumer -> PostgreSQL Consolidation
 ```
 
-**Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**. Os diagramas C4 e de sequência foram alinhados à decisão aprovada: NGINX faz parte do MVP como reverse proxy, enquanto API Gateway dedicado e BFF ficam para o futuro.
+**Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**. Os diagramas C4 e de sequência foram alinhados à decisão registrada: NGINX faz parte do MVP como reverse proxy, enquanto API Gateway dedicado e BFF ficam para o futuro.
 
 **Implementação:** o template inicial de NGINX está em [infra/nginx/default.conf.template](../../../infra/nginx/default.conf.template), com [orientações de integração](../../../infra/nginx/README.md). A integração funcional depende dos containers e dos contratos de rota reais; ainda não foi executada nem validada.
 
