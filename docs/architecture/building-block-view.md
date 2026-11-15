@@ -14,18 +14,18 @@ O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos.
 
 ## C4 Nível 2: Contêineres
 
-A **solução completa proposta** contém uma aplicação React responsiva, NGINX opcional como proxy reverso, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
+A **solução completa proposta** contém uma aplicação React responsiva, NGINX como reverse proxy obrigatório no MVP, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
 
 ![Contêineres do CashFlow](images/c4-containers.png)
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX opcional. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está em revisão para a estratégia de observabilidade.
+> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está em revisão para a estratégia de observabilidade.
 
 | Bloco | Responsabilidade |
 | --- | --- |
 | Aplicação React (arquitetura-alvo) | React + TypeScript responsivo como cliente Web; aplicativo nativo não previsto no MVP. |
-| NGINX (proxy opcional no MVP) | Serve a interface e encaminha HTTPS para as APIs quando necessário; não representa uma plataforma de API Gateway dedicada. Um Gateway com políticas adicionais fica para evolução futura. |
+| NGINX (reverse proxy do MVP) | Serve a interface React e encaminha chamadas HTTP para as APIs no fluxo Web; não representa uma plataforma de API Gateway dedicada. Um Gateway com políticas adicionais fica para evolução futura. |
 | Serviço de lançamentos (API + Outbox worker) | Receber e confirmar movimentações; publicar eventos pendentes em segundo plano. |
 | Banco de lançamentos | Guardar lançamentos e eventos Outbox; manter trilha de auditoria proposta no mesmo domínio. |
 | Mensageria | Entregar eventos ao serviço de consolidado. |
@@ -42,8 +42,8 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 | Comunicação | Protocolo |
 | --- | --- |
 | Usuários → aplicação Web/Mobile | HTTPS |
-| React → APIs diretamente ou via NGINX opcional | HTTPS / REST / JSON, com Bearer JWT |
-| NGINX opcional → APIs financeiras | Proxy HTTPS / REST / JSON; autenticação OIDC com Keycloak ocorre separadamente |
+| React → NGINX | HTTPS / REST / JSON, com Bearer JWT |
+| NGINX → APIs financeiras | Proxy HTTPS / REST / JSON; autenticação OIDC com Keycloak ocorre separadamente |
 | Login e identificação | Keycloak com OpenID Connect / OAuth 2.0 sobre HTTPS; Authorization Code + PKCE conforme tipo de cliente |
 | Cadastro, grupos e permissões | API administrativa REST / HTTPS (proposta) |
 | Validação de JWT | JWKS / HTTPS, com validação local e cache das chaves |
@@ -61,7 +61,7 @@ Os protocolos representam **propostas**, não decisões finais. Produtos e garan
 | Consulta ao consolidado diário | **Exigido pelo desafio** |
 | Independência entre registro e consolidação | **Exigida pelo desafio** |
 | Interfaces Web/Mobile e painel administrativo | **Proposta de solução completa**, não exigida |
-| NGINX / API Gateway | **NGINX opcional no MVP como proxy simples**; API Gateway dedicado é evolução futura, conforme ADR-007 |
+| NGINX / API Gateway | **NGINX incluído no MVP como reverse proxy**; API Gateway dedicado é evolução futura, conforme ADR-007 |
 | Keycloak e seu banco | **Escolha arquitetural aceita (ADR-006)**; implantação e administração completas podem ficar fora do MVP financeiro |
 | Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
 
@@ -73,11 +73,11 @@ A interface Web/Mobile autentica usuários no **Keycloak**, utilizando **OpenID 
 
 As APIs de **Lançamentos** e **Consolidado** devem validar os JWTs **localmente**, verificando assinatura, emissor, audiência, validade e permissões. As chaves públicas do Keycloak podem ser obtidas por **JWKS/HTTPS** e mantidas em cache conforme a política de rotação e expiração. Assim, com tokens e chaves válidos, o registro financeiro não precisa chamar o IAM sincronicamente a cada operação.
 
-**Keycloak autentica; as APIs do CashFlow autorizam.** O NGINX opcional não substitui esses controles. A verificação de acesso também deve considerar o `merchant_id` autorizado. Uma role como `VIEWER` não concede, por si só, acesso aos dados de outros comerciantes. Política de revogação, propagação de mudanças de permissões e acessos administrativos serão detalhados na Issue #9.
+**Keycloak autentica; as APIs do CashFlow autorizam.** O NGINX não substitui esses controles. A verificação de acesso também deve considerar o `merchant_id` autorizado. Uma role como `VIEWER` não concede, por si só, acesso aos dados de outros comerciantes. Política de revogação, propagação de mudanças de permissões e acessos administrativos serão detalhados na Issue #9.
 
 ## Telemetria e observabilidade
 
-Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak**, o NGINX opcional e um eventual **API Gateway futuro** poderão emitir telemetria quando forem implantados e configurados. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
+Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak**, o NGINX e um eventual **API Gateway futuro** poderão emitir telemetria quando forem implantados e configurados. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
 
 | Sinal | Uso esperado |
 | --- | --- |
