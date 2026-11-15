@@ -6,11 +6,13 @@ Esta visão mostra **de que partes o CashFlow é composto** e o papel de cada um
 
 ## C4 Nível 1: Contexto
 
-O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos. O **Administrador de acessos** gerencia usuários e permissões. Ambos utilizam a aplicação Web/Mobile proposta; o C4 de Contexto apresenta o CashFlow como um único sistema e deixa os detalhes internos para o Nível 2.
+O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos. O **Administrador de acessos** gerencia usuários e permissões. Ambos utilizam a aplicação Web React definida na ADR-007; o C4 de Contexto apresenta o CashFlow como um único sistema e deixa os detalhes internos para o Nível 2. As duas interações indicam **HTTPS/TCP 443 como porta pública prevista**, não como infraestrutura TLS já implantada.
 
 ![Contexto do CashFlow](images/c4-context.png)
 
 [Fonte PlantUML](plantuml/c4-context.puml)
+
+> **Atualização da imagem:** após alterações de portas na fonte, regenerar `images/c4-context.png` para que o PNG exibido nesta página reflita o protocolo HTTPS/TCP :443.
 
 ## C4 Nível 2: Contêineres
 
@@ -20,7 +22,7 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está **decidida**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
+> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png` para apresentar as portas de destino e os transportes no PNG. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está **decidida**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
 
 | Bloco | Responsabilidade |
 | --- | --- |
@@ -39,7 +41,7 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 | Tempo | Armazenar traces distribuídos de fluxos HTTP e assíncronos. |
 | Grafana | Dashboards e consulta dos três backends, com data sources configurados. |
 
-**Nota:** o bloco Web/Mobile é uma representação conceitual dos canais de entrada. Se forem aplicações implantadas separadamente, o C4 Nível 2 pode ser desdobrado em contêiner Web e contêiner Mobile após a escolha tecnológica na Issue #7.
+**Nota:** a interface escolhida é uma aplicação Web React responsiva; **não há aplicativo mobile nativo no MVP** (ADR-007).
 
 ## Protocolos e portas de referência
 
@@ -56,7 +58,7 @@ Os números são **portas de destino**, não portas de origem. NGINX :8080 está
 | Keycloak → banco de identidade | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
 | APIs → bancos lógicos próprios | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
 | Transactions Outbox → RabbitMQ | AMQP/TCP | **5672** | Porta-padrão sem TLS; AMQPS/TLS: **5671** |
-| RabbitMQ → Consolidation Consumer | AMQP/TCP | **5672** | Consumer estabelece conexão com broker, não porta de listener no consumer |
+| Consolidation Consumer → RabbitMQ | AMQP/TCP | **5672** | Consumer inicia a conexão com o broker; não abre listener AMQP próprio |
 | APIs/workers → OpenTelemetry Collector | OTLP/gRPC ou HTTP | **4317 / 4318** | Conforme transporte configurado |
 | Collector → Prometheus | Exporter HTTP / scrape | **a definir** | Exemplo configurável: 8889, não assumido como implantado |
 | Collector → Loki | OTLP/HTTP | **3100** | Porta de ingestão usual, configuração pendente |
