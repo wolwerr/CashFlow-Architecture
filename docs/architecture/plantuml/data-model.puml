@@ -100,6 +100,7 @@ package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
     credit_total : DECIMAL
     debit_total : DECIMAL
     net_amount : DECIMAL
+    closing_balance : DECIMAL <<materializacao a definir>>
     updated_at : TIMESTAMP
   }
   entity "ProcessedEvent" as P {
@@ -127,7 +128,8 @@ end note
 note bottom of D
   Segregacao por comerciante e proposta.
   ProcessedEvent exige event_id unico.
-  Formula de saldo, data financeira,
-  moeda e estorno dependem da Issue #3.
+  Exibir liquido diario e saldo acumulado.
+  Saldo inicial, recomputacao retroativa,
+  data, moeda e estorno pendentes.
 end note
 @enduml
