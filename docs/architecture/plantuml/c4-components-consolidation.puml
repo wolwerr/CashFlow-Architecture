@@ -7,7 +7,8 @@ LAYOUT_LEFT_RIGHT()
 Container_Ext(nginx, "NGINX", "HTTP interno :8080", "Encaminha consultas autenticadas")
 Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443", "Emite tokens; APIs validam JWT localmente")
 ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672", "Entrega eventos de Transactions")
-ContainerDb_Ext(consolidationDb, "Banco de Consolidation", "PostgreSQL / TCP :5432", "Totais diários e ProcessedEvent")\nContainerDb_Ext(authDb, "Banco Autorização CashFlow", "PostgreSQL lógico", "Vínculos e papéis por comerciante")
+ContainerDb_Ext(consolidationDb, "Banco de Consolidation", "PostgreSQL / TCP :5432", "Totais diários e ProcessedEvent")
+ContainerDb_Ext(authDb, "Banco Autorização CashFlow", "PostgreSQL lógico", "Vínculos e papéis por comerciante")
 Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318", "Recebe telemetria técnica")
 
 Container_Boundary(consolidation, "Consolidation | API + consumidor") {
@@ -23,7 +24,8 @@ Container_Boundary(consolidation, "Consolidation | API + consumidor") {
 
 Rel(nginx, api, "Consulta saldo diário", "HTTP / TCP :8080 privado")
 Rel(api, keycloak, "Busca chaves públicas quando necessário; valida JWT localmente", "HTTPS / TCP :443")
-Rel(api, auth, "Verifica acesso do comerciante")\nRel(auth, authDb, "Consulta vínculo via interface controlada", "mecanismo a definir")
+Rel(api, auth, "Verifica acesso do comerciante")
+Rel(auth, authDb, "Consulta vínculo via interface controlada", "mecanismo a definir")
 Rel(auth, query, "Autoriza consulta")
 Rel(api, query, "Consulta")
 Rel(query, ports, "Busca projeção")
