@@ -6,6 +6,7 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 
 | Documento | O que apresenta |
 | --- | --- |
+| **[Validação 01: Requisitos e rastreabilidade](requirements-validation.md)** | Matriz RF/RNF → ADRs/componentes, situação documental, lacunas de negócio e testes pendentes. |
 | **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | **C4 Níveis 1, 2 e 3 em uma página**, com diagramas, responsabilidades, protocolos, portas, componentes e justificativas técnicas. |
 | **[Deployment View](deployment-view.md)** | Implantação de LOCAL, DEV, HOM, PROD e SHARED; visão Azure e capacidades equivalentes em AWS/GCP. |
 | **[Diagramas de Sequência](sequence-diagrams.md)** | Interações detalhadas para registro, falha do consolidado e consulta. |
