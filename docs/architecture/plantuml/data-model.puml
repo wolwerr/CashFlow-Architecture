@@ -130,7 +130,9 @@ note bottom of D
   ProcessedEvent exige event_id unico.
   Exibir liquido diario e saldo acumulado.
   Saldo inicial zero por comerciante no MVP.
-  Dias vazios, recomputacao retroativa,
+  Dia vazio: movimento zero e saldo mantido.
+  Nao exige linha para todo dia sem eventos.
+  Recomputacao retroativa,
   data, moeda e estorno pendentes.
 end note
 @enduml
