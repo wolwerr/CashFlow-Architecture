@@ -132,8 +132,9 @@ note bottom of D
   Saldo inicial zero por comerciante no MVP.
   Dia vazio: movimento zero e saldo mantido.
   Nao exige linha para todo dia sem eventos.
-  Recomputacao retroativa,
-  Datas retroativas e estorno pendentes.
+  Competencias passadas/atuais aceitas.
+  Futuras rejeitadas; recompor acumulados.
+  Estrategia fisica e estorno pendentes.
   BRL duas casas; entradas > 0.
 end note
 @enduml
