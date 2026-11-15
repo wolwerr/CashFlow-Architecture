@@ -18,7 +18,7 @@ System_Boundary(cashflow, "CashFlow") {
   ContainerQueue(mensageria, "Mensageria", "Broker de eventos", "Distribui eventos financeiros")
   Container(consolidado, "Serviço de consolidado", "API REST + consumidor", "Calcula e consulta saldos diários")
   ContainerDb(db_consolidado, "Banco do consolidado", "Banco de projeções", "Saldos e eventos processados")
-  Container(telemetria, "Observabilidade", "OpenTelemetry", "Logs, métricas e traces")
+  Container(telemetria, "Stack de observabilidade", "OTel Collector + Prometheus + Loki + Tempo + Grafana", "Coleta OTLP; métricas, logs, traces e dashboards")
 }
 
 ' Posicionamento principal
@@ -59,10 +59,14 @@ note right of iam
 end note
 
 note right of telemetria
-  NGINX, Keycloak e serviços
-  financeiros exportam
-  métricas, logs e traces
-  via OTLP.
+  APIs e workers usam OpenTelemetry.
+  Collector recebe OTLP e encaminha:
+  Prometheus (metricas), Loki (logs),
+  Tempo (traces). Grafana consulta
+  os tres backends.
+  Integracoes de NGINX, Keycloak,
+  PostgreSQL e RabbitMQ podem
+  exigir exporters ou agentes.
 end note
 
 note bottom of gateway
