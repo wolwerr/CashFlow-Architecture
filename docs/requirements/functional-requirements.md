@@ -34,7 +34,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 | RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
 | RF-07 | Manter trilha de auditoria | Registrar ações financeiras relevantes com autor, operação, horário, resultado e correlação. Não é uma funcionalidade de consulta pública. | Proposto | Importante para integridade |
 
-**Importante:** a existência do consolidado implica alguma regra de cálculo, mas o enunciado **não define** a fórmula de saldo nem o tratamento de saldo inicial. Isso será registrado como decisão de negócio pendente.
+**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. Saldo inicial, dia sem lançamentos, competência e retroatividade continuam pendentes.
 
 ## 4. Histórias de usuário e critérios de aceite
 
@@ -62,7 +62,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 
 **Critérios de aceite:**
 - Dada uma data válida, quando o comerciante solicitar o consolidado, então o sistema deverá apresentar um resultado referente à data informada.
-- O cálculo deverá respeitar a definição de saldo diário que for aprovada no refinamento.
+- A consulta deverá retornar totais de crédito e débito, movimento líquido diário e saldo acumulado, conforme a decisão RN-02.
 - Para um dia sem lançamentos, a resposta deverá seguir a regra a ser definida (por exemplo, movimento zero ou manutenção do saldo anterior).
 
 ### HU-04: Validar lançamento (RF-04, proposto)
@@ -138,14 +138,14 @@ Considere que, em um mesmo dia, sejam registrados:
 
 Esse exemplo pressupõe, **apenas para ilustração**, que crédito soma e débito subtrai.
 
-O **movimento líquido** é R$ 150,00, mas o **saldo consolidado** poderá ser diferente se precisar considerar um saldo anterior. Precisamos validar essa diferença antes de fixar o comportamento do sistema.
+O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será o saldo anterior mais R$ 150,00. Ainda precisamos definir como estabelecer o saldo inicial e tratar dias sem movimento e lançamentos retroativos.
 
 ## 7. Regras e dúvidas que precisam de decisão
 
 | ID | Pergunta | Por que importa |
 | --- | --- | --- |
 | RN-01 | Crédito aumenta e débito diminui o saldo? | Define a interpretação das movimentações. |
-| RN-02 | Saldo diário é o movimento líquido ou o saldo acumulado? | Define o cálculo do consolidado. |
+| RN-02 | **Decidido: apresentar movimento líquido diário e saldo acumulado.** | Movimento líquido = créditos do dia - débitos do dia; saldo acumulado = saldo inicial + soma dos movimentos líquidos até a data. A regra para saldo inicial permanece pendente. |
 | RN-03 | Existe saldo inicial? | Pode alterar o saldo apresentado. |
 | RN-04 | Qual data deve ser considerada? | Determina a que dia um lançamento pertence. |
 | RN-05 | Um lançamento pode ser excluído, editado ou estornado? | Define correções e preservação do histórico. |
