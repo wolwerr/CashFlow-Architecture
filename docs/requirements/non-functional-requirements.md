@@ -124,7 +124,11 @@ A execução local com Docker Compose servirá para demonstrar os comportamentos
 
 Se não houver respostas, registraremos explicitamente as premissas do MVP. Nenhuma meta proposta será apresentada como exigência confirmada.
 
-## 8. Decisões aprovadas para teste\n\n**RNF-02/RNF-03:** 50 consultas por segundo por 5 minutos após aquecimento, até 5% de erros/timeouts/ausência de resposta útil de consultas válidas enviadas. **RNF-06:** p95 < 500 ms durante o mesmo teste. **Frescor:** 95% dos lançamentos devem aparecer no consolidado em até 30 s após registro em operação saudável. Políticas de retry limitado, backoff e DLQ são aprovadas, mas parâmetros e testes estão pendentes. [Registro completo das decisões](../architecture/mvp-decisions.md).\n\n## 9. Checklist da Issue #4
+## 8. Decisões aprovadas para teste
+
+**RNF-02/RNF-03:** 50 consultas por segundo por 5 minutos após aquecimento, até 5% de erros/timeouts/ausência de resposta útil de consultas válidas enviadas. **RNF-06:** p95 < 500 ms durante o mesmo teste. **Frescor:** 95% dos lançamentos devem aparecer no consolidado em até 30 s após registro em operação saudável. Políticas de retry limitado, backoff e DLQ são aprovadas, mas parâmetros e testes estão pendentes. [Registro completo das decisões](../architecture/mvp-decisions.md).
+
+## 9. Checklist da Issue #4
 
 - [x] Requisitos não funcionais identificados e numerados.
 - [x] Exigências explícitas separadas de metas sugeridas.
