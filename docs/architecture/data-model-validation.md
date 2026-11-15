@@ -62,7 +62,8 @@ Keycloak mantém usuários, credenciais e configurações OIDC. O CashFlow é re
 | Prioridade | Ponto aberto | Impacto |
 | --- | --- | --- |
 | **Decidido em 15/11/2026** | Exibir movimento líquido diário e saldo acumulado | Fórmulas conceituais definidas; saldo inicial de R$ 0,00 decidido; materialização e atualização retroativa ainda em aberto |
-| **Decidido em 15/11/2026** | **RN-03:** saldo inicial de R$ 0,00 por comerciante no MVP | Cálculo acumulado parte de zero; não exige saldo de abertura |\n| **Decidido em 15/11/2026** | **RN-09:** dia sem lançamentos retorna crédito, débito e líquido zero; saldo acumulado anterior é mantido | Não exige linha física por dia vazio; antes do primeiro lançamento, saldo acumulado zero |
+| **Decidido em 15/11/2026** | **RN-03:** saldo inicial de R$ 0,00 por comerciante no MVP | Cálculo acumulado parte de zero; não exige saldo de abertura |
+| **Decidido em 15/11/2026** | **RN-09:** dia sem lançamentos retorna crédito, débito e líquido zero; saldo acumulado anterior é mantido | Não exige linha física por dia vazio; antes do primeiro lançamento, saldo acumulado zero |
 | **Alta** | Data de referência e fuso do dia financeiro | Define indexação e a chave de DailyBalance |
 | **Alta** | Moeda, precisão, valores negativos e arredondamento | Define tipos, constraints e exemplos de testes |
 | **Alta** | Vínculo e autorização de merchant_id | Define propriedade e persistência de Merchant/Membership |
