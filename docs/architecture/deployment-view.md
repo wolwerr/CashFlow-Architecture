@@ -17,7 +17,9 @@ A **Azure East US é a plataforma selecionada e a base da calculadora**. O desen
 
 O arquivo PlantUML apresenta **LOCAL**, **SHARED**, **DEV**, **HOM** e **PROD**, com o relacionamento entre os clusters Kubernetes, serviços gerenciados de banco e storage, workloads e compartilhamento de imagens/DNS.
 
-> **Renderização pendente:** após renderizar o arquivo `plantuml/deployment-view.puml`, salve a imagem como **`docs/architecture/images/deployment-view.png`**. A imagem não é considerada existente até ser adicionada ao repositório. Depois disso, este trecho poderá mostrar `![Deployment View do CashFlow](images/deployment-view.png)`.
+![Deployment View do CashFlow](images/deployment-view.png)
+
+A imagem renderizada está disponível em `docs/architecture/images/deployment-view.png`. Ao alterar o PlantUML, renderize novamente o PNG correspondente para manter a documentação sincronizada.
 
 ## Distribuição dos ambientes
 
