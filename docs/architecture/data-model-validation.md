@@ -16,7 +16,7 @@ Verificar se a propriedade dos dados entre Transactions, Consolidation, Keycloak
 | `Transaction` | Registro de fato financeiro, tipo CREDIT/DEBIT, valor, comerciante e data de referência | **Conforme com ressalva**: moeda, escala e data financeira abertas | Validar `amount` com decimal/numeric, tipo válido e data definida; dados de teste e constraints |
 | `OutboxEvent` | Evento durável vinculado ao lançamento, status, payload e `correlation_id` | **Conforme no desenho** | Mesmo commit de Transaction, ID de evento estável, retries e claim concorrente |
 | `AuditEvent` | Auditoria persistida, separada de logs operacionais | **Parcial**: RF-07 é proposta | Fechar atos auditáveis, quando exige atomicidade, acesso, retenção e proteção |
-| `DailyBalance` | Projeção por comerciante/data, totais de crédito/débito e líquido | **Parcial**: pressupõe segregação por comerciante e movimento líquido; saldo acumulado decidido junto com o movimento líquido; saldo inicial e estratégia de recálculo ainda abertos | Definir semântica e chave `merchant_id + reference_date`; teste de concorrência e dias vazios |
+| `DailyBalance` | Projeção por comerciante/data, totais de crédito/débito e líquido | **Parcial**: pressupõe segregação por comerciante e movimento líquido; saldo acumulado decidido junto com o movimento líquido; saldo inicial zero decidido por comerciante; estratégia de recálculo ainda aberta | Definir semântica e chave `merchant_id + reference_date`; teste de concorrência e dias vazios |
 | `ProcessedEvent` | ID de evento aplicado, chave única para idempotência | **Conforme no desenho**, restrição física pendente | `UNIQUE(event_id)`, commit atômico com a projeção, reentrega sem duplicidade |
 | `Merchant`, `Membership`, `Role`, `Permission` | Vínculos e autorização próprios do CashFlow | **Proposto e pendente da Issue #9** | Definir contexto dono, armazenamento, revogação, vínculo sujeito/comerciante, enforcement |
 | User/Keycloak | Identidade OIDC mantida fora dos domínios financeiros | **Conforme com ajuste** | Confirmar contrato de identificador `sub`, issuer e mecanismo de verificação; não presumir UUID |
@@ -61,8 +61,8 @@ Keycloak mantém usuários, credenciais e configurações OIDC. O CashFlow é re
 
 | Prioridade | Ponto aberto | Impacto |
 | --- | --- | --- |
-| **Decidido em 15/11/2026** | Exibir movimento líquido diário e saldo acumulado | Fórmulas conceituais definidas; saldo inicial, materialização e atualização retroativa ainda em aberto |
-| **Alta** | Saldo inicial e comportamento de dia sem lançamentos | Define resultado e retroatividade de saldo |
+| **Decidido em 15/11/2026** | Exibir movimento líquido diário e saldo acumulado | Fórmulas conceituais definidas; saldo inicial de R$ 0,00 decidido; materialização e atualização retroativa ainda em aberto |
+| **Decidido em 15/11/2026** | **RN-03:** saldo inicial de R$ 0,00 por comerciante no MVP | Cálculo acumulado parte de zero; não exige saldo de abertura |\n| **Alta** | **RN-09:** comportamento de dia sem lançamentos | Define resposta para datas sem projeção e eventual manutenção do saldo anterior |
 | **Alta** | Data de referência e fuso do dia financeiro | Define indexação e a chave de DailyBalance |
 | **Alta** | Moeda, precisão, valores negativos e arredondamento | Define tipos, constraints e exemplos de testes |
 | **Alta** | Vínculo e autorização de merchant_id | Define propriedade e persistência de Merchant/Membership |
