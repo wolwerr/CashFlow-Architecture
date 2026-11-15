@@ -116,3 +116,7 @@ A ADR-009 permanece **Decidida**. Estas verificações são tarefas de implement
 - [Azure AKS](https://azure.microsoft.com/en-us/pricing/details/kubernetes-service/)
 - [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/pricing/details/postgresql/flexible-server/)
 - [Building Block View](../building-block-view.md)
+
+## Complemento do MVP, 15/11/2026
+
+Além dos bancos lógicos Transactions, Consolidation e Keycloak, cada ambiente precisa de **banco lógico de autorização CashFlow** para Merchant/Membership/RBAC, sem novo microsserviço financeiro presumido. Não afirmar impacto de custo zero: o servidor físico cotado pode abrigar o novo banco lógico, mas recursos, conexões, backups e privilégios precisam ser validados. **Backups automáticos e restauração testada/documentada são pré-condições para liberar PROD**, juntamente com aprovação manual via GitHub Environments. Incluir bancos e estados críticos como RabbitMQ/volumes no planejamento, sem considerar a cotação atual prova de restore/HA. [Decisões do MVP](../mvp-decisions.md).
