@@ -16,7 +16,7 @@ Verificar se a propriedade dos dados entre Transactions, Consolidation, Keycloak
 | `Transaction` | Registro de fato financeiro, tipo CREDIT/DEBIT, valor, comerciante e data de referência | **Conforme com ressalva**: moeda, escala e data financeira abertas | Validar `amount` com decimal/numeric, tipo válido e data definida; dados de teste e constraints |
 | `OutboxEvent` | Evento durável vinculado ao lançamento, status, payload e `correlation_id` | **Conforme no desenho** | Mesmo commit de Transaction, ID de evento estável, retries e claim concorrente |
 | `AuditEvent` | Auditoria persistida, separada de logs operacionais | **Parcial**: RF-07 é proposta | Fechar atos auditáveis, quando exige atomicidade, acesso, retenção e proteção |
-| `DailyBalance` | Projeção por comerciante/data, totais de crédito/débito e líquido | **Parcial**: pressupõe segregação por comerciante e movimento líquido; saldo acumulado não decidido | Definir semântica e chave `merchant_id + reference_date`; teste de concorrência e dias vazios |
+| `DailyBalance` | Projeção por comerciante/data, totais de crédito/débito e líquido | **Parcial**: pressupõe segregação por comerciante e movimento líquido; saldo acumulado decidido junto com o movimento líquido; saldo inicial e estratégia de recálculo ainda abertos | Definir semântica e chave `merchant_id + reference_date`; teste de concorrência e dias vazios |
 | `ProcessedEvent` | ID de evento aplicado, chave única para idempotência | **Conforme no desenho**, restrição física pendente | `UNIQUE(event_id)`, commit atômico com a projeção, reentrega sem duplicidade |
 | `Merchant`, `Membership`, `Role`, `Permission` | Vínculos e autorização próprios do CashFlow | **Proposto e pendente da Issue #9** | Definir contexto dono, armazenamento, revogação, vínculo sujeito/comerciante, enforcement |
 | User/Keycloak | Identidade OIDC mantida fora dos domínios financeiros | **Conforme com ajuste** | Confirmar contrato de identificador `sub`, issuer e mecanismo de verificação; não presumir UUID |
@@ -61,7 +61,7 @@ Keycloak mantém usuários, credenciais e configurações OIDC. O CashFlow é re
 
 | Prioridade | Ponto aberto | Impacto |
 | --- | --- | --- |
-| **Alta** | Saldo diário é movimento líquido ou saldo acumulado? | Define fórmula, campos, consulta e atualização retroativa |
+| **Decidido em 15/11/2026** | Exibir movimento líquido diário e saldo acumulado | Fórmulas conceituais definidas; saldo inicial, materialização e atualização retroativa ainda em aberto |
 | **Alta** | Saldo inicial e comportamento de dia sem lançamentos | Define resultado e retroatividade de saldo |
 | **Alta** | Data de referência e fuso do dia financeiro | Define indexação e a chave de DailyBalance |
 | **Alta** | Moeda, precisão, valores negativos e arredondamento | Define tipos, constraints e exemplos de testes |
