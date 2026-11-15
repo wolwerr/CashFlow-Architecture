@@ -44,10 +44,10 @@ A validação compara a ordem das interações nos quatro arquivos PlantUML exis
 | Prioridade | Pendência | Efeito |
 | --- | --- | --- |
 | **Decidido em 15/11/2026** | RN-02/RN-03/RN-09: líquido diário e acumulado, abertura em zero e carry-forward em dias vazios | Consulta deve responder também sem linha `DailyBalance` na data; retroatividade decidida, recomposição física a validar |
-| **Alta** | Fechar contratos OpenAPI para criação e consulta, status de sucesso e erro, conteúdo de resposta e convenções de rota | Os diagramas usam `/api/transactions/*` e `/api/consolidation/*` como prefixos, não endpoints concluídos |
-| **Alta** | Determinar política de publisher confirm, mandatory/returns, binding, retry/DLQ e estado da Outbox | Evitar dar por concluído um evento que não alcançou o destino |
-| **Alta** | Detalhar idempotência HTTP e concorrência da projeção | Evitar duplicação em repetição de requisição ou eventos simultâneos |
-| **Alta** | Definir fonte e consulta segura de vínculos `subject ↔ merchant_id` | Necessário para autorização sem acoplamento impróprio ao IAM |
+| **Parcialmente decidido em 15/11/2026** | API REST | Prefixos /api/v1/transactions e /api/v1/consolidation, HTTP 201 e Idempotency-Key obrigatória | Ainda produzir OpenAPI, schemas, erros e caminhos específicos |
+| **Parcialmente decidido em 15/11/2026** | Retentativas RabbitMQ | Limitadas com backoff, DLQ e replay controlado | Definir contagens, intervalos, roteamento e confirmar em testes |
+| **Parcialmente decidido em 15/11/2026** | Idempotência HTTP | Idempotency-Key obrigatório e event_id estável; totais diários concorrentes | Especificar armazenamento, expiração e teste de corrida |
+| **Parcialmente decidido em 15/11/2026** | Autorização por comerciante | Banco lógico próprio, ADMIN/OPERATOR e cache curto invalidável | Definir interface, TTL e revogação e testar fail-closed |
 | **Decidido em 15/11/2026** | **RN-04**: competência informada pelo comerciante; criação UTC | O consolidado agrupa por `reference_date`; fuso de referência/exibição e estratégia física de recomposição retroativa ainda pendentes; RN-07 já fixou BRL com duas casas e rejeição de precisão excessiva |
 | **Decidido em 15/11/2026** | **Complemento RN-04**: aceitar competência passada/atual, rejeitar futura, recompor saldos acumulados desde a data afetada | Testar reentrega e eventos fora de ordem sem dupla contabilização; estratégia física ainda pendente |
 | **Média** | Fixar mecanismo de reconciliação e recuperação de backlog | Recuperação deve ser reproduzível; RabbitMQ não é um log histórico ilimitado |
@@ -80,3 +80,7 @@ A validação compara a ordem das interações nos quatro arquivos PlantUML exis
 - [ADR-006](adr/ADR-006-identity-and-access.md)
 - [ADR-007](adr/ADR-007-clients-api-gateway.md)
 - [Requisitos não funcionais](../requirements/non-functional-requirements.md)
+
+## Revalidação das 24 decisões aprovadas em 15/11/2026
+
+As conclusões e pendências históricas anteriores devem ser lidas com o complemento de [Decisões consolidadas do MVP](mvp-decisions.md). **Escopo e políticas foram aprovados, mas nenhuma prova em execução foi produzida apenas por esta atualização.** Histórico paginado, auditoria básica, multi-comerciante, Authorization CashFlow com banco próprio, REST v1, Idempotency-Key, 201 pós-commit, eventos versionados, retry/backoff/DLQ, SLOs de 50 RPS/5 min/até 5%, p95 < 500 ms e frescor de 95% em 30 s são a nova referência. O acumulado é calculado na leitura sobre totais diários persistidos. Restam contratos, código, migrations, testes, configuração de infraestrutura e PNGs atualizados.
