@@ -13,7 +13,7 @@ A [ADR-007](../../docs/architecture/adr/ADR-007-clients-api-gateway.md) define N
 3. Definir `TRANSACTIONS_UPSTREAM=transactions:8080` e `CONSOLIDATION_UPSTREAM=consolidation:8080` (nomes/portas ilustrativos, não verificados).
 4. Disponibilizar NGINX na porta interna `8080`, mapeando a porta externa de acordo com Docker Compose ou infraestrutura.
 5. Validar `nginx -t` e testar `/nginx-health`, chamadas às duas rotas de API e deep links da SPA.
-6. Ajustar os prefixos `/api/transactions/` e `/api/consolidation/` aos contratos HTTP reais antes de integrar. O template **preserva o prefixo** em vez de reescrever os caminhos.
+6. Usar os prefixos **aprovados** `/api/v1/transactions` e `/api/v1/consolidation` (com caminhos específicos ainda a definir no OpenAPI). O template **preserva o prefixo** em vez de reescrever os caminhos.
 
 ## Segurança e ambiente
 
@@ -22,12 +22,12 @@ A [ADR-007](../../docs/architecture/adr/ADR-007-clients-api-gateway.md) define N
 - Não expor as APIs internas publicamente, exceto quando testes controlados exigirem acesso.
 - Keycloak realiza autenticação OIDC em fluxo separado. URLs públicas, callbacks e configuração do React serão definidos quando o frontend existir.
 - `X-Forwarded-*` deve ser interpretado pelas APIs somente com redes/proxies confiáveis configurados. Evitar confiar cegamente em cabeçalhos externos.
-- Este repositório contém principalmente documentação de arquitetura. **O template não representa uma implantação executada ou validada**: faltam os containers reais de React e .NET, as rotas finais e um arquivo de orquestração integrando os serviços.
+- Este repositório contém principalmente documentação de arquitetura. **O template não representa uma implantação executada ou validada**: faltam os containers reais de React e .NET, os contratos de endpoints específicos e um arquivo de orquestração integrando os serviços.
 
 ## Testes de integração a implementar
 
 - React servido pelo NGINX, incluindo navegação SPA com refresh.
-- Proxy de registros e de consultas com preservação do cabeçalho Authorization.
+- Proxy de registros e consultas com preservação dos cabeçalhos **Authorization**, **Idempotency-Key** e X-Correlation-ID.
 - JWT inválido retorna 401 e falta de autorização retorna 403 na API, não somente no proxy.
 - Falha de Consolidation não impede requisições de registro ao Transactions por meio do NGINX.
 - Teste de carga de 50 RPS na rota de consulta através do NGINX e registro das latências/erros.
