@@ -114,13 +114,109 @@ A indisponibilidade do Keycloak **não deve parar o registro de movimentações 
 
 ## C4 Nível 3: Componentes
 
-O [C4 Nível 3](c4-level-3-components.md) detalha três contêineres com fontes PlantUML editáveis:
+Os três diagramas abaixo detalham **Frontend React**, **Transactions** e **Consolidation**, em continuidade direta com os Níveis 1 e 2. As imagens devem usar os nomes `c4-components-frontend.png`, `c4-components-transactions.png` e `c4-components-consolidation.png` na pasta `docs/architecture/images/`. A documentação inclui detalhes que foram retirados das caixas amarelas para simplificar as imagens.
 
-- [Frontend React/TypeScript](plantuml/c4-components-frontend.puml), incluindo OIDC + PKCE, rotas, formulários, saldos e cliente HTTP
-- [Transactions](plantuml/c4-components-transactions.puml), incluindo persistência transacional e worker Outbox
-- [Consolidation](plantuml/c4-components-consolidation.puml), incluindo projeções, consumo e idempotência
+### Objetivo e fronteiras
 
-O React é executado no navegador. NGINX entrega o build e encaminha as chamadas às duas APIs. Os PNGs devem ser adicionados em `docs/architecture/images/` com os nomes `c4-components-frontend.png`, `c4-components-transactions.png` e `c4-components-consolidation.png`; a documentação do Nível 3 já referencia essas imagens.
+Esta seção C4 Nível 3 detalha **componentes dentro de um contêiner do C4 Nível 2**, não adiciona microsserviços novos. Por isso existem **três diagramas**, um para React, um para `Transactions` e outro para `Consolidation`. Os componentes são responsabilidades lógicas que podem corresponder a classes ou conjuntos de classes em projetos .NET, não necessariamente a processos, bibliotecas ou deploys independentes.
+
+Para os serviços .NET, a organização segue a [ADR-002](adr/ADR-002-architecture-style-clean-architecture.md): projetos `Domain`, `Application`, `Infrastructure` e `Api` por serviço; dependências de código apontam para o núcleo, e `Api` atua como *composition root*. **Setas nos diagramas representam interações em tempo de execução**, não o grafo de referências de assembly.
+
+As representações dos serviços financeiros mantêm PostgreSQL, RabbitMQ, Keycloak/NGINX e OpenTelemetry Collector como **contêineres externos ao limite dos componentes de cada serviço**. No ambiente Azure, PostgreSQL Flexible Server pode ser o mesmo servidor físico para vários bancos lógicos, mas a propriedade dos dados continua segregada por domínio. Nenhum serviço financeiro lê o banco do outro.
+
+### Frontend React e TypeScript
+
+![C4 Nível 3: Frontend React](images/c4-components-frontend.png)
+
+**[Fonte PlantUML editável](plantuml/c4-components-frontend.puml)**
+
+| Componente | Responsabilidade |
+| --- | --- |
+| App Shell e rotas | Navegação, layout responsivo e inicialização |
+| Autenticação OIDC | Login/logout via Keycloak com Authorization Code + PKCE, callback e controle de tokens |
+| Estado de sessão e permissões | Experiência de navegação conforme sessão, sem substituir autorização das APIs |
+| Tela de lançamentos | Formulários de crédito/débito e feedback da operação |
+| Tela de consolidado | Consulta de saldos diários e estados de carregamento/erro |
+| Cliente HTTP | Chamadas REST a `/api/transactions/*` e `/api/consolidation/*` com access token |
+| Componentes de interface | Elementos reutilizáveis, validações visuais e acessibilidade |
+
+**Portas e execução:** React é uma SPA executada no navegador e **não abre porta TCP própria**. O NGINX serve seu build estático e encaminha APIs, escutando **HTTP interno :8080** no [template atual](../../infra/nginx/default.conf.template). A entrada HTTPS pública **:443** é uma premissa de implantação futura. O login comunica diretamente com Keycloak por OIDC/HTTPS. Não há BFF nem mobile nativo no MVP (ADR-007).
+
+**Segurança:** proteger rotas no React é apenas UX. Ambas as APIs devem validar JWT e autorização por `merchant_id` no backend. Não armazenar tokens em `localStorage`.
+
+### Transactions, API de lançamentos e Outbox
+
+![C4 Nível 3: Transactions](images/c4-components-transactions.png)
+
+**[Fonte PlantUML editável](plantuml/c4-components-transactions.puml)**
+
+| Componente lógico | Responsabilidade |
+| --- | --- |
+| Endpoints / API Host | Receber chamadas REST, validar tokens no limite, mapear comandos, executar DI/health checks |
+| Autorização por comerciante | Verificar a associação autorizada entre sujeito autenticado e `merchant_id`; persistência e regras administrativas ainda a detalhar |
+| Registrar lançamento (Application) | Orquestrar crédito/débito, invariantes e persistência transacional |
+| Modelo financeiro (Domain) | Entidades, value objects, cálculos e regras de negócio puras |
+| Portas (Application) | Contratos necessários aos repositórios, unidade de trabalho e publicação |
+| Repositórios + Unit of Work (Infrastructure) | Persistir `Transaction` e `OutboxEvent` atomicamente por EF Core |
+| Outbox BackgroundService | Recolher eventos pendentes e conduzir retentativas sem bloquear o endpoint de registro |
+| RabbitMQ Publisher (Infrastructure) | Publicar eventos por AMQP com *publisher confirms* |
+
+**Fluxo essencial:** NGINX → API → autorização → caso de uso → domínio + repositórios → commit de `Transaction` e `OutboxEvent`. **Só depois**, de modo assíncrono, o worker Outbox busca registros pendentes e publica no RabbitMQ. Consolidation não participa da confirmação HTTP de um lançamento.
+
+A ADR-002 permite que o `BackgroundService` seja registrado no mesmo processo host que a API. Portanto, **o worker Outbox é um componente de Transactions, não um terceiro microsserviço**. Se for necessário separá-lo em processo no futuro, a propriedade do evento e do banco permanece com Transactions.
+
+### Consolidation, consumidor e consulta do consolidado
+
+![C4 Nível 3: Consolidation](images/c4-components-consolidation.png)
+
+**[Fonte PlantUML editável](plantuml/c4-components-consolidation.puml)**
+
+| Componente lógico | Responsabilidade |
+| --- | --- |
+| Endpoints de consulta | Receber consultas REST, validar tokens e delegar busca do saldo |
+| Autorização por comerciante | Autorizar consultas no contexto de `merchant_id` |
+| Consultar saldo diário (Application) | Recuperar projeções do banco próprio, sem chamada para Transactions |
+| RabbitMQ Consumer (Host / Infrastructure) | Consumir mensagem, chamar o caso de uso e enviar ACK apenas após sucesso |
+| Processar lançamento (Application) | Aplicar regras e garantir idempotência por `event_id` |
+| Modelo de consolidação (Domain) | Manter invariantes e regra de agregação diária |
+| Portas de projeção e deduplicação | Contratos para leitura de projeções e gravação atômica |
+| Repositórios + Unit of Work | Ler `DailyBalance`; gravar `DailyBalance` e `ProcessedEvent` na mesma transação |
+
+**Fluxo de evento:** RabbitMQ → consumidor → caso de uso → regra de domínio + repositório → commit transacional de `DailyBalance` e `ProcessedEvent` → ACK. Um `event_id` já aplicado não pode alterar novamente o saldo, mesmo após reentrega.
+
+**Fluxo de consulta:** NGINX → API → autorização → caso de uso de consulta → banco de Consolidation. A consulta deve ser independente do banco e da disponibilidade de Transactions; a visão pode estar temporariamente desatualizada pela consistência eventual.
+
+### Regras transversais preservadas
+
+- **Identidade:** Keycloak autentica e emite JWT; as APIs validam assinatura, issuer, audience e validade localmente a partir de chaves JWKS cacheadas. A autorização por comerciante é responsabilidade do CashFlow, não uma concessão implícita de qualquer JWT válido.
+- **Observabilidade:** componentes emitem métricas, traces e logs via OpenTelemetry/OTLP; a falha do Collector não deve interromper o registro financeiro. Auditoria persistente é distinta de telemetria.
+- **Persistência:** `Transaction` + `OutboxEvent` no mesmo commit, e `DailyBalance` + `ProcessedEvent` no mesmo commit, conforme ADR-005.
+- **Contratos:** a comunicação entre serviços financeiros ocorre por eventos versionáveis no RabbitMQ; nenhuma dependência síncrona de Transactions para Consolidation no registro.
+- **Fronteira não fechada:** localização da persistência de `Merchant`/`Membership`, política exata de permissões, regra do saldo diário, estornos e algumas convenções de retries/DLQ seguem os documentos de requisitos e issues em aberto. Os componentes indicam responsabilidades, **não tabelas ou classes definitivas**.
+
+### Como renderizar os diagramas
+
+As três fontes usam a biblioteca **C4-PlantUML** (`!include <C4/C4_Component>`). Em um ambiente com PlantUML instalado e suporte à biblioteca:
+
+```bash
+plantuml -tpng docs/architecture/plantuml/c4-components-frontend.puml
+plantuml -tpng docs/architecture/plantuml/c4-components-transactions.puml
+plantuml -tpng docs/architecture/plantuml/c4-components-consolidation.puml
+```
+
+As imagens acima devem ser colocadas em `docs/architecture/images/` com os nomes `c4-components-frontend.png`, `c4-components-transactions.png` e `c4-components-consolidation.png`. **As fontes PlantUML são a referência editável**. Os links de imagem funcionarão após adicionar os PNGs ao repositório.
+
+### Protocolos e portas de destino
+
+A tabela completa está na [Building Block View](building-block-view.md#protocolos-e-portas-de-referência). Nos diagramas Nível 3 foram identificadas as principais portas: **443** (HTTPS de entrada previsto), **8080** (NGINX interno confirmado, APIs como exemplo), **5432** (PostgreSQL), **5672** (AMQP privado, ou **5671** com TLS) e **4317/4318** (OTLP, conforme transporte). As portas-padrão não são garantia de configuração implantada; todo acesso público além do HTTPS previsto depende de decisão de segurança e infraestrutura.
+
+### Observações que saíram dos diagramas
+
+As notas amarelas foram retiradas apenas para melhorar a legibilidade, sem eliminar as decisões técnicas:
+
+- **Frontend:** React não abre uma porta de servidor própria. O NGINX serve o build estático, e o JavaScript roda no navegador. O template atual do NGINX escuta HTTP interno em **8080**; **HTTPS público em 443** depende da configuração de Ingress/TLS no AKS. A SPA não deve guardar tokens em `localStorage` e não substitui a autorização do backend.
+- **Transactions:** Keycloak autentica, mas o acesso por `merchant_id` pertence às APIs CashFlow. O armazenamento do vínculo ainda depende de definição. O Outbox worker pertence ao serviço Transactions, pode compartilhar o host da API e nunca precisa aguardar Consolidation para confirmar o lançamento.
+- **Consolidation:** o banco de Transactions **não** é consultado diretamente. O saldo pode ficar temporariamente desatualizado. A deduplicação por `event_id` e a atualização de `DailyBalance` devem ocorrer na mesma transação para impedir contagem dupla.
 
 ## Próximas leituras
 
