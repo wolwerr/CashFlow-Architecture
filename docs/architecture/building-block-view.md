@@ -116,7 +116,7 @@ O [C4 Nível 3](c4-level-3-components.md) detalha três contêineres com fontes 
 - [Transactions](plantuml/c4-components-transactions.puml), incluindo persistência transacional e worker Outbox
 - [Consolidation](plantuml/c4-components-consolidation.puml), incluindo projeções, consumo e idempotência
 
-O React é executado no navegador. NGINX entrega o build e encaminha as chamadas às duas APIs. **Os PNGs novos ainda precisam ser renderizados e validados**.
+O React é executado no navegador. NGINX entrega o build e encaminha as chamadas às duas APIs. Os PNGs devem ser adicionados em `docs/architecture/images/` com os nomes `c4-components-frontend.png`, `c4-components-transactions.png` e `c4-components-consolidation.png`; a documentação do Nível 3 já referencia essas imagens.
 
 ## Próximas leituras
 
