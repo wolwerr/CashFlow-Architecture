@@ -1,97 +1,65 @@
 @startuml CashFlow_Containers
 !include <C4/C4_Container>
 
-title CashFlow | C4 Nível 2: Arquitetura da Solução
-
+title CashFlow | C4 Nível 2: Contêineres
 LAYOUT_TOP_DOWN()
 
-Person(comerciante, "Comerciante", "Registra lançamentos e consulta saldos")
-Person(admin, "Administrador de acessos", "Gerencia usuários e permissões")
+Person(comerciante, "Comerciante", "Lançamentos e consultas")
+Person(admin, "Administrador", "Usuários e permissões")
 
 System_Boundary(cashflow, "CashFlow") {
-  Container(web, "Aplicação Web responsiva", "React / TypeScript (SPA no navegador)", "Interface financeira e administrativa")
-  Container(gateway, "NGINX (reverse proxy)", "HTTP interno :8080; HTTPS público :443 previsto", "Serve o React e encaminha requisições às APIs")
-  Container(iam, "Keycloak", "OIDC / OAuth 2.0; HTTPS público :443 previsto", "Identidades, login, sessões e tokens")
-  ContainerDb(db_iam, "Banco do Keycloak", "PostgreSQL / TCP :5432 (referência)", "Usuários, credenciais e configuração do provedor")
-  Container(lancamentos, "Serviço de lançamentos", "ASP.NET Core HTTP interno :8080 (referência)", "Registra créditos e débitos")
-  ContainerDb(db_lancamentos, "Banco de lançamentos", "PostgreSQL / TCP :5432", "Movimentações, auditoria e Outbox")
-  ContainerQueue(mensageria, "RabbitMQ", "AMQP / TCP :5672 (referência)", "Distribui eventos financeiros")
-  Container(consolidado, "Serviço de consolidado", "ASP.NET Core HTTP interno :8080 (referência)", "Calcula e consulta saldos diários")
-  ContainerDb(db_consolidado, "Banco do consolidado", "PostgreSQL / TCP :5432", "Saldos e eventos processados")
-  Container(telemetria, "Stack de observabilidade", "OTLP gRPC :4317 / HTTP :4318 (referência)", "Coleta OTLP; métricas, logs, traces e dashboards")
+  Container(web, "Frontend", "React / TypeScript", "SPA executada no navegador")
+  Container(nginx, "NGINX", "HTTP interno :8080", "Arquivos estáticos e proxy /api/*")
+  Container(iam, "Keycloak", "OIDC / HTTPS :443 (previsto)", "Login, tokens e chaves JWKS")
+  ContainerDb(db_iam, "Banco IAM", "PostgreSQL / TCP :5432", "Identidades e configuração")
+
+  Container(transactions, "Transactions", ".NET 10 / HTTP :8080 (ref.)", "API de lançamentos e Outbox worker")
+  Container(consolidation, "Consolidation", ".NET 10 / HTTP :8080 (ref.)", "API de saldo e consumidor")
+  ContainerQueue(rabbitmq, "RabbitMQ", "AMQP / TCP :5672", "Mensagens financeiras")
+  ContainerDb(db_transactions, "Banco Transactions", "PostgreSQL / TCP :5432", "Lançamentos e Outbox")
+  ContainerDb(db_consolidation, "Banco Consolidation", "PostgreSQL / TCP :5432", "Saldos e eventos processados")
+  Container(observability, "Observabilidade", "OTLP :4317 / :4318 (ref.)", "Collector, Prometheus, Loki, Tempo e Grafana")
 }
 
-' Posicionamento principal
+' Agrupamento visual: borda e IAM na parte superior;
+' serviços financeiros no centro; dados e telemetria abaixo.
 Lay_R(comerciante, admin)
-Lay_D(web, gateway)
-Lay_D(gateway, iam)
+Lay_D(web, nginx)
+Lay_R(nginx, iam)
 Lay_D(iam, db_iam)
-Lay_R(gateway, lancamentos)
-Lay_D(lancamentos, db_lancamentos)
-Lay_R(lancamentos, mensageria)
-Lay_R(mensageria, consolidado)
-Lay_D(consolidado, db_consolidado)
-Lay_D(db_consolidado, telemetria)
+Lay_D(nginx, transactions)
+Lay_R(transactions, consolidation)
+Lay_D(transactions, db_transactions)
+Lay_D(consolidation, db_consolidation)
+Lay_D(transactions, rabbitmq)
+Lay_D(rabbitmq, observability)
 
-' Atores e canais
-Rel(comerciante, web, "Registra e consulta", "HTTPS / TCP :443 público previsto")
-Rel(admin, web, "Administra acessos", "HTTPS / TCP :443 público previsto")
-Rel_D(web, gateway, "Consome APIs e assets pelo NGINX", "HTTPS / TCP :443 público previsto")
+Rel(comerciante, web, "Usa a aplicação", "HTTPS :443 (previsto)")
+Rel(admin, web, "Administra acessos", "HTTPS :443 (previsto)")
+Rel(web, nginx, "Busca assets e acessa /api/*", "HTTPS :443 externo (previsto)")
+Rel(web, iam, "Login OIDC + PKCE", "HTTPS :443 (previsto)")
 
-' Identidade
-Rel_D(web, iam, "Login OIDC direto do navegador; Authorization Code + PKCE", "HTTPS / TCP :443 público previsto")
-Rel(lancamentos, iam, "Obtém metadata OIDC / JWKS quando necessário; valida JWT localmente", "HTTPS / TCP :443 (referência)")
-Rel(consolidado, iam, "Obtém metadata OIDC / JWKS quando necessário; valida JWT localmente", "HTTPS / TCP :443 (referência)")
-Rel_D(iam, db_iam, "Persiste identidades e sessões", "PostgreSQL / TCP :5432")
+' Integração opcional na borda, NÃO presente no template atual.
+' Exigiria auth_request e um serviço adaptador OIDC, ou equivalente.
+Rel(nginx, iam, "Opcional futuro: auth_request + adaptador", "HTTPS :443 (não ativo)")
 
-' Fluxo financeiro
-Rel_R(gateway, lancamentos, "Encaminha registro + Authorization: Bearer", "HTTP / TCP :8080 privado (referência)")
-Rel_D(lancamentos, db_lancamentos, "Persiste lançamento + Outbox", "PostgreSQL / TCP :5432")
-Rel_R(lancamentos, mensageria, "Publica eventos", "AMQP 0-9-1 / TCP :5672 (referência)")
-Rel_R(consolidado, mensageria, "Consome eventos e confirma ACK após commit", "AMQP 0-9-1 / TCP :5672 (referência)")
-Rel_D(consolidado, db_consolidado, "Atualiza e consulta saldos", "PostgreSQL / TCP :5432")
-Rel(gateway, consolidado, "Encaminha consulta + Authorization: Bearer", "HTTP / TCP :8080 privado (referência)")
+Rel(nginx, transactions, "Proxy + Bearer JWT", "HTTP :8080 (privado)")
+Rel(nginx, consolidation, "Proxy + Bearer JWT", "HTTP :8080 (privado)")
 
-' Integrações transversais apresentadas em notas
-note right of iam
-  React inicia login OIDC com PKCE.
-  NGINX apenas encaminha Bearer.
-  Cada API valida assinatura, issuer,
-  audience e expiracao do access token.
-  JWKS consultado sob demanda/cache.
-  Merchant_id autorizado nas APIs.
-  Nao existe introspeccao no Keycloak
-  a cada requisicao por padrao.
-end note
+' A validação JWT é feita localmente em CADA API.
+' As conexões JWKS/metadata são sob demanda e usam cache.
+Rel(transactions, iam, "Obtém JWKS; valida JWT localmente", "HTTPS :443 (ref.)")
+Rel(consolidation, iam, "Obtém JWKS; valida JWT localmente", "HTTPS :443 (ref.)")
 
-note right of telemetria
-  Entrada OTLP: gRPC TCP :4317
-  ou HTTP TCP :4318 (referencia).
-  APIs e workers usam OpenTelemetry.
-  Collector recebe OTLP e encaminha:
-  Prometheus (metricas), Loki (logs),
-  Tempo (traces). Grafana consulta
-  os tres backends.
-  Integracoes de NGINX, Keycloak,
-  PostgreSQL e RabbitMQ podem
-  exigir exporters ou agentes.
-end note
+Rel(iam, db_iam, "Persiste identidades", "TCP :5432")
+Rel(transactions, db_transactions, "Grava lançamento + Outbox", "TCP :5432")
+Rel(consolidation, db_consolidation, "Lê e atualiza projeções", "TCP :5432")
+Rel(transactions, rabbitmq, "Publica Outbox", "AMQP :5672")
+Rel(consolidation, rabbitmq, "Consome; ACK após commit", "AMQP :5672")
 
-note bottom of gateway
-  Template atual: listen :8080 HTTP.
-  TLS e porta :443 externa são previstos.
-  Porta :8080 das APIs é exemplo de upstream.
-  HTTPS interno requer configuração adicional.
-  PostgreSQL: TCP :5432 privado.
-  RabbitMQ: TCP :5672 sem TLS,
-  ou :5671 com AMQPS/TLS.
-  NGINX nao valida JWT no template.
-  Nao ha relacao NGINX -> Keycloak
-  para autenticar a cada requisicao.
-  Reverse proxy adotado no MVP.
-  API Gateway dedicado e BFF:
-  evolucoes futuras (ADR-007).
-end note
+' Para reduzir cruzamentos, a telemetria aparece como relação agrupada.
+Rel(transactions, observability, "Envia telemetria", "OTLP :4317 / :4318")
+Rel(consolidation, observability, "Envia telemetria", "OTLP :4317 / :4318")
 
 SHOW_LEGEND()
 @enduml
