@@ -16,13 +16,13 @@ O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos.
 
 ## C4 Nível 2: Contêineres
 
-A **solução completa proposta** contém uma aplicação React responsiva, NGINX como reverse proxy definido para implementação no MVP, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
+A **solução completa proposta** contém uma aplicação React responsiva, NGINX como reverse proxy definido para implementação no MVP, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos. **O React faz login diretamente no Keycloak; o NGINX encaminha o Bearer token e cada API valida JWT localmente com chaves JWKS obtidas sob demanda ou em cache.**
 
 ![Contêineres do CashFlow](images/c4-containers.png)
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png` para apresentar as portas de destino e os transportes no PNG. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está **decidida**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
+> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png` para apresentar as portas, o token encaminhado pelo NGINX e a obtenção de JWKS por cada backend no PNG. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está **decidida**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
 
 | Bloco | Responsabilidade |
 | --- | --- |
@@ -55,6 +55,7 @@ Os números são **portas de destino**, não portas de origem. NGINX :8080 está
 | NGINX → Consolidation | HTTP/TCP | **8080** | Exemplo `consolidation:8080`, rede privada |
 | Navegador → Keycloak | OIDC/HTTPS | **443** | URL pública e terminação TLS a definir |
 | APIs → JWKS Keycloak | HTTPS/TCP | **443** | Endpoint externo/privado conforme implantação; cache local |
+| NGINX → APIs financeiras | HTTP/TCP | **8080** | Preserva `Authorization: Bearer`; o NGINX não valida JWT no template atual |
 | Keycloak → banco de identidade | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
 | APIs → bancos lógicos próprios | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
 | Transactions Outbox → RabbitMQ | AMQP/TCP | **5672** | Porta-padrão sem TLS; AMQPS/TLS: **5671** |
