@@ -1,6 +1,6 @@
 # ADR-004: RabbitMQ para comunicação assíncrona entre serviços financeiros
 
-> **Status:** aceita  
+> **Status:** decidida  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), ADR-005 (Outbox, consistência e idempotência)
@@ -22,7 +22,7 @@ Os eventos financeiros devem ser entregues de forma durável e reprocessável ap
 
 Nenhuma alternativa dispensa desenho de consistência e idempotência. A escolha não afirma que RabbitMQ seja intrinsecamente superior a Kafka em toda carga ou integração.
 
-## Decisão aceita
+## Decisão decidida
 
 Utilizar **RabbitMQ com AMQP 0-9-1** no MVP como broker entre Transactions e Consolidation, preservando a propriedade dos eventos em Transactions por meio de **Transactional Outbox**. Executar RabbitMQ no Docker Compose para avaliação. Não fixar uma tecnologia cloud gerenciada nesta ADR.
 
