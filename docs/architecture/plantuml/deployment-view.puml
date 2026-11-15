@@ -1,0 +1,92 @@
+@startuml CashFlow_Deployment_View
+title CashFlow | Deployment View - Azure de referencia, arquitetura portavel
+top to bottom direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam backgroundColor white
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam ArrowColor #566579
+skinparam packageBorderColor #64748B
+skinparam packageFontColor #0F172A
+skinparam rectangleBorderColor #64748B
+skinparam rectangleFontColor #0F172A
+skinparam noteBackgroundColor #FFF9E8
+hide stereotype
+
+actor "Comerciante e\nadministrador" as people
+
+rectangle "LOCAL | Docker Compose\nSem custo Azure na estimativa" as LOCAL #E8EDF5 {
+  rectangle "NGINX + React\nTransactions + Consolidation\nKeycloak + RabbitMQ\nPostgreSQL + observabilidade" as localStack #FFFFFF
+}
+
+package "SHARED | Azure" as SHARED #E2EFFB {
+  rectangle "Container Registry\nACR Basic" as acr #FFFFFF
+  rectangle "DNS publico\nAzure DNS" as dns #FFFFFF
+}
+
+package "DEV | Azure East US" as DEV #E8F3FF {
+  rectangle "Entrada\nStandard Load Balancer + IPs" as devLb #FFFFFF
+  node "AKS DEV | 1 no D4as v5" as devAks #D5E8FF {
+    rectangle "NGINX + React\nTransactions + Outbox\nConsolidation + consumer\nRabbitMQ + Keycloak\nOTel + Prometheus + Loki\nTempo + Grafana" as devPods #FFFFFF
+    database "PVCs\n3 x P4" as devPvc #FFFFFF
+  }
+  database "PostgreSQL Flexible Server\nB1ms | 32 GiB" as devPg #FFFFFF
+  rectangle "Blob Hot LRS\n20 GB" as devBlob #FFFFFF
+  rectangle "Key Vault" as devKv #FFFFFF
+}
+
+package "HOM | Azure East US" as HOM #E8F3FF {
+  rectangle "Entrada\nStandard Load Balancer + IPs" as homLb #FFFFFF
+  node "AKS HOM | 1 no D4as v5" as homAks #D5E8FF {
+    rectangle "NGINX + React\nTransactions + Outbox\nConsolidation + consumer\nRabbitMQ + Keycloak\nOTel + Prometheus + Loki\nTempo + Grafana" as homPods #FFFFFF
+    database "PVCs\n3 x P4" as homPvc #FFFFFF
+  }
+  database "PostgreSQL Flexible Server\nB1ms | 32 GiB" as homPg #FFFFFF
+  rectangle "Blob Hot LRS\n20 GB" as homBlob #FFFFFF
+  rectangle "Key Vault" as homKv #FFFFFF
+}
+
+package "PROD | Azure East US" as PROD #D9EEFF {
+  rectangle "Entrada\nStandard Load Balancer + IPs" as prodLb #FFFFFF
+  node "AKS Standard | 3 nos D4as v5" as prodAks #CCE5FF {
+    rectangle "NGINX + React\nTransactions + Outbox\nConsolidation + consumer\nRabbitMQ quorum + Keycloak\nOTel + Prometheus + Loki\nTempo + Grafana" as prodPods #FFFFFF
+    database "PVCs\n4 x P10" as prodPvc #FFFFFF
+  }
+  database "PostgreSQL Flexible Server\nGeneral Purpose D2s v3 + HA" as prodPg #FFFFFF
+  rectangle "Blob Hot ZRS\n200 GB" as prodBlob #FFFFFF
+  rectangle "Key Vault\nSnapshots: 100 GB estimados" as prodKv #FFFFFF
+}
+
+' Fluxos ilustrativos, nao sao regras de rede nem topologia definitiva.
+people --> dns : Resolve dominio
+dns ..> devLb : DEV
+dns ..> homLb : HOM
+dns ..> prodLb : PROD
+devLb --> devPods : HTTPS externo / HTTP interno
+homLb --> homPods : HTTPS externo / HTTP interno
+prodLb --> prodPods : HTTPS externo / HTTP interno
+devPods --> devPg : SQL
+homPods --> homPg : SQL
+prodPods --> prodPg : SQL
+devPods --> devBlob : Loki / Tempo
+homPods --> homBlob : Loki / Tempo
+prodPods --> prodBlob : Loki / Tempo
+devPods ..> devKv : Segredos
+homPods ..> homKv : Segredos
+prodPods ..> prodKv : Segredos
+acr ..> devAks : Imagens
+acr ..> homAks : Imagens
+acr ..> prodAks : Imagens
+
+legend bottom
+  Arquitetura-alvo, nao implantacao validada.
+  LOCAL e independente da nuvem.
+  DEV, HOM e PROD possuem clusters e bancos logicos separados.
+  Azure e a referencia de custo; AWS e GCP requerem reestimativa.
+  Os componentes internos sao workloads sobre nos Kubernetes.
+  PostgreSQL e servico gerenciado fora do AKS.
+  HTTPS publico, conectividade privada, HA e backup exigem validacao.
+endlegend
+@enduml
