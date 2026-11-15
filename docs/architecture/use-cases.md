@@ -95,7 +95,11 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 
 **Situação:** fora do MVP, previsto para próxima versão. Regra de autorização, dia de efeito e política de estorno serão definidos quando implementado.
 
-## 5. Escopo aprovado em 15/11/2026\n\nAlém de UC-01 a UC-03, **UC-04 integra o MVP**. A auditoria básica de registros financeiros confirmados é mecanismo interno aprovado, sem caso de uso público de administração. O sistema é multicomerciante, com papéis ADMIN e OPERATOR por estabelecimento. O formulário inicia na data atual de `America/Sao_Paulo`, editável; lançamentos retroativos são admitidos sem limite de dias com autorização. O acumulado deriva de totais diários persistidos. **UC-05 fica fora do MVP.** Consulte [Decisões consolidadas](mvp-decisions.md).\n\n## 6. Relação com a documentação
+## 5. Escopo aprovado em 15/11/2026
+
+Além de UC-01 a UC-03, **UC-04 integra o MVP**. A auditoria básica de registros financeiros confirmados é mecanismo interno aprovado, sem caso de uso público de administração. O sistema é multicomerciante, com papéis ADMIN e OPERATOR por estabelecimento. O formulário inicia na data atual de `America/Sao_Paulo`, editável; lançamentos retroativos são admitidos sem limite de dias com autorização. O acumulado deriva de totais diários persistidos. **UC-05 fica fora do MVP.** Consulte [Decisões consolidadas](mvp-decisions.md).
+
+## 6. Relação com a documentação
 
 | Necessidade | Documento |
 | --- | --- |
