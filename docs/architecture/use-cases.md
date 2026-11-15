@@ -2,7 +2,7 @@
 
 > **Projeto:** CashFlow Architecture · **Milestone:** M2  
 > **Base:** requisitos funcionais da Issue #3 e mapeamento de negócio da Issue #2  
-> **Situação:** versão inicial, com regras de saldo e estorno ainda pendentes
+> **Situação:** escopo funcional do MVP decidido em 15/11/2026; testes pendentes
 
 ## 1. Objetivo
 
@@ -25,8 +25,8 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 | UC-01 | Registrar crédito | Comerciante | Exigido |
 | UC-02 | Registrar débito | Comerciante | Exigido |
 | UC-03 | Consultar consolidado diário | Comerciante | Exigido |
-| UC-04 | Consultar histórico de lançamentos | Comerciante | Proposto |
-| UC-05 | Estornar lançamento | Comerciante | Proposto |
+| UC-04 | Consultar histórico de lançamentos | Comerciante | Proposto, **aprovado para MVP** |
+| UC-05 | Estornar lançamento | Comerciante | Proposto, **próxima versão** |
 
 ### UC-01: Registrar crédito
 
@@ -85,7 +85,7 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 
 **Fluxo resumido:** o comerciante escolhe um período e visualiza os lançamentos correspondentes.
 
-**Situação:** sugestão de melhoria, dependente de aprovação do escopo funcional.
+**Situação:** aprovado para o MVP, com filtro por período, paginação e autorização por comerciante.
 
 ### UC-05: Estornar lançamento
 
@@ -93,9 +93,9 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 
 **Fluxo resumido:** o comerciante identifica o lançamento original, solicita o estorno e recebe a confirmação do ajuste.
 
-**Situação:** proposta para futura definição. A regra de autorização, o dia de efeito e a política de estorno ainda não foram aprovados.
+**Situação:** fora do MVP, previsto para próxima versão. Regra de autorização, dia de efeito e política de estorno serão definidos quando implementado.
 
-## 5. Relação com a documentação
+## 5. Escopo aprovado em 15/11/2026\n\nAlém de UC-01 a UC-03, **UC-04 integra o MVP**. A auditoria básica de registros financeiros confirmados é mecanismo interno aprovado, sem caso de uso público de administração. O sistema é multicomerciante, com papéis ADMIN e OPERATOR por estabelecimento. O formulário inicia na data atual de `America/Sao_Paulo`, editável; lançamentos retroativos são admitidos sem limite de dias com autorização. O acumulado deriva de totais diários persistidos. **UC-05 fica fora do MVP.** Consulte [Decisões consolidadas](mvp-decisions.md).\n\n## 6. Relação com a documentação
 
 | Necessidade | Documento |
 | --- | --- |
