@@ -41,25 +41,32 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 
 **Nota:** o bloco Web/Mobile é uma representação conceitual dos canais de entrada. Se forem aplicações implantadas separadamente, o C4 Nível 2 pode ser desdobrado em contêiner Web e contêiner Mobile após a escolha tecnológica na Issue #7.
 
-## Protocolos propostos
+## Protocolos e portas de referência
 
-| Comunicação | Protocolo |
-| --- | --- |
-| Usuários → aplicação Web/Mobile | HTTPS |
-| React → NGINX | HTTPS / REST / JSON, com Bearer JWT |
-| NGINX → APIs financeiras | Proxy HTTPS / REST / JSON; autenticação OIDC com Keycloak ocorre separadamente |
-| Login e identificação | Keycloak com OpenID Connect / OAuth 2.0 sobre HTTPS; Authorization Code + PKCE conforme tipo de cliente |
-| Cadastro, grupos e permissões | API administrativa REST / HTTPS (proposta) |
-| Validação de JWT | JWKS / HTTPS, com validação local e cache das chaves |
-| APIs e seus bancos | SQL / TCP, com proteção de conexão |
-| Worker Outbox → broker → consumidor | AMQP 0-9-1 |
-| APIs e workers → OpenTelemetry Collector | OTLP / gRPC ou HTTP, logs estruturados, métricas e traces |
-| Collector → Prometheus | Exportação de métricas por endpoint de scrape HTTP |
-| Collector → Loki | Logs via OTLP / HTTP |
-| Collector → Tempo | Traces via OTLP / gRPC ou HTTP |
-| Grafana → Prometheus, Loki e Tempo | Consultas às APIs dos backends configurados |
+Os números são **portas de destino**, não portas de origem. NGINX :8080 está **confirmado no template** [default.conf.template](../../infra/nginx/default.conf.template); portas das APIs :8080 são **exemplos dos upstreams** documentados. HTTPS público :443 e os serviços não implementados são **premissas a confirmar na implantação**, não configuração validada do AKS.
 
-Os protocolos representam **propostas**, não decisões finais. Produtos e garantias serão formalizados nos ADRs da Issue #7. As APIs devem validar assinatura, emissor, audiência, prazo e permissões do token. A autorização também precisa verificar que o usuário possui acesso ao **comerciante/conta consultada**, e não somente que pertence a determinado grupo. Tokens podem ter permissões desatualizadas até sua expiração; revogação e política de atualização serão detalhadas na Issue #9.
+| Origem → destino | Protocolo | Porta de destino | Condição |
+| --- | --- | --- | --- |
+| Navegador → borda pública | HTTPS/TCP | **443** | Prevista com TLS; porta externa ainda não configurada |
+| Borda / Ingress → NGINX | HTTP/TCP | **8080** | Confirmada no template NGINX |
+| NGINX → Transactions | HTTP/TCP | **8080** | Exemplo `transactions:8080`, rede privada |
+| NGINX → Consolidation | HTTP/TCP | **8080** | Exemplo `consolidation:8080`, rede privada |
+| Navegador → Keycloak | OIDC/HTTPS | **443** | URL pública e terminação TLS a definir |
+| APIs → JWKS Keycloak | HTTPS/TCP | **443** | Endpoint externo/privado conforme implantação; cache local |
+| Keycloak → banco de identidade | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
+| APIs → bancos lógicos próprios | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
+| Transactions Outbox → RabbitMQ | AMQP/TCP | **5672** | Porta-padrão sem TLS; AMQPS/TLS: **5671** |
+| RabbitMQ → Consolidation Consumer | AMQP/TCP | **5672** | Consumer estabelece conexão com broker, não porta de listener no consumer |
+| APIs/workers → OpenTelemetry Collector | OTLP/gRPC ou HTTP | **4317 / 4318** | Conforme transporte configurado |
+| Collector → Prometheus | Exporter HTTP / scrape | **a definir** | Exemplo configurável: 8889, não assumido como implantado |
+| Collector → Loki | OTLP/HTTP | **3100** | Porta de ingestão usual, configuração pendente |
+| Collector → Tempo | OTLP/gRPC ou HTTP | **4317 / 4318** | Porta no contêiner Tempo, independente do Collector |
+| Grafana → Prometheus | HTTP | **9090** | Porta usual de consulta, privada |
+| Grafana → Loki | HTTP | **3100** | Porta usual de consulta, privada |
+| Grafana → Tempo | HTTP | **3200** | Porta usual de consulta, privada |
+| Navegador → Grafana (se exposto) | HTTPS | **443** | Serviço interno costuma escutar em 3000; exposição opcional |
+
+**O React não escuta porta TCP**: seus arquivos são servidos pelo NGINX e o JavaScript roda no navegador. O template NGINX atual escuta **HTTP em 8080**, não HTTPS. TLS público na porta 443 precisa ser configurado no Ingress/borda; não assumir HTTPS no salto NGINX → APIs até que seja implementado. O broker AMQP/5672 deve ficar privado; habilitar TLS e 5671 se exigido.
 
 ## Escopo: desafio x solução completa
 
@@ -103,12 +110,13 @@ A indisponibilidade do Keycloak **não deve parar o registro de movimentações 
 
 ## C4 Nível 3: Componentes
 
-A visão de componentes foi documentada em **[C4 Nível 3: Transactions e Consolidation](c4-level-3-components.md)**, com duas fontes PlantUML editáveis:
+O [C4 Nível 3](c4-level-3-components.md) detalha três contêineres com fontes PlantUML editáveis:
 
-- [Transactions: API, domínio, persistência e worker Outbox](plantuml/c4-components-transactions.puml)
-- [Consolidation: consulta diária, consumidor, projeção e idempotência](plantuml/c4-components-consolidation.puml)
+- [Frontend React/TypeScript](plantuml/c4-components-frontend.puml), incluindo OIDC + PKCE, rotas, formulários, saldos e cliente HTTP
+- [Transactions](plantuml/c4-components-transactions.puml), incluindo persistência transacional e worker Outbox
+- [Consolidation](plantuml/c4-components-consolidation.puml), incluindo projeções, consumo e idempotência
 
-Os componentes seguem a **ADR-002 (Clean Architecture)**, a **ADR-005 (Transactional Outbox e consumidor idempotente)** e a **ADR-006 (autorização financeira separada da autenticação do Keycloak)**. Os diagramas representam responsabilidades propostas e suas interações, não classes de código ou deployments já implementados. **Os PNGs dos dois diagramas novos ainda precisam ser renderizados** a partir das fontes.
+O React é executado no navegador. NGINX entrega o build e encaminha as chamadas às duas APIs. **Os PNGs novos ainda precisam ser renderizados e validados**.
 
 ## Próximas leituras
 
