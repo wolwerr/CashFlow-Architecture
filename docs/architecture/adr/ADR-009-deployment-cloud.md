@@ -35,7 +35,7 @@ A escolha é de **arquitetura e orçamento-base**. Não significa que já exista
 | **TOTAL MENSAL** | **1.305,02** | Somente itens e premissas orçados |
 | **TOTAL ANUAL ESTIMADO** | **15.660,24** | 12 × total mensal aproximado |
 
-### PostgreSQL: valores efetivamente aprovados
+### PostgreSQL: valores definidos na calculadora
 
 | Ambiente | Serviço | Mensal |
 | --- | --- | ---: |
