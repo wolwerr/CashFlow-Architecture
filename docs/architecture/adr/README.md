@@ -24,7 +24,7 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 | ADR-010 | Estratégia de testes e cobertura | Mínimo de **80% de cobertura de linhas**, além de testes de integração, carga e resiliência | **Proposto** |
 | ADR-011 | CI/CD | Comparar GitHub Actions, Azure DevOps Pipelines e Jenkins; automatizar quality gates | **Pendente** |
 
-**Status proposto** significa que o padrão está desenhado, mas ainda não é uma escolha decidida. Cada ADR será detalhada e terá seu status atualizado após análise dos trade-offs.
+**Decidida** indica que a decisão arquitetural foi registrada após análise das alternativas e dos trade-offs. Não significa que já foi implementada ou validada por testes. **Proposta** e **Pendente** continuam estados distintos.
 
 ## Prioridades de decisão
 
