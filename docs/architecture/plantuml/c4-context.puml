@@ -1,18 +1,15 @@
 @startuml CashFlow_Context
 !include <C4/C4_Context>
+
 title CashFlow | C4 Nível 1: Contexto
 LAYOUT_LEFT_RIGHT()
-Person(comerciante, "Comerciante", "Consulta o caixa e registra créditos e débitos")
-Person(admin, "Administrador de acessos", "Gerencia usuários, vínculos e permissões")
-System(cashflow, "CashFlow", "Solução Web React, APIs financeiras e controle de acessos. Entrada pública HTTPS :443 prevista")
-Rel(comerciante, cashflow, "Acessa a aplicação e realiza operações", "HTTPS / TCP :443 (público previsto)")
-Rel(admin, cashflow, "Acessa o painel e gerencia acessos", "HTTPS")
-note bottom of cashflow
-  C4 Nivel 1 representa a entrada publica.
-  Porta TCP :443 e TLS sao previstos.
-  Portas privadas e protocolos internos
-  aparecem no C4 Nivel 2 e Nivel 3.
-end note
+
+Person(comerciante, "Comerciante", "Registra créditos/débitos e consulta saldos")
+Person(admin, "Administrador de acessos", "Gerencia usuários e permissões")
+System(cashflow, "CashFlow", "Aplicação Web financeira com autenticação e consolidação diária")
+
+Rel(comerciante, cashflow, "Registra e consulta", "HTTPS / TCP 443 (previsto)")
+Rel(admin, cashflow, "Administra acessos", "HTTPS / TCP 443 (previsto)")
 
 SHOW_LEGEND()
 @enduml
