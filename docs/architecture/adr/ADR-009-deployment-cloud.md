@@ -1,6 +1,6 @@
 # ADR-009: Implantação local, alternativas de cloud e custo total
 
-> **Status:** proposta para aprovação  
+> **Status:** aceita  
 > **Data:** 2026-11-15  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Orçamento por ambiente e lacunas para total:** [Plano LOCAL, DEV, HOM, PROD](../four-environment-total-cost-plan.md)  
@@ -14,7 +14,46 @@ CashFlow separa Transactions e Consolidation, com persistência PostgreSQL por d
 
 É necessário demonstrar **continuidade do registro quando o consolidado falhar**, além da consulta a **50 RPS com até 5% de perda** segundo a interpretação documentada nos RNFs. A escolha de plataforma precisa considerar custos e operação de **toda a arquitetura**, não só das duas APIs.
 
-O desafio não informou região obrigatória, orçamento ou SLA anual. Portanto o comparativo de cloud constitui **estudo de engenharia com premissas**. Não há cloud de produção escolhida nesta ADR.
+O desafio não informou região obrigatória, orçamento ou SLA anual. Portanto o comparativo de cloud constitui **estudo de engenharia com premissas**. A decisão final de referência é **Azure AKS em East US**, com serviços de aplicação no Kubernetes e Azure Database for PostgreSQL Flexible Server externo ao cluster. O estudo AWS EKS permanece como alternativa histórica documentada.
+
+## Decisão aprovada em 2026-11-15: Azure AKS e orçamento-base da calculadora
+
+**ADR-009 aceita.** A plataforma de referência é **Azure Kubernetes Service (AKS), região East US**, com PostgreSQL gerenciado externo ao Kubernetes. Amazon EKS permanece alternativa analisada, **não escolhida**. A decisão aceita o **orçamento-base de referência**, não aprova aquisição nem afirma HA validada em execução.
+
+A estimativa foi preenchida manualmente na **Azure Pricing Calculator** com 730 horas/mês, tarifas exibidas em USD, sem descontos contratuais. Os valores são os totais exibidos nos grupos, com arredondamentos por produto.
+
+| Ambiente / grupo | Mensal (USD) | Recursos e limites adotados |
+| --- | ---: | --- |
+| **LOCAL** | 0,00 de cloud | Docker Compose no computador de desenvolvimento; hardware e operação fora da conta Azure |
+| **DEV** | **204,34** | AKS sem SLA, 1 nó D4as v5 com OS Disk P10, 3 PV P4, PostgreSQL B1ms/32 GiB, Blob Hot LRS 20 GB, Standard LB, 2 IPv4 Standard, Key Vault, banda 20 GB |
+| **HOM** | **204,34** | Infraestrutura própria, isolada de DEV e PROD, **mesma capacidade econômica de DEV**; sem redimensionamento de HOM incluído no orçamento aprovado |
+| **PROD** | **890,44** | AKS Standard com SLA, 3 nós D4as v5 e 3 OS Disks P10, 4 PV P10, PostgreSQL General Purpose D2s v3/32 GiB com HA habilitada, Blob Hot ZRS 200 GB, Standard LB, 2 IPv4 Standard, Key Vault, banda 100 GB, 100 GB de snapshot estimados |
+| **SHARED** | **5,90** | 1 ACR Basic, 1 zona pública Azure DNS (1 milhão de consultas/mês) |
+| **TOTAL DE REFERÊNCIA** | **1.305,02** | 204,34 + 204,34 + 890,44 + 5,90 |
+| **TOTAL ANUAL DE REFERÊNCIA** | **15.660,24** | 12 vezes o valor mensal agregado, arredondado |
+
+**HOM permanece econômico por decisão expressa.** Valida funcionalidade, contratos, integração e deploy em ambiente independente. **Não prova por si só** latência ou disponibilidade de PROD sob a mesma carga. Testes de 50 RPS e resiliência devem ter capacidade adequada e resultados medidos; nenhum custo de expansão temporária está previsto neste baseline.
+
+### Valores detalhados confirmados na calculadora
+
+| Componente | DEV | HOM | PROD | SHARED |
+| --- | ---: | ---: | ---: | ---: |
+| AKS com discos de sistema | 145,27 | 145,27 | 508,81 | - |
+| Managed Disks (dados) | 15,84 | 15,84 | 78,84 | - |
+| PostgreSQL Flexible Server | 16,09 | 16,09 | 257,02 | - |
+| Blob Storage | 1,46 | 1,46 | 6,49 | - |
+| Load Balancer | 18,35 | 18,35 | 18,75 | - |
+| Public IPs (2 por ambiente) | 7,30 | 7,30 | 7,30 | - |
+| Key Vault | 0,03 | 0,03 | 0,03 | - |
+| Bandwidth (Internet egress) | 0,00 | 0,00 | 0,00 | - |
+| Snapshots (100 GB, PROD) | - | - | 13,20 | - |
+| Azure Container Registry Basic | - | - | - | 5,00 |
+| Azure DNS público | - | - | - | 0,90 |
+| **Subtotal por grupo** | **204,34** | **204,34** | **890,44** | **5,90** |
+
+**Precisão:** o total anual é aproximado e não inclui impostos nem câmbio; a interface pode apresentar diferença de centavos por arredondamento. Os **100 GB de snapshots** correspondem a volume de snapshot cobrado, não comprovam retenção de sete dias ou recuperação consistente de RabbitMQ. A calculadora informou **HA habilitada** para PostgreSQL PROD, mas não comprovou modalidade *zone-redundant*. Os **2 IPv4** por ambiente são hipótese de entrada e saída; confirmar a topologia real. O valor de **Internet egress igual a zero** resulta do preenchimento por grupo e não garante gratuidade agregada no contrato. O ACR Basic não oferece Private Endpoint e a política de segurança de PROD precisa considerar o trade-off.
+
+**Custos/riscos não encerrados por esta ADR:** consumo real e retenção de logs/traces, operações de storage, backups e restauração consistentes, saída e transferências entre zonas, serviços de proteção/segredos adicionais, expansão do Cluster Autoscaler, escalabilidade/HA do RabbitMQ, disponibilidade N+1, custo de capacidade adicional em HOM para testes não funcionais, eventuais políticas de rede privada e suporte. São pendências de execução e reestimativa, **não condição para marcar a ADR-009 aceita**.
 
 ## Alternativas avaliadas
 
@@ -27,11 +66,11 @@ O desafio não informou região obrigatória, orçamento ou SLA anual. Portanto 
 | **AWS ECS com Fargate** | Infraestrutura gerenciada para containers stateless, escala independente, modelo pay-per-resource, sem exigir Kubernetes | Não equivale a um cluster Kubernetes e requer componentes stateful adicionais, ALB/NAT/ECR/RDS/storage |
 | **VMs + Docker Compose em cloud** | Familiaridade e menor esforço inicial | Escalabilidade, recuperação, isolamento de falhas e HA exigem engenharia manual; risco de ponto único |
 
-## Propostas separadas para aprovação
+## Decisões adotadas e fundamentos
 
 ### 1. MVP: Docker Compose
 
-**Proposta:** adotar Docker Compose como ambiente de desenvolvimento, integração e demonstração. O arranjo local deve incluir, conforme código implementado:
+**Decisão:** adotar Docker Compose como ambiente de desenvolvimento, integração e demonstração. O arranjo local deve incluir, conforme código implementado:
 
 - React estático servido por **NGINX**.
 - **Transactions** e **Consolidation** com imagens, configurações, migrations e ciclos de vida independentes.
@@ -44,9 +83,9 @@ Não prometer HA em Compose com um nó para cada infraestrutura. Não interpreta
 
 **Situação atual:** existe template inicial de NGINX em [infra/nginx](../../../infra/nginx/README.md) e documentação arquitetural, mas ainda não foi demonstrada a integração de todos esses containers nem testes de carga. Uma decisão arquitetural não é prova de implantação.
 
-### 2. Produção de referência: decisão pendente
+### 2. Produção de referência: AKS selecionado
 
-**Proposta revisada:** priorizar uma comparação direta **AKS x Amazon EKS (managed EC2 node groups)**, pois ambos executam os workloads do CashFlow em nós Kubernetes, com o PostgreSQL externo e gerenciado, respectivamente **Azure Database for PostgreSQL Flexible Server** e **Amazon RDS for PostgreSQL**. Registrar **preferência provisória por AKS**, não aprovação final de cloud, até completar rede, persistência, segurança, HA e custos totais. [Veja o custo por serviço e por linha faturável](../aks-eks-cost-breakdown.md). ACA e ECS/Fargate permanecem alternativas já estudadas, mas são modelos de orquestração diferentes.
+**Decisão final:** **Azure AKS** em East US com PostgreSQL Flexible Server externo. O EKS segue como alternativa avaliada, sem necessidade de conclusão do custo integral AWS para esta decisão. [Comparativo histórico de AKS x EKS](../aks-eks-cost-breakdown.md).
 
 | Critério | ACA | AKS | ECS/Fargate |
 | --- | --- | --- | --- |
@@ -102,17 +141,17 @@ O [comparativo AKS x EKS](../aks-eks-cost-breakdown.md) agora inclui um **cenár
 
 A decisão sobre armazenamento deve distinguir PVs (RabbitMQ, Prometheus e estado auxiliar) de object storage (Loki/Tempo), pois executar pods dentro dos nós Kubernetes **não elimina a cobrança de persistência**. As hipóteses de três volumes 128 GiB são apenas *sizing financeiro preliminar*; não justificam compartilhar um disco RWO entre pods distintos nem garantem capacidade sob carga.
 
-**Aprovação ainda pendente:** manter AKS como preferência preliminar, com EKS como alternativa equivalente em Kubernetes, até termos uma versão com preço total de rede, storage, banco, egress e HA, além de teste de 50 RPS.
+**Decisão aceita:** AKS selecionado com orçamento-base **US$ 1.305,02/mês**. Custo efetivo, HA e 50 RPS dependem de validação técnica e operacional; não foram comprovados pelo orçamento.
 
 ## Decisão de isolamento de ambientes e revisão de orçamento (2026-11-15)
 
-**Definido pelo projeto:** DEV e HOM **não compartilham Kubernetes, PostgreSQL, dados, credenciais nem infraestrutura de ambiente**, para permitir homologação separada de produção. LOCAL continua Docker Compose. HOM mantém perfil econômico normalmente e deve ser **temporariamente configurado como espelho do PROD** (réplicas, HPA, quotas, recursos, versões, broker quorum, banco HA, ingress e testes de carga/resiliência) antes de promover release. Comparabilidade real deve ser verificada em testes, não declarada apenas pela escolha de Kubernetes.
+**Definido pelo projeto:** DEV e HOM **não compartilham Kubernetes, PostgreSQL, dados, credenciais nem infraestrutura de ambiente**. LOCAL continua Docker Compose. HOM **permanece econômico sem ampliação obrigatória** no orçamento aprovado; valida funcionalidades, contratos e implantação. A homologação nesse porte não substitui ensaios de carga e HA de PROD, que deverão ocorrer com infraestrutura capaz de reproduzir os requisitos.
 
 **Correção de viabilidade:** o PostgreSQL Azure Burstable B2ms usado no preço anterior de PROD **não suporta HA zone-redundant**. O [plano de custo por ambiente](../four-environment-total-cost-plan.md) substitui essa premissa para PROD por **General Purpose D2s v3 com primary/standby zone-redundant**, a cotar definitivamente. A cifra anterior não serve para produção com HA.
 
-**Totais base atualizados de itens quantificados 24x7**, *excluindo network/ingress/NAT/egress e outras lacunas*: Azure AKS **US$ 1.093,55/mês** para DEV + HOM + PROD; Amazon EKS **US$ 1.211,58/mês**, com a parcela RDS Multi-AZ ainda sendo um **proxy**, sem tarifa final nem storage de banco. Esses não são custos totais de fatura. Os dois ambientes não produtivos foram preservados como clusters separados.
+**Estimativa final do escopo aprovado na calculadora Azure:** **US$ 1.305,02/mês**, incluindo DEV, HOM, PROD e SHARED conforme tabela no início desta ADR. Os valores anteriores de US$ 1.093,55 (Azure parcial) e US$ 1.211,58 (AWS proxy) são estudos históricos e não representam o orçamento aprovado.
 
-**Faturamento definitivo depende** de estimativas exportadas das calculadoras oficiais, cobrindo por ambiente NAT, LB/ingress, IPs, armazenamento e backup de PostgreSQL, PVC/snapshots, object storage e operações, registry, segredos, DNS, transferência, custo de replica do broker e horas de HOM espelhando PROD. Não usar zero para lacunas e não aprovar cloud por subtotal.
+**Faturamento real pode variar** com rede, operações de dados, backup/retenção, políticas de segurança, escalabilidade, disponibilidade e contratação. O orçamento é uma referência de arquitetura e não equivale a compromisso comercial nem teste de produção.
 
 ## Ambientes obrigatórios: LOCAL, DEV, HOM e PROD
 
@@ -139,7 +178,7 @@ A [planilha textual do estudo AKS x EKS](../aks-eks-cost-breakdown.md) apresenta
 
 **Não são faturas totais, nem prova de custo menor do AKS.** Os números incluem nós/cluster, instância PostgreSQL, apenas armazenamento PostgreSQL Azure, uma reserva ilustrativa de PVs e object storage. Excluem, entre outros, **LB/NAT/ingress em ambos, RDS storage, registry, backups, IPs, egress, secrets e produção HA**. A estimativa de DEV/HOM com um nó precisa ser testada: Keycloak, RabbitMQ e stack Grafana podem exigir mais recursos, especialmente em HOM durante testes de carga.
 
-**Decisão:** manter DEV e HOM em **clusters e bancos separados**. Não compartilhar cluster nem banco entre ambientes. HOM é redimensionado temporariamente quando necessário para executar testes próximos aos de PROD, gerando custo adicional por hora.
+**Decisão:** manter DEV e HOM em **clusters e bancos separados**. O porte econômico de HOM fica inalterado; ensaios de escala/HA que exijam mais recursos serão planejados e cotados separadamente, sem premissa de aumento no orçamento aprovado.
 
 **Estratégia HPA:** usar HPA apenas quando há métricas, requests de CPU e capacidade de nós; com HPA desativado em DEV/HOM como baseline econômico, sem SLA. Em PROD, HPA para Transactions e Consolidation com `minReplicas: 2` é ponto de partida, junto a topology spread e probes, **não garantia de HA sem nós e banco capazes de sobreviver a falhas**.
 
@@ -180,16 +219,15 @@ A [planilha textual do estudo AKS x EKS](../aks-eks-cost-breakdown.md) apresenta
 | Subestimar esforço operacional | Incidentes e atrasos de patch | Definir equipe responsável e rotinas de runbook |
 | Persistência compartilhada | Falha simultânea de dados de múltiplos domínios | Isolamento lógico no MVP; avaliar instâncias/HA separadas em produção |
 
-## Pendências para a decisão final de cloud
+## Pendências de implementação e revisão da estimativa
 
-- Região e exigências de localização de dados.
-- Validar tamanho mínimo de DEV/HOM (1 nó cada), suporte a toda a stack e possível compartilhamento de cluster entre esses ambientes.
-- Distinção entre **demonstração cloud** e **produção HA**.
-- Recursos realmente medidos sob carga, 50 RPS e volume de eventos/dados.
-- Requisitos de RTO/RPO, retenção de dados, backup e disponibilidade.
-- Preços completos de Azure LB/NAT, AWS RDS storage/ECR, rede, ingress, object storage, PVCs, backups, observabilidade, broker, certificados, secrets e suporte.
-- Nível de operação aceito pela equipe e uso de serviços gerenciados.
-- Escolher formalmente **AKS ou EKS** após concluir a comparação Kubernetes; ACA e ECS/Fargate são alternativas de outros modelos já avaliadas. Atualizar esta ADR para aceita somente depois da escolha.
+- Confirmar a modalidade **zone-redundant** do PostgreSQL PROD no provisionamento, além de backup/restore e RPO/RTO.
+- Validar recursos necessários para a stack completa em DEV/HOM e N+1 para PROD, incluindo RabbitMQ quorum, HPA, Cluster Autoscaler, PDB e zonas.
+- Confirmar IPs de entrada/saída e saída via Standard Load Balancer, limites SNAT e custos agregados de egress e tráfego entre zonas.
+- Rever snapshots de 100 GB, retenção, recuperação consistente e crescimento de logs/traces no Blob.
+- Validar o modelo de segurança do ACR Basic compartilhado, acessos de produção e segredos isolados.
+- Validar 50 RPS e a interpretação do limite de 5% de perda no ensaio de carga; HOM econômico não substitui esse teste.
+- Revisar custos após métricas reais, autoscaling, eventuais contratos e operação. A ADR-009 está **aceita** com essas restrições registradas.
 
 ## Referências
 
