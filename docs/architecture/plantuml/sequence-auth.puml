@@ -1,49 +1,48 @@
 @startuml CashFlow_Authentication
-title CashFlow | Login com Keycloak e autorização por comerciante
+title CashFlow | Login OIDC e autorizacao por comerciante
 autonumber
-actor "Usuário" as U
-participant "Aplicação Web/Mobile" as W
-participant "Keycloak\n(provedor OIDC)" as KC
-database "Banco do Keycloak" as DB
-participant "NGINX (reverse proxy)" as G
-participant "API financeira" as API
-U -> W: Acessa a aplicação
-W -> KC: Inicia Authorization Code + PKCE (OIDC / HTTPS)
-KC -> U: Solicita autenticação
-U -> KC: Envia credenciais por conexão segura
-KC -> DB: Valida identidade, credenciais e estado
-DB --> KC: Resultado da autenticação
-KC --> W: Redireciona com código de autorização
-W -> KC: Troca código + code_verifier por tokens (HTTPS)
-KC --> W: Access token e demais tokens conforme fluxo
-W -> G: Requisição com access token via NGINX
-G -> API: Encaminha Bearer token sem alterar autorização
-API -> API: Valida assinatura JWT, issuer, audience e prazo
-API -> API: Verifica permissão e vínculo autorizado ao merchant_id
-alt Autenticado e autorizado
-  API --> G: Resposta da operação
-  G --> W: Resposta autorizada
-else Token ausente ou inválido
-  API --> G: 401 Unauthorized
-  G --> W: 401 Unauthorized
-else Token válido, sem autorização de comerciante
-  API --> G: 403 Forbidden
-  G --> W: 403 Forbidden
+actor "Comerciante" as U
+participant "React SPA\nno navegador" as W
+participant "Keycloak\nOIDC" as KC
+database "Banco IAM" as DB
+participant "NGINX\nreverse proxy" as G
+participant "API financeira\nTransactions ou Consolidation" as API
+
+U -> W: Acessa aplicacao
+W -> KC: Authorization Code + PKCE\nHTTPS :443
+KC -> U: Apresenta login
+U -> KC: Autentica em canal HTTPS
+KC -> DB: Verifica identidade\nPostgreSQL TCP :5432
+DB --> KC: Resultado
+KC --> W: Redireciona com authorization code
+W -> KC: Troca code + code_verifier por tokens\nHTTPS :443
+KC --> W: Access token para API
+W -> G: /api/* com Bearer token\nHTTPS :443 publico
+G -> API: Proxy com Authorization preservado\nHTTP :8080 privado
+opt Chaves ausentes ou atualizacao de cache
+  API -> KC: Consulta discovery / JWKS\nHTTPS conforme URL do issuer
+  KC --> API: Chaves publicas
 end
-W --> U: Apresenta resultado
+API -> API: Valida assinatura, iss, aud, exp/nbf\nlocalmente com JWKS em cache
+API -> API: Verifica vinculo e permissao\npara merchant_id no CashFlow
+alt JWT valido e acesso autorizado
+  API --> G: Resposta da operacao
+  G --> W: Resposta
+else JWT ausente ou invalido
+  API --> G: HTTP 401
+  G --> W: HTTP 401
+else JWT valido mas acesso negado
+  API --> G: HTTP 403
+  G --> W: HTTP 403
+end
+W --> U: Exibe resultado
 note over W,KC
-Fluxo conceitual React com PKCE.
-BFF futuro; a gestão segura de tokens
-e callback depende do tipo de cliente (ADR-007).
+SPA publica no MVP; BFF futuro.
+Nao persistir tokens em localStorage.
 end note
 note over G,API
-NGINX faz o proxy das APIs no MVP.
-A API valida o JWT e a autorizacao.
-end note
-note over API
-As relações usuário/comerciante são regras do
-CashFlow, não dados de negócio do Keycloak.
-Fonte e cache das permissões serão detalhados
-na Issue #9.
+NGINX atual somente encaminha.
+Autenticacao na borda via auth_request
+e opcional e nao implementada.
 end note
 @enduml
