@@ -46,7 +46,7 @@ Rel_D(iam, db_iam, "Persiste identidades e sessões", "PostgreSQL / TCP :5432")
 Rel_R(gateway, lancamentos, "Encaminha registros", "HTTP / TCP :8080 privado (referência)")
 Rel_D(lancamentos, db_lancamentos, "Persiste lançamento + Outbox", "PostgreSQL / TCP :5432")
 Rel_R(lancamentos, mensageria, "Publica eventos", "AMQP 0-9-1 / TCP :5672 (referência)")
-Rel_R(mensageria, consolidado, "Entrega eventos", "AMQP 0-9-1 / TCP :5672 (referência)")
+Rel_R(consolidado, mensageria, "Consome eventos e confirma ACK após commit", "AMQP 0-9-1 / TCP :5672 (referência)")
 Rel_D(consolidado, db_consolidado, "Atualiza e consulta saldos", "PostgreSQL / TCP :5432")
 Rel(gateway, consolidado, "Encaminha consultas", "HTTP / TCP :8080 privado (referência)")
 
@@ -59,6 +59,8 @@ note right of iam
 end note
 
 note right of telemetria
+  Entrada OTLP: gRPC TCP :4317
+  ou HTTP TCP :4318 (referencia).
   APIs e workers usam OpenTelemetry.
   Collector recebe OTLP e encaminha:
   Prometheus (metricas), Loki (logs),
@@ -74,6 +76,9 @@ note bottom of gateway
   TLS e porta :443 externa são previstos.
   Porta :8080 das APIs é exemplo de upstream.
   HTTPS interno requer configuração adicional.
+  PostgreSQL: TCP :5432 privado.
+  RabbitMQ: TCP :5672 sem TLS,
+  ou :5671 com AMQPS/TLS.
   Reverse proxy adotado no MVP.
   API Gateway dedicado e BFF:
   evolucoes futuras (ADR-007).
