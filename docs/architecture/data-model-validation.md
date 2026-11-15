@@ -13,7 +13,7 @@ Verificar se a propriedade dos dados entre Transactions, Consolidation, Keycloak
 
 | Entidade / grupo | Função conforme modelo | Resultado documental | Próxima evidência necessária |
 | --- | --- | --- | --- |
-| `Transaction` | Registro de fato financeiro, tipo CREDIT/DEBIT, valor, comerciante e data de referência | **Conforme com ressalva**: moeda, escala e data financeira abertas | Validar `amount` com decimal/numeric, tipo válido e data definida; dados de teste e constraints |
+| `Transaction` | Registro de fato financeiro, tipo CREDIT/DEBIT, valor, comerciante e data de referência | **Conforme com ressalva**: moeda e escala abertas; competência e instante UTC decididos | Validar `amount` com decimal/numeric, tipo válido e data definida; dados de teste e constraints |
 | `OutboxEvent` | Evento durável vinculado ao lançamento, status, payload e `correlation_id` | **Conforme no desenho** | Mesmo commit de Transaction, ID de evento estável, retries e claim concorrente |
 | `AuditEvent` | Auditoria persistida, separada de logs operacionais | **Parcial**: RF-07 é proposta | Fechar atos auditáveis, quando exige atomicidade, acesso, retenção e proteção |
 | `DailyBalance` | Projeção por comerciante/data, totais de crédito/débito e líquido | **Parcial**: pressupõe segregação por comerciante e movimento líquido; saldo acumulado decidido junto com o movimento líquido; saldo inicial zero decidido por comerciante; estratégia de recálculo ainda aberta | Definir semântica e chave `merchant_id + reference_date`; testes de concorrência e dias vazios com carry-forward do saldo |
@@ -64,7 +64,7 @@ Keycloak mantém usuários, credenciais e configurações OIDC. O CashFlow é re
 | **Decidido em 15/11/2026** | Exibir movimento líquido diário e saldo acumulado | Fórmulas conceituais definidas; saldo inicial de R$ 0,00 decidido; materialização e atualização retroativa ainda em aberto |
 | **Decidido em 15/11/2026** | **RN-03:** saldo inicial de R$ 0,00 por comerciante no MVP | Cálculo acumulado parte de zero; não exige saldo de abertura |
 | **Decidido em 15/11/2026** | **RN-09:** dia sem lançamentos retorna crédito, débito e líquido zero; saldo acumulado anterior é mantido | Não exige linha física por dia vazio; antes do primeiro lançamento, saldo acumulado zero |
-| **Alta** | Data de referência e fuso do dia financeiro | Define indexação e a chave de DailyBalance |
+| **Decidido em 15/11/2026** | **RN-04**: data de competência informada e instante de criação UTC | `reference_date` é `DATE`, enquanto `created_at` representa instante UTC; agrupamento pela competência | Retroatividade, datas futuras e fuso de apresentação ainda a definir |
 | **Alta** | Moeda, precisão, valores negativos e arredondamento | Define tipos, constraints e exemplos de testes |
 | **Alta** | Vínculo e autorização de merchant_id | Define propriedade e persistência de Merchant/Membership |
 | **Alta** | Modelo físico de Outbox/ProcessedEvent e concorrência | Define garantias reais de idempotência e entrega |
