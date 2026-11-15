@@ -14,7 +14,7 @@ Fluxo conceitual de autenticação da **React SPA** no **Keycloak** com OIDC Aut
 
 ## Registro de lançamento e publicação assíncrona
 
-A interface envia o registro ao NGINX, que o encaminha ao serviço de lançamentos. A API financeira valida o token, as permissões e o comerciante autorizado antes de gravar o lançamento. O registro é confirmado após o **commit atômico de Transaction e OutboxEvent**, sem esperar a publicação do evento. O worker só marca o registro Outbox como publicado após publisher confirm positivo e roteamento ao destino esperado. O consumidor aplica idempotência e envia ACK após commit.
+A interface envia o registro com **data de competência informada pelo comerciante (RN-04)** ao NGINX, que encaminha ao serviço de lançamentos. O backend registra o **instante de criação em UTC**. A API financeira valida o token, as permissões e o comerciante autorizado antes de gravar o lançamento. O registro é confirmado após o **commit atômico de Transaction e OutboxEvent**, sem esperar a publicação do evento. O worker só marca o registro Outbox como publicado após publisher confirm positivo e roteamento ao destino esperado. O consumidor aplica idempotência e envia ACK após commit.
 
 ![Registro e publicação assíncrona](images/sequence-register.png)
 
