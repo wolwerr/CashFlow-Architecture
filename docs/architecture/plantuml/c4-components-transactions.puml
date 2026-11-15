@@ -4,11 +4,11 @@
 title CashFlow | C4 Nível 3: Serviço Transactions (Lançamentos)
 LAYOUT_LEFT_RIGHT()
 
-Container_Ext(nginx, "NGINX", "Reverse proxy", "Encaminha chamadas autenticadas")
-Container_Ext(keycloak, "Keycloak", "OIDC / JWKS", "Emite tokens; APIs validam JWT localmente")
-ContainerDb_Ext(transactionsDb, "Banco de Transactions", "PostgreSQL / EF Core", "Transactions, OutboxEvent e auditoria")
-ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1", "Recebe eventos publicados pela Outbox")
-Container_Ext(otel, "OpenTelemetry Collector", "OTLP", "Recebe telemetria técnica")
+Container_Ext(nginx, "NGINX", "HTTP interno :8080", "Encaminha chamadas autenticadas")
+Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443 (público previsto)", "Emite tokens; APIs validam JWT localmente")
+ContainerDb_Ext(transactionsDb, "Banco de Transactions", "PostgreSQL / TCP :5432", "Transactions, OutboxEvent e auditoria")
+ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672 (referência)", "Recebe eventos publicados pela Outbox")
+Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318 (referência)", "Recebe telemetria técnica")
 
 Container_Boundary(transactions, "Transactions | API + Outbox worker (.NET 10)") {
   Component(api, "Endpoints / API Host", "ASP.NET Core", "REST: crédito/débito; autenticação, entrada e composição")
@@ -21,19 +21,19 @@ Container_Boundary(transactions, "Transactions | API + Outbox worker (.NET 10)")
   Component(publisher, "RabbitMQ Publisher", "Infrastructure / AMQP", "Publica eventos persistidos com publisher confirms")
 }
 
-Rel(nginx, api, "Registra créditos/débitos", "HTTPS / JSON")
-Rel(api, keycloak, "Busca chaves públicas, quando necessário; valida JWT localmente", "HTTPS / JWKS")
+Rel(nginx, api, "Registra créditos/débitos", "HTTP / TCP :8080 privado (referência)")
+Rel(api, keycloak, "Busca chaves públicas, quando necessário; valida JWT localmente", "HTTPS / TCP :443 (público previsto)")
 Rel(api, auth, "Verifica acesso do comerciante")
 Rel(auth, usecase, "Autoriza operação")
 Rel(api, usecase, "Invoca caso de uso")
 Rel(usecase, domain, "Aplica regras")
 Rel(usecase, ports, "Exige commit atômico")
 Rel(repo, ports, "Implementa interfaces")
-Rel(repo, transactionsDb, "Persiste lançamento + Outbox", "SQL")
+Rel(repo, transactionsDb, "Persiste lançamento + Outbox", "PostgreSQL / TCP :5432")
 Rel(worker, repo, "Busca/atualiza eventos pendentes")
 Rel(worker, publisher, "Publica e aguarda confirmação")
-Rel(publisher, rabbit, "Envia evento", "AMQP")
-Rel(api, otel, "Emite sinais técnicos", "OTLP")
+Rel(publisher, rabbit, "Envia evento", "AMQP / TCP :5672 (referência)")
+Rel(api, otel, "Emite sinais técnicos", "OTLP gRPC :4317 ou HTTP :4318 (referência)")
 Rel(worker, otel, "Emite sinais técnicos", "OTLP")
 
 note bottom of worker
