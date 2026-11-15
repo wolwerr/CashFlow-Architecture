@@ -12,13 +12,13 @@ participant "Consolidation\nconsumer" as CON
 database "PostgreSQL\nConsolidation" as DBC
 
 U -> W: Informa credito/debito e data de competencia
-W -> G: POST /api/transactions/*\nBearer JWT; HTTPS :443 publico
+W -> G: POST /api/v1/transactions/*\nIdempotency-Key obrigatorio\nBearer JWT; HTTPS :443 publico
 G -> API: Proxy + Authorization\nHTTP :8080 privado
-API -> API: Valida JWT, merchant_id, BRL e competencia\nAceita passada/atual; rejeita futura
-API -> DBT: BEGIN; grava reference_date informada\ne created_at UTC com Transaction + OutboxEvent\nmesma transacao SQL TCP :5432
+API -> API: Valida JWT, ADMIN/OPERATOR, merchant_id\nBRL e competencia em Sao_Paulo
+API -> DBT: BEGIN; Idempotency-Key + request hash\nTransaction + Outbox + AuditEvent confirmada\nmesmo commit; created_at UTC
 DBT --> API: COMMIT confirmado
-API --> G: Sucesso de registro\nstatus e payload a definir
-G --> W: Confirma registro persistido
+API --> G: HTTP 201 Created\nregistro persistido, saldo eventual
+G --> W: HTTP 201 Created
 W --> U: Registro concluido, saldo pode atrasar
 
 ... Etapa assincrona, sem bloquear resposta HTTP ...
@@ -34,13 +34,13 @@ else NACK, unroutable ou confirm incerto
 end
 ... Consumo independente ...
 CON -> MQ: Abre canal e consome fila\nAMQP TCP :5672
-MQ --> CON: Entrega evento; event_id estavel
+MQ --> CON: JSON: event_id, event_type, schema_version\ncorrelation_id, merchant_id e dados
 CON -> DBC: BEGIN; insere ProcessedEvent com UNIQUE event_id
 alt Evento ja processado
   DBC --> CON: Unicidade indica evento repetido
   CON -> DBC: ROLLBACK ou encerra sem alterar saldo
 else Evento novo
-  CON -> DBC: Atualiza DailyBalance com concorrencia segura
+  CON -> DBC: Incrementa totais diarios por competencia\nconcorrencia segura; acumulado na leitura
   CON -> DBC: COMMIT de saldo + ProcessedEvent
   DBC --> CON: Confirmado
 end
