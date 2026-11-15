@@ -82,6 +82,27 @@ O [estudo FinOps](../cloud-cost-comparison.md) documenta 730 h/mês e tarifas ve
 
 Os totais são **não comparáveis como faturas completas**. Devem ser apresentados como **subtotais de itens precificados**, com escopo e capacidade diferentes. Valores de entrada podem mudar. Não atribuir custo zero a serviços sem preços calculados.
 
+## Refinamento de custos: volumes, object storage e rede
+
+O [comparativo AKS x EKS](../aks-eks-cost-breakdown.md) agora inclui um **cenário ampliado de itens precificados**, ainda não equivalente a TCO e sem HA:
+
+| Item | AKS East US | EKS us-east-1 |
+| --- | ---: | ---: |
+| Subtotal inicial: nós, cluster e PostgreSQL básico | US$ 552,64 | US$ 587,65 |
+| 3 volumes de 128 GiB para persistência | US$ 59,13 | US$ 30,72 |
+| Object storage 200 GB para Loki/Tempo | US$ 4,16 | US$ 4,60 |
+| Registry ACR Basic | ~US$ 5,00 | Pendente ECR |
+| Load balancer | **Pendente Azure LB** | US$ 22,27 (ALB, 1 LCU médio) |
+| NAT e 50 GB processados | **Pendente Azure NAT** | US$ 35,10 (1 gateway) |
+| Storage RDS PostgreSQL 32 GiB | Incluído no subtotal Azure | **Pendente AWS RDS storage** |
+| **Subtotal ampliado, componentes cotados** | **~US$ 620,93/mês** | **US$ 680,34/mês** |
+
+**Não comparar as duas últimas cifras como fatura completa:** há componentes presentes na coluna AWS ainda não cotados na Azure e vice-versa. Os itens pendentes não têm custo zero. Discos, IOPS, snapshots, egress, IPs, Load Balancer/NAT Azure, RDS storage, ECR e backups exigem confirmação nas calculadoras oficiais. Nessa configuração **não há HA garantida**.
+
+A decisão sobre armazenamento deve distinguir PVs (RabbitMQ, Prometheus e estado auxiliar) de object storage (Loki/Tempo), pois executar pods dentro dos nós Kubernetes **não elimina a cobrança de persistência**. As hipóteses de três volumes 128 GiB são apenas *sizing financeiro preliminar*; não justificam compartilhar um disco RWO entre pods distintos nem garantem capacidade sob carga.
+
+**Aprovação ainda pendente:** manter AKS como preferência preliminar, com EKS como alternativa equivalente em Kubernetes, até termos uma versão com preço total de rede, storage, banco, egress e HA, além de teste de 50 RPS.
+
 ## Disponibilidade, consistência e recuperação
 
 **RNF-01:** falha de Consolidation deve ser isolada; Transactions confirma gravação de lançamento + Outbox no banco próprio e continua operando enquanto esse banco e seu caminho de entrada estiverem disponíveis. Falha de banco de Transactions, rede/NGINX ou host compartilhado não é coberta pela garantia.
@@ -125,7 +146,7 @@ Os totais são **não comparáveis como faturas completas**. Devem ser apresenta
 - Distinção entre **demonstração cloud** e **produção HA**.
 - Recursos realmente medidos sob carga, 50 RPS e volume de eventos/dados.
 - Requisitos de RTO/RPO, retenção de dados, backup e disponibilidade.
-- Preços completos de rede, ALB/ingress, storage, observabilidade, banco, broker, certificados, registry, secrets e suporte.
+- Preços completos de Azure LB/NAT, AWS RDS storage/ECR, rede, ingress, object storage, PVCs, backups, observabilidade, broker, certificados, secrets e suporte.
 - Nível de operação aceito pela equipe e uso de serviços gerenciados.
 - Escolher formalmente **AKS ou EKS** após concluir a comparação Kubernetes; ACA e ECS/Fargate são alternativas de outros modelos já avaliadas. Atualizar esta ADR para aceita somente depois da escolha.
 
