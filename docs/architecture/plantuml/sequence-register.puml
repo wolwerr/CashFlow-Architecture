@@ -1,37 +1,53 @@
 @startuml CashFlow_Register
-title CashFlow | Registro na aplicação Web/Mobile e publicação assíncrona
+title CashFlow | Registro e publicacao confiavel via Outbox
 autonumber
-actor Comerciante
-participant "Aplicação Web/Mobile" as W
-participant "NGINX (reverse proxy)" as G
-participant "Serviço de lançamentos\n(API + worker Outbox)" as L
-database "Banco de lançamentos" as BL
-queue "Mensageria" as M
-participant "Serviço de consolidado" as C
-database "Banco do consolidado" as BC
-Comerciante -> W: Informa crédito ou débito
-W -> G: POST /lançamentos (via NGINX)
-G -> L: Encaminha HTTPS/JSON + JWT
-L -> L: Valida token, papel, merchant_id e dados
-L -> BL: Grava lançamento + evento Outbox\n(uma transação SQL)
-BL --> L: Commit confirmado
-L --> G: 201 Created
-G --> W: 201 Created (JSON)
-W --> Comerciante: Exibe confirmação
-... Worker interno em segundo plano ...
-L -> BL: Consulta eventos Outbox pendentes
-BL --> L: Eventos pendentes
-L -> M: Publica evento (AMQP, proposto)
-M --> L: Confirma publicação no broker
-L -> BL: Marca evento como publicado
-M -> C: Entrega evento
-C -> BC: Atualiza projeção por comerciante/data\n+ registra event_id (atômico)
-BC --> C: Commit confirmado
-C --> M: ACK
-note over L,C
-NGINX encaminha as requisicoes HTTP do React.
-A API financeira valida a autorização.
-O registro não espera a consolidação.
-O consumidor é idempotente.
+actor Comerciante as U
+participant "React SPA" as W
+participant "NGINX" as G
+participant "Transactions API" as API
+database "PostgreSQL\nTransactions" as DBT
+participant "Transactions\nOutbox worker" as OUT
+queue "RabbitMQ\nexchange + fila duravel" as MQ
+participant "Consolidation\nconsumer" as CON
+database "PostgreSQL\nConsolidation" as DBC
+
+U -> W: Informa credito ou debito
+W -> G: POST /api/transactions/*\nBearer JWT; HTTPS :443 publico
+G -> API: Proxy + Authorization\nHTTP :8080 privado
+API -> API: Valida JWT, merchant_id, regras\ne dados da operacao
+API -> DBT: BEGIN; INSERT Transaction + OutboxEvent\nmesma transacao SQL TCP :5432
+DBT --> API: COMMIT confirmado
+API --> G: Sucesso de registro\nstatus e payload a definir
+G --> W: Confirma registro persistido
+W --> U: Registro concluido, saldo pode atrasar
+
+... Etapa assincrona, sem bloquear resposta HTTP ...
+OUT -> DBT: Busca e reivindica Outbox pendente\ncom controle de concorrencia
+DBT --> OUT: Eventos pendentes
+OUT -> MQ: Publica evento persistente\nAMQP TCP :5672
+alt Publisher confirm positivo E roteamento confirmado
+  MQ --> OUT: Confirm e entrega ao destino esperado
+  OUT -> DBT: Marca evento como publicado
+else NACK, unroutable ou confirm incerto
+  MQ --> OUT: Falha / retorno / timeout
+  OUT -> OUT: Mantem pendente e agenda retry
+end
+... Consumo independente ...
+CON -> MQ: Abre canal e consome fila\nAMQP TCP :5672
+MQ --> CON: Entrega evento; event_id estavel
+CON -> DBC: BEGIN; insere ProcessedEvent com UNIQUE event_id
+alt Evento ja processado
+  DBC --> CON: Unicidade indica evento repetido
+  CON -> DBC: ROLLBACK ou encerra sem alterar saldo
+else Evento novo
+  CON -> DBC: Atualiza DailyBalance com concorrencia segura
+  CON -> DBC: COMMIT de saldo + ProcessedEvent
+  DBC --> CON: Confirmado
+end
+CON -> MQ: ACK apenas apos resultado persistido seguro
+note over OUT,MQ
+At-least-once: confirm perdido pode gerar
+nova publicacao. DLQ, retries e
+politica de roteamento a detalhar.
 end note
 @enduml
