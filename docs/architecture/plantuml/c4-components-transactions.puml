@@ -5,12 +5,12 @@ title CashFlow | C4 Nível 3: Serviço Transactions (Lançamentos)
 LAYOUT_LEFT_RIGHT()
 
 Container_Ext(nginx, "NGINX", "HTTP interno :8080", "Encaminha chamadas autenticadas")
-Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443 (público previsto)", "Emite tokens; APIs validam JWT localmente")
+Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443", "Emite tokens; APIs validam JWT localmente")
 ContainerDb_Ext(transactionsDb, "Banco de Transactions", "PostgreSQL / TCP :5432", "Transactions, OutboxEvent e auditoria")
-ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672 (referência)", "Recebe eventos publicados pela Outbox")
-Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318 (referência)", "Recebe telemetria técnica")
+ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672", "Recebe eventos publicados pela Outbox")
+Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318", "Recebe telemetria técnica")
 
-Container_Boundary(transactions, "Transactions | API + Outbox worker (.NET 10)") {
+Container_Boundary(transactions, "Transactions | API + Outbox worker") {
   Component(api, "Endpoints / API Host", "ASP.NET Core", "REST: crédito/débito; autenticação, entrada e composição")
   Component(auth, "Autorização por comerciante", "Application / Policy", "Valida acesso do sujeito ao merchant_id; mecanismo/persistência pendentes")
   Component(usecase, "Registrar lançamento", "Application", "Orquestra crédito/débito, invariantes e persistência atômica")
@@ -21,8 +21,8 @@ Container_Boundary(transactions, "Transactions | API + Outbox worker (.NET 10)")
   Component(publisher, "RabbitMQ Publisher", "Infrastructure / AMQP", "Publica eventos persistidos com publisher confirms")
 }
 
-Rel(nginx, api, "Registra créditos/débitos", "HTTP / TCP :8080 privado (referência)")
-Rel(api, keycloak, "Busca chaves públicas, quando necessário; valida JWT localmente", "HTTPS / TCP :443 (público previsto)")
+Rel(nginx, api, "Registra créditos/débitos", "HTTP / TCP :8080 privado")
+Rel(api, keycloak, "Busca chaves públicas, quando necessário; valida JWT localmente", "HTTPS / TCP :443")
 Rel(api, auth, "Verifica acesso do comerciante")
 Rel(auth, usecase, "Autoriza operação")
 Rel(api, usecase, "Invoca caso de uso")
@@ -32,24 +32,9 @@ Rel(repo, ports, "Implementa interfaces")
 Rel(repo, transactionsDb, "Persiste lançamento + Outbox", "PostgreSQL / TCP :5432")
 Rel(worker, repo, "Busca/atualiza eventos pendentes")
 Rel(worker, publisher, "Publica e aguarda confirmação")
-Rel(publisher, rabbit, "Envia evento", "AMQP / TCP :5672 (referência)")
-Rel(api, otel, "Emite sinais técnicos", "OTLP gRPC :4317 ou HTTP :4318 (referência)")
+Rel(publisher, rabbit, "Envia evento", "AMQP / TCP :5672")
+Rel(api, otel, "Emite sinais técnicos", "OTLP gRPC :4317 ou HTTP :4318")
 Rel(worker, otel, "Emite sinais técnicos", "OTLP")
-
-note bottom of worker
-  Worker pertence a Transactions.
-  Pode executar no mesmo host da API,
-  conforme ADR-002. Não depende
-  de Consolidation para confirmar
-  um lançamento.
-end note
-
-note bottom of auth
-  Keycloak autentica.
-  A regra de merchant_id pertence
-  ao CashFlow. O armazenamento
-  da associação ainda será definido.
-end note
 
 SHOW_LEGEND()
 @enduml
