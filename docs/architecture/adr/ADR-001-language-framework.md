@@ -44,7 +44,7 @@ Ambas as alternativas são capazes de atender aos requisitos. Não há evidênci
 
 **Referência:** [Política oficial de suporte do .NET](https://dotnet.microsoft.com/pt-br/platform/support/policy), consultada em 14/11/2026.
 
-## Decisão decidida
+## Decisão registrada
 
 Adotar **C# com .NET 10 LTS e ASP.NET Core** nos dois serviços financeiros do MVP:
 
