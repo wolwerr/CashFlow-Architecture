@@ -51,7 +51,7 @@ Falha antes do commit implica rollback e reentrega possível. Falha após commit
 
 - A soma de créditos e débitos de uma mesma data/comerciante pode ser comutativa para movimentos independentes, mas isso precisa ser conferido contra regras de negócio como estorno, cancelamento e ajustes posteriores. Não presumir ordem global do RabbitMQ.
 - Atualizações concorrentes para o mesmo saldo devem ser **atômicas** (por exemplo, UPSERT incremental ou bloqueio/transação compatível), evitando *lost updates*. Unicidade do `event_id` sozinha não resolve concorrência entre eventos distintos.
-- Valores são `decimal` no código e `numeric(p,s)` no banco; moeda, escala e data de competência serão definidas nos requisitos e modelo físico.
+- **RN-07 decidida:** valores de lançamento são `decimal` no código e `numeric(19,2)` no PostgreSQL, em BRL, estritamente positivos, com até duas casas decimais. Rejeitar precisão excessiva antes de gravar ou publicar, sem arredondamento silencioso. `CREDIT`/`DEBIT` determina o efeito contábil; totais líquidos podem ser negativos. **RN-04 decidida:** a competência vem da data informada pelo comerciante e o instante de criação é registrado em UTC.
 - Não criar uma segunda fonte de verdade no consumidor: o consolidado é uma projeção, não o livro de lançamentos.
 
 ## Semântica de garantias
