@@ -43,75 +43,6 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 
 **Nota:** a interface escolhida é uma aplicação Web React responsiva; **não há aplicativo mobile nativo no MVP** (ADR-007).
 
-## Protocolos e portas de referência
-
-Os números são **portas de destino**, não portas de origem. NGINX :8080 está **confirmado no template** [default.conf.template](../../infra/nginx/default.conf.template); portas das APIs :8080 são **exemplos dos upstreams** documentados. HTTPS público :443 e os serviços não implementados são **premissas a confirmar na implantação**, não configuração validada do AKS.
-
-| Origem → destino | Protocolo | Porta de destino | Condição |
-| --- | --- | --- | --- |
-| Navegador → borda pública | HTTPS/TCP | **443** | Prevista com TLS; porta externa ainda não configurada |
-| Borda / Ingress → NGINX | HTTP/TCP | **8080** | Confirmada no template NGINX |
-| NGINX → Transactions | HTTP/TCP | **8080** | Exemplo `transactions:8080`, rede privada |
-| NGINX → Consolidation | HTTP/TCP | **8080** | Exemplo `consolidation:8080`, rede privada |
-| Navegador → Keycloak | OIDC/HTTPS | **443** | URL pública e terminação TLS a definir |
-| APIs → JWKS Keycloak | HTTPS/TCP | **443** | Endpoint externo/privado conforme implantação; cache local |
-| NGINX → integração IAM opcional | HTTPS/TCP | **443** | **Futura, não implementada**: `auth_request` com adaptador OIDC ou solução equivalente; não é login obrigatório no fluxo atual |
-| NGINX → APIs financeiras | HTTP/TCP | **8080** | Preserva `Authorization: Bearer`; o NGINX não valida JWT no template atual |
-| Keycloak → banco de identidade | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
-| APIs → bancos lógicos próprios | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
-| Transactions Outbox → RabbitMQ | AMQP/TCP | **5672** | Porta-padrão sem TLS; AMQPS/TLS: **5671** |
-| Consolidation Consumer → RabbitMQ | AMQP/TCP | **5672** | Consumer inicia a conexão com o broker; não abre listener AMQP próprio |
-| APIs/workers → OpenTelemetry Collector | OTLP/gRPC ou HTTP | **4317 / 4318** | Conforme transporte configurado |
-| Collector → Prometheus | Exporter HTTP / scrape | **a definir** | Exemplo configurável: 8889, não assumido como implantado |
-| Collector → Loki | OTLP/HTTP | **3100** | Porta de ingestão usual, configuração pendente |
-| Collector → Tempo | OTLP/gRPC ou HTTP | **4317 / 4318** | Porta no contêiner Tempo, independente do Collector |
-| Grafana → Prometheus | HTTP | **9090** | Porta usual de consulta, privada |
-| Grafana → Loki | HTTP | **3100** | Porta usual de consulta, privada |
-| Grafana → Tempo | HTTP | **3200** | Porta usual de consulta, privada |
-| Navegador → Grafana (se exposto) | HTTPS | **443** | Serviço interno costuma escutar em 3000; exposição opcional |
-
-**O React não escuta porta TCP**: seus arquivos são servidos pelo NGINX e o JavaScript roda no navegador. O template NGINX atual escuta **HTTP em 8080**, não HTTPS. TLS público na porta 443 precisa ser configurado no Ingress/borda; não assumir HTTPS no salto NGINX → APIs até que seja implementado. O broker AMQP/5672 deve ficar privado; habilitar TLS e 5671 se exigido.
-
-## Escopo: desafio x solução completa
-
-| Elemento | Situação |
-| --- | --- |
-| Registro de créditos e débitos | **Exigido pelo desafio** |
-| Consulta ao consolidado diário | **Exigido pelo desafio** |
-| Independência entre registro e consolidação | **Exigida pelo desafio** |
-| Interfaces Web/Mobile e painel administrativo | **Proposta de solução completa**, não exigida |
-| NGINX / API Gateway | **NGINX incluído no MVP como reverse proxy**; API Gateway dedicado é evolução futura, conforme ADR-007 |
-| Keycloak e seu banco | **Escolha arquitetural decidida (ADR-006)**; implantação e administração completas podem ficar fora do MVP financeiro |
-| Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
-
-A implementação planejada do MVP inclui NGINX no caminho Web e mantém o foco funcional nas duas APIs e no processamento financeiro; a infraestrutura completa ainda precisa ser integrada e testada. Isso evita confundir a apresentação com uma promessa de implementar todas as interfaces.
-
-## Autenticação, autorização e validação de JWT
-
-A interface Web/Mobile autentica usuários no **Keycloak**, utilizando **OpenID Connect (OIDC) sobre HTTPS**. Para clientes públicos, a direção é Authorization Code com PKCE; o armazenamento seguro de tokens, eventual BFF, MFA e detalhes por plataforma serão definidos nas Issues #7 e #9. Não será desenvolvido um servidor próprio para emissão de tokens.
-
-As APIs de **Lançamentos** e **Consolidado** devem validar os JWTs **localmente**, verificando assinatura, emissor, audiência, validade e permissões. As chaves públicas do Keycloak podem ser obtidas por **JWKS/HTTPS** e mantidas em cache conforme a política de rotação e expiração. Assim, com tokens e chaves válidos, o registro financeiro não precisa chamar o IAM sincronicamente a cada operação.
-
-**Keycloak autentica; as APIs do CashFlow autorizam.** O NGINX não substitui esses controles. A verificação de acesso também deve considerar o `merchant_id` autorizado. Uma role como `VIEWER` não concede, por si só, acesso aos dados de outros comerciantes. Política de revogação, propagação de mudanças de permissões e acessos administrativos serão detalhados na Issue #9.
-
-## Telemetria e observabilidade
-
-Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak**, o NGINX e um eventual **API Gateway futuro** poderão emitir telemetria quando forem implantados e configurados. O C4 apresenta o pipeline em um bloco de plataforma, com seus componentes listados na documentação, para evitar linhas transversais em excesso.
-
-| Sinal | Uso esperado |
-| --- | --- |
-| **Logs estruturados** | Diagnóstico de erros, tentativas de acesso e processamento, sem expor tokens, senhas ou dados financeiros sensíveis. |
-| **Métricas** | Taxa de requisições, erros, latência, eventos pendentes na Outbox, tamanho das filas e atraso da consolidação. |
-| **Traces distribuídos** | Acompanhar operações que passam por NGINX, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
-
-Conforme a **ADR-008 decidida**, OpenTelemetry instrumenta serviços .NET, OpenTelemetry Collector recebe/encaminha os sinais, **Prometheus** armazena métricas, **Loki** armazena logs, **Tempo** armazena traces e **Grafana** oferece dashboards. Alertas, retenção, volumes, segurança e HA serão detalhados na ADR-009 e nas issues operacionais. A coleta de componentes de terceiros exige exporters/agentes próprios quando aplicável. A falha na stack de observabilidade não pode bloquear a confirmação de lançamentos. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
-
-## Controle de acesso e decisão de tecnologia
-
-Os perfis `ADMIN`, `OPERATOR` e `VIEWER` são exemplos para discussão. O cadastro de usuários, as relações com comerciantes e os fluxos de aprovação ainda precisam ser refinados nos requisitos funcionais. A **ADR-006 escolhe Keycloak** para identidade e autenticação. As relações usuário/comerciante e as permissões financeiras continuam sob a responsabilidade do CashFlow, sem exigir um novo servidor próprio de autenticação. A forma de persistir e consultar esses vínculos será detalhada na Issue #9. A Issue #9 detalhará MFA, auditoria, segregação por comerciante, tratamento de segredos, expiração e revogação de acesso.
-
-A indisponibilidade do Keycloak **não deve parar o registro de movimentações que já tenham token válido**, desde que a validação local e as políticas de acesso permitam. Essa condição precisa ser testada.
-
 ## C4 Nível 3: Componentes
 
 Os três diagramas abaixo detalham **Frontend React**, **Transactions** e **Consolidation**, em continuidade direta com os Níveis 1 e 2. As imagens devem usar os nomes `c4-components-frontend.png`, `c4-components-transactions.png` e `c4-components-consolidation.png` na pasta `docs/architecture/images/`. A documentação inclui detalhes que foram retirados das caixas amarelas para simplificar as imagens.
@@ -217,6 +148,75 @@ As notas amarelas foram retiradas apenas para melhorar a legibilidade, sem elimi
 - **Frontend:** React não abre uma porta de servidor própria. O NGINX serve o build estático, e o JavaScript roda no navegador. O template atual do NGINX escuta HTTP interno em **8080**; **HTTPS público em 443** depende da configuração de Ingress/TLS no AKS. A SPA não deve guardar tokens em `localStorage` e não substitui a autorização do backend.
 - **Transactions:** Keycloak autentica, mas o acesso por `merchant_id` pertence às APIs CashFlow. O armazenamento do vínculo ainda depende de definição. O Outbox worker pertence ao serviço Transactions, pode compartilhar o host da API e nunca precisa aguardar Consolidation para confirmar o lançamento.
 - **Consolidation:** o banco de Transactions **não** é consultado diretamente. O saldo pode ficar temporariamente desatualizado. A deduplicação por `event_id` e a atualização de `DailyBalance` devem ocorrer na mesma transação para impedir contagem dupla.
+
+## Protocolos e portas de referência
+
+Os números são **portas de destino**, não portas de origem. NGINX :8080 está **confirmado no template** [default.conf.template](../../infra/nginx/default.conf.template); portas das APIs :8080 são **exemplos dos upstreams** documentados. HTTPS público :443 e os serviços não implementados são **premissas a confirmar na implantação**, não configuração validada do AKS.
+
+| Origem → destino | Protocolo | Porta de destino | Condição |
+| --- | --- | --- | --- |
+| Navegador → borda pública | HTTPS/TCP | **443** | Prevista com TLS; porta externa ainda não configurada |
+| Borda / Ingress → NGINX | HTTP/TCP | **8080** | Confirmada no template NGINX |
+| NGINX → Transactions | HTTP/TCP | **8080** | Exemplo `transactions:8080`, rede privada |
+| NGINX → Consolidation | HTTP/TCP | **8080** | Exemplo `consolidation:8080`, rede privada |
+| Navegador → Keycloak | OIDC/HTTPS | **443** | URL pública e terminação TLS a definir |
+| APIs → JWKS Keycloak | HTTPS/TCP | **443** | Endpoint externo/privado conforme implantação; cache local |
+| NGINX → integração IAM opcional | HTTPS/TCP | **443** | **Futura, não implementada**: `auth_request` com adaptador OIDC ou solução equivalente; não é login obrigatório no fluxo atual |
+| NGINX → APIs financeiras | HTTP/TCP | **8080** | Preserva `Authorization: Bearer`; o NGINX não valida JWT no template atual |
+| Keycloak → banco de identidade | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
+| APIs → bancos lógicos próprios | PostgreSQL/TCP | **5432** | Porta-padrão, privada |
+| Transactions Outbox → RabbitMQ | AMQP/TCP | **5672** | Porta-padrão sem TLS; AMQPS/TLS: **5671** |
+| Consolidation Consumer → RabbitMQ | AMQP/TCP | **5672** | Consumer inicia a conexão com o broker; não abre listener AMQP próprio |
+| APIs/workers → OpenTelemetry Collector | OTLP/gRPC ou HTTP | **4317 / 4318** | Conforme transporte configurado |
+| Collector → Prometheus | Exporter HTTP / scrape | **a definir** | Exemplo configurável: 8889, não assumido como implantado |
+| Collector → Loki | OTLP/HTTP | **3100** | Porta de ingestão usual, configuração pendente |
+| Collector → Tempo | OTLP/gRPC ou HTTP | **4317 / 4318** | Porta no contêiner Tempo, independente do Collector |
+| Grafana → Prometheus | HTTP | **9090** | Porta usual de consulta, privada |
+| Grafana → Loki | HTTP | **3100** | Porta usual de consulta, privada |
+| Grafana → Tempo | HTTP | **3200** | Porta usual de consulta, privada |
+| Navegador → Grafana (se exposto) | HTTPS | **443** | Serviço interno costuma escutar em 3000; exposição opcional |
+
+**O React não escuta porta TCP**: seus arquivos são servidos pelo NGINX e o JavaScript roda no navegador. O template NGINX atual escuta **HTTP em 8080**, não HTTPS. TLS público na porta 443 precisa ser configurado no Ingress/borda; não assumir HTTPS no salto NGINX → APIs até que seja implementado. O broker AMQP/5672 deve ficar privado; habilitar TLS e 5671 se exigido.
+
+## Escopo: desafio x solução completa
+
+| Elemento | Situação |
+| --- | --- |
+| Registro de créditos e débitos | **Exigido pelo desafio** |
+| Consulta ao consolidado diário | **Exigido pelo desafio** |
+| Independência entre registro e consolidação | **Exigida pelo desafio** |
+| Interfaces Web/Mobile e painel administrativo | **Proposta de solução completa**, não exigida |
+| NGINX / API Gateway | **NGINX incluído no MVP como reverse proxy**; API Gateway dedicado é evolução futura, conforme ADR-007 |
+| Keycloak e seu banco | **Escolha arquitetural decidida (ADR-006)**; implantação e administração completas podem ficar fora do MVP financeiro |
+| Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
+
+A implementação planejada do MVP inclui NGINX no caminho Web e mantém o foco funcional nas duas APIs e no processamento financeiro; a infraestrutura completa ainda precisa ser integrada e testada. Isso evita confundir a apresentação com uma promessa de implementar todas as interfaces.
+
+## Autenticação, autorização e validação de JWT
+
+A interface Web/Mobile autentica usuários no **Keycloak**, utilizando **OpenID Connect (OIDC) sobre HTTPS**. Para clientes públicos, a direção é Authorization Code com PKCE; o armazenamento seguro de tokens, eventual BFF, MFA e detalhes por plataforma serão definidos nas Issues #7 e #9. Não será desenvolvido um servidor próprio para emissão de tokens.
+
+As APIs de **Lançamentos** e **Consolidado** devem validar os JWTs **localmente**, verificando assinatura, emissor, audiência, validade e permissões. As chaves públicas do Keycloak podem ser obtidas por **JWKS/HTTPS** e mantidas em cache conforme a política de rotação e expiração. Assim, com tokens e chaves válidos, o registro financeiro não precisa chamar o IAM sincronicamente a cada operação.
+
+**Keycloak autentica; as APIs do CashFlow autorizam.** O NGINX não substitui esses controles. A verificação de acesso também deve considerar o `merchant_id` autorizado. Uma role como `VIEWER` não concede, por si só, acesso aos dados de outros comerciantes. Política de revogação, propagação de mudanças de permissões e acessos administrativos serão detalhados na Issue #9.
+
+## Telemetria e observabilidade
+
+Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak**, o NGINX e um eventual **API Gateway futuro** poderão emitir telemetria quando forem implantados e configurados. O C4 apresenta o pipeline em um bloco de plataforma, com seus componentes listados na documentação, para evitar linhas transversais em excesso.
+
+| Sinal | Uso esperado |
+| --- | --- |
+| **Logs estruturados** | Diagnóstico de erros, tentativas de acesso e processamento, sem expor tokens, senhas ou dados financeiros sensíveis. |
+| **Métricas** | Taxa de requisições, erros, latência, eventos pendentes na Outbox, tamanho das filas e atraso da consolidação. |
+| **Traces distribuídos** | Acompanhar operações que passam por NGINX, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
+
+Conforme a **ADR-008 decidida**, OpenTelemetry instrumenta serviços .NET, OpenTelemetry Collector recebe/encaminha os sinais, **Prometheus** armazena métricas, **Loki** armazena logs, **Tempo** armazena traces e **Grafana** oferece dashboards. Alertas, retenção, volumes, segurança e HA serão detalhados na ADR-009 e nas issues operacionais. A coleta de componentes de terceiros exige exporters/agentes próprios quando aplicável. A falha na stack de observabilidade não pode bloquear a confirmação de lançamentos. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
+
+## Controle de acesso e decisão de tecnologia
+
+Os perfis `ADMIN`, `OPERATOR` e `VIEWER` são exemplos para discussão. O cadastro de usuários, as relações com comerciantes e os fluxos de aprovação ainda precisam ser refinados nos requisitos funcionais. A **ADR-006 escolhe Keycloak** para identidade e autenticação. As relações usuário/comerciante e as permissões financeiras continuam sob a responsabilidade do CashFlow, sem exigir um novo servidor próprio de autenticação. A forma de persistir e consultar esses vínculos será detalhada na Issue #9. A Issue #9 detalhará MFA, auditoria, segregação por comerciante, tratamento de segredos, expiração e revogação de acesso.
+
+A indisponibilidade do Keycloak **não deve parar o registro de movimentações que já tenham token válido**, desde que a validação local e as políticas de acesso permitam. Essa condição precisa ser testada.
 
 ## Próximas leituras
 
