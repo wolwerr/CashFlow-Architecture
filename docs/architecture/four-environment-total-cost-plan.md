@@ -1,6 +1,6 @@
 # CashFlow | Orçamento Azure dos quatro ambientes
 
-> **Status:** orçamento-base aprovado na [ADR-009](adr/ADR-009-deployment-cloud.md) em 2026-11-15.  
+> **Status:** orçamento-base decidido na [ADR-009](adr/ADR-009-deployment-cloud.md) em 2026-11-15.  
 > **Fonte dos valores:** telas da Azure Pricing Calculator configuradas para o CashFlow pelo responsável pelo projeto.  
 > **Região:** East US. **Moeda:** USD. **Cobrança:** referência de 730 horas/mês e Pay as you go, sem descontos contratuais.  
 > **Escopo:** LOCAL, DEV, HOM, PROD e serviços SHARED. Este documento substitui os estudos preliminares AKS/EKS e ACA/AKS/ECS.
@@ -82,7 +82,7 @@ Os valores são a **estimativa de recursos selecionados na calculadora**, não u
 2. Implementar LOCAL com Docker Compose e os três ambientes AKS de forma **isolada**; o orçamento não é prova de provisionamento.
 3. Validar 50 RPS, falha de Consolidation sem bloquear Transactions, Outbox/consumer idempotente, falha do RabbitMQ e recuperação.
 4. Confirmar PostgreSQL zone-redundant, retenções e backups/restauração, custo de storage e banda agregado, capacidade N+1 e autoscaling.
-5. Recalcular custo com métricas reais, sem alterar retroativamente o orçamento-base aceito: registrar revisões com data e escopo.
+5. Recalcular custo com métricas reais, sem alterar retroativamente o orçamento-base decidido: registrar revisões com data e escopo.
 
 ## Referências
 
