@@ -8,8 +8,8 @@ Person(comerciante, "Comerciante", "Registra créditos/débitos e consulta saldo
 Person(admin, "Administrador de acessos", "Gerencia usuários e permissões")
 System(cashflow, "CashFlow", "Aplicação Web financeira com autenticação e consolidação diária")
 
-Rel(comerciante, cashflow, "Registra e consulta", "HTTPS / TCP 443 (previsto)")
-Rel(admin, cashflow, "Administra acessos", "HTTPS / TCP 443 (previsto)")
+Rel(comerciante, cashflow, "Registra e consulta", "HTTPS / TCP 443")
+Rel(admin, cashflow, "Administra acessos", "HTTPS / TCP 443")
 
 SHOW_LEGEND()
 @enduml
