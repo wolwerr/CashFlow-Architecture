@@ -17,14 +17,14 @@ DB --> KC: Resultado
 KC --> W: Redireciona com authorization code
 W -> KC: Troca code + code_verifier por tokens\nHTTPS :443
 KC --> W: Access token para API
-W -> G: /api/* com Bearer token\nHTTPS :443 publico
+W -> G: /api/v1/* com Bearer token\nHTTPS :443 publico
 G -> API: Proxy com Authorization preservado\nHTTP :8080 privado
 opt Chaves ausentes ou atualizacao de cache
   API -> KC: Consulta discovery / JWKS\nHTTPS conforme URL do issuer
   KC --> API: Chaves publicas
 end
 API -> API: Valida assinatura, iss, aud, exp/nbf\nlocalmente com JWKS em cache
-API -> API: Verifica vinculo e permissao\npara merchant_id no CashFlow
+API -> API: Confere vinculo no CashFlow\ncache curto e invalido quando revogado\nADMIN ou OPERATOR por merchant_id
 alt JWT valido e acesso autorizado
   API --> G: Resposta da operacao
   G --> W: Resposta
@@ -38,7 +38,7 @@ end
 W --> U: Exibe resultado
 note over W,KC
 SPA publica no MVP; BFF futuro.
-Nao persistir tokens em localStorage.
+Tokens somente em memoria; nao gravar em\nlocalStorage ou sessionStorage.
 end note
 note over G,API
 NGINX atual somente encaminha.
