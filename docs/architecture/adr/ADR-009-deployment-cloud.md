@@ -3,6 +3,7 @@
 > **Status:** proposta para aprovação  
 > **Data:** 2026-11-15  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
+> **Orçamento por ambiente e lacunas para total:** [Plano LOCAL, DEV, HOM, PROD](../four-environment-total-cost-plan.md)  
 > **Comparativo Kubernetes prioritário:** [AKS versus EKS, custo por serviço](../aks-eks-cost-breakdown.md)  
 > **Comparativo original de modelos alternativos:** [ACA, AKS e ECS/Fargate](../cloud-cost-comparison.md)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), [ADR-004](ADR-004-async-messaging.md), [ADR-005](ADR-005-outbox-consistency-idempotency.md), [ADR-006](ADR-006-identity-and-access.md), [ADR-007](ADR-007-clients-api-gateway.md), [ADR-008](ADR-008-observability.md)
@@ -103,6 +104,16 @@ A decisão sobre armazenamento deve distinguir PVs (RabbitMQ, Prometheus e estad
 
 **Aprovação ainda pendente:** manter AKS como preferência preliminar, com EKS como alternativa equivalente em Kubernetes, até termos uma versão com preço total de rede, storage, banco, egress e HA, além de teste de 50 RPS.
 
+## Decisão de isolamento de ambientes e revisão de orçamento (2026-11-15)
+
+**Definido pelo projeto:** DEV e HOM **não compartilham Kubernetes, PostgreSQL, dados, credenciais nem infraestrutura de ambiente**, para permitir homologação separada de produção. LOCAL continua Docker Compose. HOM mantém perfil econômico normalmente e deve ser **temporariamente configurado como espelho do PROD** (réplicas, HPA, quotas, recursos, versões, broker quorum, banco HA, ingress e testes de carga/resiliência) antes de promover release. Comparabilidade real deve ser verificada em testes, não declarada apenas pela escolha de Kubernetes.
+
+**Correção de viabilidade:** o PostgreSQL Azure Burstable B2ms usado no preço anterior de PROD **não suporta HA zone-redundant**. O [plano de custo por ambiente](../four-environment-total-cost-plan.md) substitui essa premissa para PROD por **General Purpose D2s v3 com primary/standby zone-redundant**, a cotar definitivamente. A cifra anterior não serve para produção com HA.
+
+**Totais base atualizados de itens quantificados 24x7**, *excluindo network/ingress/NAT/egress e outras lacunas*: Azure AKS **US$ 1.093,55/mês** para DEV + HOM + PROD; Amazon EKS **US$ 1.211,58/mês**, com a parcela RDS Multi-AZ ainda sendo um **proxy**, sem tarifa final nem storage de banco. Esses não são custos totais de fatura. Os dois ambientes não produtivos foram preservados como clusters separados.
+
+**Faturamento definitivo depende** de estimativas exportadas das calculadoras oficiais, cobrindo por ambiente NAT, LB/ingress, IPs, armazenamento e backup de PostgreSQL, PVC/snapshots, object storage e operações, registry, segredos, DNS, transferência, custo de replica do broker e horas de HOM espelhando PROD. Não usar zero para lacunas e não aprovar cloud por subtotal.
+
 ## Ambientes obrigatórios: LOCAL, DEV, HOM e PROD
 
 A arquitetura será organizada em **quatro ambientes**, com separação explícita de configurações, dados, credenciais e deploys:
@@ -128,7 +139,7 @@ A [planilha textual do estudo AKS x EKS](../aks-eks-cost-breakdown.md) apresenta
 
 **Não são faturas totais, nem prova de custo menor do AKS.** Os números incluem nós/cluster, instância PostgreSQL, apenas armazenamento PostgreSQL Azure, uma reserva ilustrativa de PVs e object storage. Excluem, entre outros, **LB/NAT/ingress em ambos, RDS storage, registry, backups, IPs, egress, secrets e produção HA**. A estimativa de DEV/HOM com um nó precisa ser testada: Keycloak, RabbitMQ e stack Grafana podem exigir mais recursos, especialmente em HOM durante testes de carga.
 
-**Alternativa a analisar:** **um único cluster compartilhado para DEV e HOM** com namespaces, quotas, identidades e bancos logicamente segregados. Isso pode economizar taxa de control plane no EKS e recursos ociosos, mas cria risco de interferência, falha comum e menor equivalência entre HOM e PROD. A tabela principal assume **clusters separados**.
+**Decisão:** manter DEV e HOM em **clusters e bancos separados**. Não compartilhar cluster nem banco entre ambientes. HOM é redimensionado temporariamente quando necessário para executar testes próximos aos de PROD, gerando custo adicional por hora.
 
 **Estratégia HPA:** usar HPA apenas quando há métricas, requests de CPU e capacidade de nós; com HPA desativado em DEV/HOM como baseline econômico, sem SLA. Em PROD, HPA para Transactions e Consolidation com `minReplicas: 2` é ponto de partida, junto a topology spread e probes, **não garantia de HA sem nós e banco capazes de sobreviver a falhas**.
 
