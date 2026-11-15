@@ -6,7 +6,8 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 
 | Documento | O que apresenta |
 | --- | --- |
-| **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | Estrutura estática da solução: C4 Nível 1 e 2, responsabilidades, protocolos propostos e futura visão de componentes. |
+| **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | Estrutura estática da solução: C4 Níveis 1 e 2, responsabilidades e protocolos. |
+| **[C4 Nível 3: Componentes](c4-level-3-components.md)** | Componentes internos de Transactions e Consolidation, interações, Outbox e idempotência. |
 | **[Diagramas de Sequência](sequence-diagrams.md)** | Interações detalhadas para registro, falha do consolidado e consulta. |
 | **[Casos de Uso (Use Case View)](use-cases.md)** | Ações do comerciante, fluxos principais e alternativas, com requisitos confirmados e propostas separados. |
 | **[Modelo de Dados (Data Model View)](data-model.md)** | Entidades por domínio, integridade, Outbox, idempotência e trilha de auditoria financeira. |
@@ -24,7 +25,7 @@ plantuml -tpng docs/architecture/plantuml/*.puml
 
 O comando gera PNGs na pasta das fontes; para atualizar as imagens referenciadas, mova ou copie os PNGs para `docs/architecture/images/`. Os arquivos PlantUML são a referência de edição. Renderizações devem ser atualizadas sempre que as fontes mudarem.
 
-## Decisões pendentes
+## Pendências e validação
 
 - **Issue #3:** definição da regra financeira do saldo diário, histórico e correção/estorno.
 - **Issue #7:** ADRs para linguagem, banco de dados, mensageria, autenticação e observabilidade.
@@ -32,4 +33,4 @@ O comando gera PNGs na pasta das fontes; para atualizar as imagens referenciadas
 - **Issue #9:** controles de segurança, retenção, acesso à auditoria e proteção de dados.
 - **Issue #10:** custo, implantação e impactos operacionais.
 
-A descrição da arquitetura não comprova, por si só, implementação ou execução de testes. A Issue #6 foi concluída. Após a [ADR-008](adr/ADR-008-observability.md), o C4 Nível 2 passou a mostrar a stack de observabilidade escolhida (OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana). É necessário **regenerar `images/c4-containers.png`** para refletir a fonte PlantUML atualizada.
+A descrição da arquitetura não comprova, por si só, implementação ou execução de testes. A Issue #6 foi concluída. O **C4 Nível 3** agora possui fontes editáveis para os dois microsserviços; os PNGs correspondentes precisam de renderização. Após a [ADR-008](adr/ADR-008-observability.md), o C4 Nível 2 passou a mostrar a stack de observabilidade escolhida (OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana). É necessário **regenerar `images/c4-containers.png`** para refletir a fonte PlantUML atualizada.
