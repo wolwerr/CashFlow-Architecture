@@ -20,7 +20,7 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX opcional. Regerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está em revisão para a estratégia de observabilidade.
+> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX opcional. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está em revisão para a estratégia de observabilidade.
 
 | Bloco | Responsabilidade |
 | --- | --- |
@@ -77,13 +77,13 @@ As APIs de **Lançamentos** e **Consolidado** devem validar os JWTs **localmente
 
 ## Telemetria e observabilidade
 
-Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak** e um eventual **API Gateway** poderão emitir telemetria quando forem implantados e configurados. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
+Os serviços de **Lançamentos** e **Consolidado** são prioritários para instrumentação. **Keycloak**, o NGINX opcional e um eventual **API Gateway futuro** poderão emitir telemetria quando forem implantados e configurados. O desenho simplificado representa essa integração como uma nota para evitar cruzamento de linhas.
 
 | Sinal | Uso esperado |
 | --- | --- |
 | **Logs estruturados** | Diagnóstico de erros, tentativas de acesso e processamento, sem expor tokens, senhas ou dados financeiros sensíveis. |
 | **Métricas** | Taxa de requisições, erros, latência, eventos pendentes na Outbox, tamanho das filas e atraso da consolidação. |
-| **Traces distribuídos** | Acompanhar operações que passam por Gateway, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
+| **Traces distribuídos** | Acompanhar operações que passam por proxy opcional, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
 
 **OTLP** é o protocolo proposto para exportação dos sinais; **OpenTelemetry** é a opção de instrumentação/coleta. A escolha de armazenamento, dashboards, alertas e regras de retenção será formalizada nas próximas issues. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
 
