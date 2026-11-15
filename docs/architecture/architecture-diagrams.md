@@ -6,8 +6,7 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 
 | Documento | O que apresenta |
 | --- | --- |
-| **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | Estrutura estática C4 Níveis 1 e 2, responsabilidades, protocolos e portas de referência. |
-| **[C4 Nível 3: Componentes](c4-level-3-components.md)** | Componentes do frontend React, Transactions e Consolidation, com interações e portas de rede. |
+| **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | **C4 Níveis 1, 2 e 3 em uma página**, com diagramas, responsabilidades, protocolos, portas, componentes e justificativas técnicas. |
 | **[Diagramas de Sequência](sequence-diagrams.md)** | Interações detalhadas para registro, falha do consolidado e consulta. |
 | **[Casos de Uso (Use Case View)](use-cases.md)** | Ações do comerciante, fluxos principais e alternativas, com requisitos confirmados e propostas separados. |
 | **[Modelo de Dados (Data Model View)](data-model.md)** | Entidades por domínio, integridade, Outbox, idempotência e trilha de auditoria financeira. |
@@ -33,4 +32,4 @@ O comando gera PNGs na pasta das fontes; para atualizar as imagens referenciadas
 - **Issue #9:** controles de segurança, retenção, acesso à auditoria e proteção de dados.
 - **Issue #10:** custo, implantação e impactos operacionais.
 
-A descrição da arquitetura não comprova, por si só, implementação ou execução de testes. A Issue #6 foi concluída. O **C4 Nível 3** agora possui fontes editáveis para frontend React e os dois microsserviços; os três PNGs correspondentes precisam de renderização. Após a [ADR-008](adr/ADR-008-observability.md), o C4 Nível 2 passou a mostrar a stack de observabilidade escolhida (OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana). É necessário **regenerar `images/c4-containers.png`** para refletir a fonte PlantUML atualizada.
+A descrição da arquitetura não comprova, por si só, implementação ou execução de testes. A Issue #6 foi concluída. O **C4 Nível 3** possui fontes editáveis para frontend React e os dois microsserviços. Toda a documentação de componentes está consolidada na [Building Block View](building-block-view.md); os PNGs precisam estar atualizados na pasta `images/`. Após a [ADR-008](adr/ADR-008-observability.md), o C4 Nível 2 passou a mostrar a stack de observabilidade escolhida (OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana). É necessário **regenerar `images/c4-containers.png`** para refletir a fonte PlantUML atualizada.
