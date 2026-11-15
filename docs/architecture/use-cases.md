@@ -75,7 +75,7 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 
 **Pós-condição:** o comerciante visualiza o resultado ou recebe uma indicação apropriada da indisponibilidade.
 
-**RN-02 decidida em 15/11/2026:** a consulta apresenta totais de crédito, débito, **movimento líquido do dia** e **saldo acumulado**. Permanecem pendentes saldo inicial, dias sem movimento e lançamentos retroativos.
+**RN-02 decidida em 15/11/2026:** a consulta apresenta totais de crédito, débito, **movimento líquido do dia** e **saldo acumulado**. **RN-03 decidida:** o saldo inicial é **R$ 0,00 por comerciante** no MVP. Permanecem pendentes dias sem movimento e lançamentos retroativos.
 
 ## 4. Casos de uso sugeridos
 
