@@ -73,12 +73,21 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     transaction_id : UUID <<FK>>
     event_type : STRING
     correlation_id : UUID <<metadata>>
-    schema_version : STRING\n    payload : JSON
+    schema_version : STRING
+    payload : JSON
     created_at : TIMESTAMP
     published_at : TIMESTAMP (opcional)
     status : STRING
   }
-  entity "HttpIdempotencyRecord" as I {\n    * id : UUID <<PK>>\n    --\n    merchant_id : UUID\n    idempotency_key : STRING\n    request_hash : STRING\n    transaction_id : UUID\n  }\n  entity "AuditEvent" as A {
+  entity "HttpIdempotencyRecord" as I {
+    * id : UUID <<PK>>
+    --
+    merchant_id : UUID
+    idempotency_key : STRING
+    request_hash : STRING
+    transaction_id : UUID
+  }
+  entity "AuditEvent" as A {
     * id : UUID <<PK>>
     --
     transaction_id : UUID (opcional)
@@ -89,7 +98,8 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     correlation_id : UUID
     outcome : STRING
   }
-  T ||--o{ I : registro idempotente\n  T ||--o{ O : origina
+  T ||--o{ I : registro idempotente
+  T ||--o{ O : origina
   T |o--o{ A : auditoria
 }
 package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
@@ -116,7 +126,8 @@ P ..> D : atualiza atomica
 note bottom of MT
   Keycloak autentica e gerencia usuarios.
   CashFlow gerencia merchants e vinculos.
-  Banco logico proprio de autorizacao.\n  ADMIN e OPERATOR por comerciante.
+  Banco logico proprio de autorizacao.
+  ADMIN e OPERATOR por comerciante.
   Sem FK fisica entre os dominios.
 end note
 note right of T
@@ -128,13 +139,15 @@ end note
 note bottom of D
   Segregacao por comerciante aprovada.
   ProcessedEvent exige event_id unico.
-  Persistir totais diarios; saldo\n  acumulado calculado na leitura.
+  Persistir totais diarios; saldo
+  acumulado calculado na leitura.
   Saldo inicial zero por comerciante no MVP.
   Dia vazio: movimento zero e saldo mantido.
   Nao exige linha para todo dia sem eventos.
   Competencias passadas/atuais aceitas.
   Futuras rejeitadas; recompor acumulados.
-  Sem closing_balance persistido.\n  Estorno fora do MVP.
+  Sem closing_balance persistido.
+  Estorno fora do MVP.
   BRL duas casas; entradas > 0.
 end note
 @enduml
