@@ -22,7 +22,7 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Blazor com .NET** | Linguagem C# compartilhada, integração ao ecossistema Microsoft | Equipe precisa dominar modelo de renderização e trade-offs do ambiente Blazor; não há requisito que exija uniformizar a linguagem do frontend |
 | **Sem frontend no MVP** | Prioriza as APIs e os testes fundamentais | Demonstração para usuários menos visuais |
 
-**Decisão decidida:** utilizar **React + TypeScript**, com interface responsiva. **Não criar aplicações Android e iOS nativas no MVP**. Uma PWA pode ser avaliada futuramente se houver requisitos de instalação, offline ou notificações; a simples responsividade não garante capacidades PWA.
+**Decisão registrada:** utilizar **React + TypeScript**, com interface responsiva. **Não criar aplicações Android e iOS nativas no MVP**. Uma PWA pode ser avaliada futuramente se houver requisitos de instalação, offline ou notificações; a simples responsividade não garante capacidades PWA.
 
 ## 2. API Gateway: alternativas
 
