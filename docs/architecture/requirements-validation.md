@@ -22,7 +22,7 @@ Não transformar propostas em requisitos obrigatórios nem caracterizar o percen
 | --- | --- | --- | --- | --- |
 | **RF-01** Registro de crédito | Exigido, essencial | [ADR-002](adr/ADR-002-architecture-style-clean-architecture.md), [ADR-005](adr/ADR-005-outbox-consistency-idempotency.md), C4 Transactions e `Transaction` | **Conforme no desenho** | Crédito válido persiste com Outbox no mesmo commit, resposta coerente e sem aguardar Consolidation |
 | **RF-02** Registro de débito | Exigido, essencial | Mesmas decisões de Transactions e modelo `Transaction` | **Conforme no desenho** | Débito válido persiste com Outbox e altera a projeção segundo regra de negócio definida |
-| **RF-03** Consultar consolidado diário | Exigido, essencial | C4 Consolidation, `DailyBalance`, ADR-002 e ADR-005 | **Parcial**: movimento líquido e saldo acumulado decididos; saldo inicial de R$ 0,00 decidido; dia vazio definido pela RN-09; demais contratos e retroatividade ainda pendentes | Consulta por data e comerciante com valores esperados derivados da regra aprovada |
+| **RF-03** Consultar consolidado diário | Exigido, essencial | C4 Consolidation, `DailyBalance`, ADR-002 e ADR-005 | **Parcial**: movimento líquido e saldo acumulado decididos; saldo inicial de R$ 0,00 decidido; dia vazio definido pela RN-09; demais contratos e estratégia física de recomposição retroativa ainda pendentes | Consulta por data e comerciante com valores esperados derivados da regra aprovada |
 | **RF-04** Validar dados de lançamento | **Proposto** como essencial ao MVP | Domain e Application de Transactions, endpoints e critérios da HU-04 | **Parcial**: campos, limites, valor e data ainda a definir | Rejeições não persistem lançamentos confirmados |
 | **RF-05** Consultar histórico | **Proposto**, desejável | `Transaction` como registro de referência; fluxo opcional nos casos de uso | **Pendente de escopo** | Se incluído, consulta paginada/filtrada e autorização por comerciante |
 | **RF-06** Corrigir por estorno | **Proposto**, futuro/a validar | `Transaction`, `AuditEvent` proposto e referência potencial `reversal_of_id` no modelo de dados | **Pendente de escopo e regra** | Se incluído, efeito contábil correto, preservação de histórico e idempotência |
@@ -52,10 +52,10 @@ Outros SLOs, como p95 inferior a 500 ms, 95% das atualizações em 30 s, continu
 
 | Prioridade | Tema | Fontes e impacto | Ação de validação |
 | --- | --- | --- | --- |
-| **Decidido em 15/11/2026** | **RN-02**: exibir movimento líquido diário e saldo acumulado | RF-03, UC-03 e `DailyBalance` devem refletir ambos; saldo inicial de R$ 0,00 decidido; retroatividade segue aberta | Registrar regra e conferir documentos/contratos |
+| **Decidido em 15/11/2026** | **RN-02**: exibir movimento líquido diário e saldo acumulado | RF-03, UC-03 e `DailyBalance` devem refletir ambos; saldo inicial de R$ 0,00 decidido; retroatividade decidida; implementação e testes de recomposição pendentes | Registrar regra e conferir documentos/contratos |
 | **Decidido em 15/11/2026** | **RN-03**: saldo inicial de R$ 0,00 por comerciante | O acumulado parte de zero, sem saldo manual de abertura no MVP | Refletir em cálculos e testes |
 | **Decidido em 15/11/2026** | **RN-09**: dia sem movimentação | Totais e líquido zero, saldo acumulado anterior mantido; antes da primeira transação, saldo zero | Cobrir com testes de consulta em dia vazio |
-| **Decidido em 15/11/2026** | **RN-04**: competência informada pelo comerciante, criação UTC | `reference_date` define dia financeiro e `created_at` registra instante UTC | Definir regras para datas passadas/futuras e fuso de apresentação |
+| **Decidido em 15/11/2026** | **RN-04**: competência informada pelo comerciante, criação UTC | `reference_date` define dia financeiro e `created_at` registra instante UTC | Competências passadas/atuais aceitas, futuras rejeitadas; recompor acumulados afetados. Fuso de referência/exibição pendente |
 | **Decidido em 15/11/2026** | **RN-07**: BRL com duas casas, `decimal` no .NET, `numeric(19,2)` no PostgreSQL | Montantes de lançamento > 0; rejeitar precisão excessiva; `CREDIT`/`DEBIT` determina o efeito; validar em contratos/constraints/testes |
 | **Alta** | **RNF-03**: significado dos 5% de perda e janela | Sem definição não há aceite inequívoco de desempenho | Confirmar erro/timeout/resposta útil, carga e janela |
 | **Alta** | **RN-06 / Issue #9**: vínculo sujeito-comerciante | Segurança multi-comerciante proposta; Keycloak não autoriza `merchant_id` automaticamente | Definir fonte e mecanismo de autorização; testar isolamento |
@@ -80,7 +80,7 @@ Outros SLOs, como p95 inferior a 500 ms, 95% das atualizações em 30 s, continu
 - [x] Identificadas as regras financeiras que impedem fixar o resultado esperado do consolidado.
 - [x] Confirmado que os critérios de 50 RPS e 5% ainda necessitam execução e interpretação oficial.
 - [x] Confirmada a diferenciação entre decisão arquitetural, critério proposto e teste executado.
-- [ ] Concluir decisões ainda abertas sobre datas retroativas, escopo, autorização por comerciante e interpretação da perda de requisições; verificar RN-07 em testes.
+- [ ] Concluir fuso de referência para a data atual, escopo, autorização por comerciante, estratégia de recomposição e interpretação de perda de requisições; verificar RN-07 em testes.
 - [ ] Implementar e executar cenários automatizados; registrar relatórios.
 - [ ] Aceite funcional e não funcional após revisão dos resultados.
 
