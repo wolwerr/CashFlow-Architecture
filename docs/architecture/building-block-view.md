@@ -20,7 +20,7 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) foi **aceita**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
+> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png`. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está **decidida**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
 
 | Bloco | Responsabilidade |
 | --- | --- |
@@ -70,7 +70,7 @@ Os protocolos representam **propostas**, não decisões finais. Produtos e garan
 | Independência entre registro e consolidação | **Exigida pelo desafio** |
 | Interfaces Web/Mobile e painel administrativo | **Proposta de solução completa**, não exigida |
 | NGINX / API Gateway | **NGINX incluído no MVP como reverse proxy**; API Gateway dedicado é evolução futura, conforme ADR-007 |
-| Keycloak e seu banco | **Escolha arquitetural aceita (ADR-006)**; implantação e administração completas podem ficar fora do MVP financeiro |
+| Keycloak e seu banco | **Escolha arquitetural decidida (ADR-006)**; implantação e administração completas podem ficar fora do MVP financeiro |
 | Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
 
 A implementação planejada do MVP inclui NGINX no caminho Web e mantém o foco funcional nas duas APIs e no processamento financeiro; a infraestrutura completa ainda precisa ser integrada e testada. Isso evita confundir a apresentação com uma promessa de implementar todas as interfaces.
@@ -93,7 +93,7 @@ Os serviços de **Lançamentos** e **Consolidado** são prioritários para instr
 | **Métricas** | Taxa de requisições, erros, latência, eventos pendentes na Outbox, tamanho das filas e atraso da consolidação. |
 | **Traces distribuídos** | Acompanhar operações que passam por NGINX, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
 
-Conforme a **ADR-008 aceita**, OpenTelemetry instrumenta serviços .NET, OpenTelemetry Collector recebe/encaminha os sinais, **Prometheus** armazena métricas, **Loki** armazena logs, **Tempo** armazena traces e **Grafana** oferece dashboards. Alertas, retenção, volumes, segurança e HA serão detalhados na ADR-009 e nas issues operacionais. A coleta de componentes de terceiros exige exporters/agentes próprios quando aplicável. A falha na stack de observabilidade não pode bloquear a confirmação de lançamentos. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
+Conforme a **ADR-008 decidida**, OpenTelemetry instrumenta serviços .NET, OpenTelemetry Collector recebe/encaminha os sinais, **Prometheus** armazena métricas, **Loki** armazena logs, **Tempo** armazena traces e **Grafana** oferece dashboards. Alertas, retenção, volumes, segurança e HA serão detalhados na ADR-009 e nas issues operacionais. A coleta de componentes de terceiros exige exporters/agentes próprios quando aplicável. A falha na stack de observabilidade não pode bloquear a confirmação de lançamentos. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
 
 ## Controle de acesso e decisão de tecnologia
 
@@ -101,9 +101,14 @@ Os perfis `ADMIN`, `OPERATOR` e `VIEWER` são exemplos para discussão. O cadast
 
 A indisponibilidade do Keycloak **não deve parar o registro de movimentações que já tenham token válido**, desde que a validação local e as políticas de acesso permitam. Essa condição precisa ser testada.
 
-## Evolução para C4 Nível 3
+## C4 Nível 3: Componentes
 
-Se for útil à avaliação, uma futura visão de componentes pode detalhar **API, aplicação de negócio, persistência e Outbox worker** dentro do serviço de lançamentos; consumidor e consulta no serviço de consolidado; e configuração do Keycloak e autorização por comerciante nos serviços de negócio. Só acrescentaremos níveis adicionais quando contribuírem para explicar decisões importantes.
+A visão de componentes foi documentada em **[C4 Nível 3: Transactions e Consolidation](c4-level-3-components.md)**, com duas fontes PlantUML editáveis:
+
+- [Transactions: API, domínio, persistência e worker Outbox](plantuml/c4-components-transactions.puml)
+- [Consolidation: consulta diária, consumidor, projeção e idempotência](plantuml/c4-components-consolidation.puml)
+
+Os componentes seguem a **ADR-002 (Clean Architecture)**, a **ADR-005 (Transactional Outbox e consumidor idempotente)** e a **ADR-006 (autorização financeira separada da autenticação do Keycloak)**. Os diagramas representam responsabilidades propostas e suas interações, não classes de código ou deployments já implementados. **Os PNGs dos dois diagramas novos ainda precisam ser renderizados** a partir das fontes.
 
 ## Próximas leituras
 
