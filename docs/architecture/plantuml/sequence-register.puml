@@ -3,14 +3,14 @@ title CashFlow | Registro na aplicação Web/Mobile e publicação assíncrona
 autonumber
 actor Comerciante
 participant "Aplicação Web/Mobile" as W
-participant "NGINX (proxy opcional)" as G
+participant "NGINX (reverse proxy)" as G
 participant "Serviço de lançamentos\n(API + worker Outbox)" as L
 database "Banco de lançamentos" as BL
 queue "Mensageria" as M
 participant "Serviço de consolidado" as C
 database "Banco do consolidado" as BC
 Comerciante -> W: Informa crédito ou débito
-W -> G: POST /lançamentos (via proxy, se configurado)
+W -> G: POST /lançamentos (via NGINX)
 G -> L: Encaminha HTTPS/JSON + JWT
 L -> L: Valida token, papel, merchant_id e dados
 L -> BL: Grava lançamento + evento Outbox\n(uma transação SQL)
@@ -29,7 +29,7 @@ C -> BC: Atualiza projeção por comerciante/data\n+ registra event_id (atômico
 BC --> C: Commit confirmado
 C --> M: ACK
 note over L,C
-NGINX e opcional; sem ele, o cliente chama a API diretamente.
+NGINX encaminha as requisicoes HTTP do React.
 A API financeira valida a autorização.
 O registro não espera a consolidação.
 O consumidor é idempotente.
