@@ -74,7 +74,9 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 - Um valor inválido não poderá ser registrado, incluindo zero, negativos e valores com mais de duas casas decimais (RN-07).
 - O comerciante deverá receber uma mensagem compreensível sem que um lançamento rejeitado seja contabilizado.
 
-**Decisões adicionais aprovadas:** o dia atual é determinado em `America/Sao_Paulo`; o formulário sugere hoje, editável. Competências passadas são aceitas sem limite de dias para usuário autorizado. `Idempotency-Key` é obrigatório no registro e a confirmação HTTP é **201 Created somente após commit de Transaction + Outbox**, sem esperar a consolidação.\n\n**Campos do registro:** valor, tipo de movimentação e data de competência informada pelo comerciante (RN-04). Identificador do lançamento pode ser gerado pelo sistema. **RN-07 decidida:** BRL com duas casas, valor estritamente positivo, rejeição de precisão maior que duas casas, sem arredondamento automático de entradas. A data padrão da interface permanece a definir.
+**Decisões adicionais aprovadas:** o dia atual é determinado em `America/Sao_Paulo`; o formulário sugere hoje, editável. Competências passadas são aceitas sem limite de dias para usuário autorizado. `Idempotency-Key` é obrigatório no registro e a confirmação HTTP é **201 Created somente após commit de Transaction + Outbox**, sem esperar a consolidação.
+
+**Campos do registro:** valor, tipo de movimentação e data de competência informada pelo comerciante (RN-04). Identificador do lançamento pode ser gerado pelo sistema. **RN-07 decidida:** BRL com duas casas, valor estritamente positivo, rejeição de precisão maior que duas casas, sem arredondamento automático de entradas. A data padrão da interface permanece a definir.
 
 ### HU-05: Consultar histórico (RF-05, proposto)
 
@@ -156,7 +158,11 @@ O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será
 
 **Tratamento proposto:** caso não seja possível obter respostas da empresa, documentar as premissas adotadas para o MVP, explicitar seus impactos e evitar apresentá-las como requisitos fornecidos pela banca.
 
-## 8. Aprovações de MVP\n\nO escopo de histórico paginado, auditoria básica de registros confirmados, multicomerciante, papéis ADMIN/OPERATOR, fuso `America/Sao_Paulo`, persistência de totais diários com acumulado calculado na leitura e API versionada foram **aprovados pelo projeto**, não impostos pelo enunciado. A especificação integral das 24 decisões encontra-se em [Decisões consolidadas do MVP](../architecture/mvp-decisions.md). Estorno e exclusão/edição de fatos confirmados ficam fora do MVP.\n\n## 9. Rastreabilidade e conclusão
+## 8. Aprovações de MVP
+
+O escopo de histórico paginado, auditoria básica de registros confirmados, multicomerciante, papéis ADMIN/OPERATOR, fuso `America/Sao_Paulo`, persistência de totais diários com acumulado calculado na leitura e API versionada foram **aprovados pelo projeto**, não impostos pelo enunciado. A especificação integral das 24 decisões encontra-se em [Decisões consolidadas do MVP](../architecture/mvp-decisions.md). Estorno e exclusão/edição de fatos confirmados ficam fora do MVP.
+
+## 9. Rastreabilidade e conclusão
 
 | Requisito | Contexto responsável | Validação prevista |
 | --- | --- | --- |
