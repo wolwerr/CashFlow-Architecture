@@ -1,6 +1,6 @@
 # ADR-006: Identidade, autenticação e autorização por comerciante
 
-> **Status:** aceita  
+> **Status:** decidida  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [Building Block View](../building-block-view.md) e Issue #9 (segurança)
@@ -20,7 +20,7 @@ A arquitetura do CashFlow contempla cliente Web responsivo, Keycloak para identi
 
 As comparações tratam de **soluções de identidade**, não de desempenho comprovado. A decisão sobre produto e integração com o ambiente corporativo deve poder ser revisitada.
 
-## Decisão aceita
+## Decisão decidida
 
 1. **Protocolos:** utilizar OpenID Connect (OIDC) para autenticação de usuários e OAuth 2.0 para autorização delegada, com fluxos seguros apropriados para o tipo de cliente; para Web/Mobile, avaliar Authorization Code + PKCE. Comunicação via HTTPS.
 2. **Provedor:** adotar **Keycloak como provedor de identidade da arquitetura CashFlow**, para desenvolvimento e eventual demonstração local. O **Microsoft Entra External ID** segue como alternativa futura caso políticas corporativas e análise de custo/gestão justifiquem migração. A decisão de adotar Keycloak **não obriga implementar IAM completo no MVP financeiro**.
@@ -74,7 +74,7 @@ As comparações tratam de **soluções de identidade**, não de desempenho comp
 ## Pontos pendentes
 
 - Confirmar se o desafio requer implementação efetiva de login/gestão de usuários ou somente desenho-alvo (o enunciado prioriza os dois serviços financeiros).
-- A escolha do Keycloak está aceita; detalhar versão, hardening, operação, backup, HA e eventual migração para um serviço gerenciado conforme implantação e custo.
+- a escolha do Keycloak está decidida; detalhar versão, hardening, operação, backup, HA e eventual migração para um serviço gerenciado conforme implantação e custo.
 - Decidir onde persistir vínculos usuário/comerciante e como refletir a autorização com baixa dependência síncrona.
 - Refinar administração de usuários, MFA, SSO, políticas de senha, revogação, auditoria e LGPD na Issue #9.
 - O C4 Nível 2 e a sequência de autenticação foram atualizados para nomear o Keycloak; atualizar as imagens PNG após renderização.
