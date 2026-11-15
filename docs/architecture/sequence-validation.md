@@ -16,7 +16,7 @@ A validação compara a ordem das interações nos quatro arquivos PlantUML exis
 | **Autenticação e autorização** | [sequence-auth.puml](plantuml/sequence-auth.puml) | **Alinhado ao desenho**: SPA → Keycloak OIDC/PKCE; NGINX proxy, APIs validam JWT localmente com JWKS cacheado | JWT válido/inválido, expiração, issuer/audience, vínculo `merchant_id`, 401/403, rotação JWKS |
 | **Registro e publicação** | [sequence-register.puml](plantuml/sequence-register.puml) | **Alinhado ao desenho**: commit `Transaction + OutboxEvent` antes da resposta; worker assíncrono; confirmação de publicação **e roteamento**; deduplicação | Rollback atômico, publish confirm perdido, retorno unroutable, concorrência da Outbox, reentrega e ACK |
 | **Falha do consolidado** | [sequence-failure.puml](plantuml/sequence-failure.puml) | **Alinhado ao desenho**: registro confirmado com Consolidation fora; pendência preservada quando broker falha; recuperação e commit idempotente antes do ACK | Desligar somente Consolidation; desligar broker; backlog; reentrega e reconstrução do consolidado |
-| **Consulta diária** | [sequence-query.puml](plantuml/sequence-query.puml) | **Parcial**: consulta sem dependência de Transactions; autorização e caminhos de erro desenhados. Regra do saldo e ausência de projeção ainda indefinidas | Data inválida, 401/403, dia vazio, divergência/atraso e regra de saldo aprovada |
+| **Consulta diária** | [sequence-query.puml](plantuml/sequence-query.puml) | **Parcial**: consulta sem dependência de Transactions; autorização e caminhos de erro desenhados. Movimento líquido e acumulado definidos; saldo inicial e ausência de projeção ainda indefinidos | Data inválida, 401/403, dia vazio, divergência/atraso e regra de saldo aprovada |
 
 ## Inconsistências encontradas e corrigidas
 
@@ -43,7 +43,7 @@ A validação compara a ordem das interações nos quatro arquivos PlantUML exis
 
 | Prioridade | Pendência | Efeito |
 | --- | --- | --- |
-| **Alta** | Definir regra do consolidado: saldo líquido ou acumulado, saldo inicial e dia sem movimentação | Sem semântica de `DailyBalance` não é possível definir resposta esperada para a consulta |
+| **Alta** | Consolidado exibirá movimento líquido e saldo acumulado; definir saldo inicial e dia sem movimentação | Sem semântica de `DailyBalance` não é possível definir resposta esperada para a consulta |
 | **Alta** | Fechar contratos OpenAPI para criação e consulta, status de sucesso e erro, conteúdo de resposta e convenções de rota | Os diagramas usam `/api/transactions/*` e `/api/consolidation/*` como prefixos, não endpoints concluídos |
 | **Alta** | Determinar política de publisher confirm, mandatory/returns, binding, retry/DLQ e estado da Outbox | Evitar dar por concluído um evento que não alcançou o destino |
 | **Alta** | Detalhar idempotência HTTP e concorrência da projeção | Evitar duplicação em repetição de requisição ou eventos simultâneos |
