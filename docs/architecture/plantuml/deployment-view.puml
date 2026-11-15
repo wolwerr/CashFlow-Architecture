@@ -18,7 +18,7 @@ hide stereotype
 actor "Comerciante e\nadministrador" as people
 
 rectangle "LOCAL | Docker Compose\nSem custo Azure na estimativa" as LOCAL #E8EDF5 {
-  rectangle "NGINX + React\nTransactions + Consolidation\nKeycloak + RabbitMQ\nPostgreSQL + observabilidade" as localStack #FFFFFF
+  rectangle "NGINX + React\nTransactions + Consolidation\nKeycloak + RabbitMQ\nPostgreSQL (4 bancos logicos)\nObservabilidade" as localStack #FFFFFF
 }
 
 package "SHARED | Azure" as SHARED #E2EFFB {
@@ -32,7 +32,7 @@ package "DEV | Azure East US" as DEV #E8F3FF {
     rectangle "NGINX + React\nTransactions + Outbox\nConsolidation + consumer\nRabbitMQ + Keycloak\nOTel + Prometheus + Loki\nTempo + Grafana" as devPods #FFFFFF
     database "PVCs\n3 x P4" as devPvc #FFFFFF
   }
-  database "PostgreSQL Flexible Server\nB1ms | 32 GiB" as devPg #FFFFFF
+  database "PostgreSQL Flexible Server\nB1ms | 32 GiB\n4 bancos logicos" as devPg #FFFFFF
   rectangle "Blob Hot LRS\n20 GB" as devBlob #FFFFFF
   rectangle "Key Vault" as devKv #FFFFFF
 }
@@ -54,9 +54,10 @@ package "PROD | Azure East US" as PROD #D9EEFF {
     rectangle "NGINX + React\nTransactions + Outbox\nConsolidation + consumer\nRabbitMQ quorum + Keycloak\nOTel + Prometheus + Loki\nTempo + Grafana" as prodPods #FFFFFF
     database "PVCs\n4 x P10" as prodPvc #FFFFFF
   }
-  database "PostgreSQL Flexible Server\nGeneral Purpose D2s v3 + HA" as prodPg #FFFFFF
+  database "PostgreSQL Flexible Server\nGP D2s v3 + HA\n4 bancos logicos" as prodPg #FFFFFF
   rectangle "Blob Hot ZRS\n200 GB" as prodBlob #FFFFFF
-  rectangle "Key Vault\nSnapshots: 100 GB estimados" as prodKv #FFFFFF
+  rectangle "Key Vault" as prodKv #FFFFFF
+  rectangle "Snapshots de discos\n100 GB estimados" as prodSnapshots #FFFFFF
 }
 
 ' Fluxos ilustrativos, nao sao regras de rede nem topologia definitiva.
@@ -83,10 +84,14 @@ acr ..> prodAks : Imagens
 legend bottom
   Arquitetura-alvo, nao implantacao validada.
   LOCAL e independente da nuvem.
-  DEV, HOM e PROD possuem clusters e bancos logicos separados.
+  DEV, HOM e PROD possuem clusters independentes.
+  4 bancos logicos por ambiente: Transactions,
+  Consolidation, Autorizacao CashFlow e Keycloak.
   Azure e a referencia de custo; AWS e GCP requerem reestimativa.
   Os componentes internos sao workloads sobre nos Kubernetes.
   PostgreSQL e servico gerenciado fora do AKS.
-  HTTPS publico, conectividade privada, HA e backup exigem validacao.
+  Backups automaticos e restore testado antes de PROD.
+  Aprovar deploy via GitHub Environments.
+  HTTPS publico, rede e HA exigem validacao.
 endlegend
 @enduml
