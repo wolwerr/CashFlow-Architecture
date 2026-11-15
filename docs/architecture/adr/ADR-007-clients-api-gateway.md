@@ -73,11 +73,13 @@ Outbox worker -> RabbitMQ -> Consolidation consumer -> PostgreSQL Consolidation
 
 **Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**. Os diagramas C4 e de sequência foram alinhados à decisão aprovada: NGINX faz parte do MVP como reverse proxy, enquanto API Gateway dedicado e BFF ficam para o futuro.
 
+**Implementação:** o template inicial de NGINX está em [infra/nginx/default.conf.template](../../../infra/nginx/default.conf.template), com [orientações de integração](../../../infra/nginx/README.md). A integração funcional depende dos containers e dos contratos de rota reais; ainda não foi executada nem validada.
+
 ## 5. Consequências positivas
 
 - Interface responsiva evita multiplicar aplicativos logo no início.
 - React permite entrega incremental de formulários de lançamentos, consulta de saldo e administração.
-- Adiar o Gateway reduz componentes e pontos de falha no MVP. NGINX pode futuramente oferecer uma entrada HTTP comum; no MVP, ele serve o React e encaminha requisições financeiras.
+- Adiar um Gateway dedicado reduz componentes. O NGINX é a entrada HTTP do MVP para servir React e encaminhar requisições financeiras.
 - BFF pode reduzir exposição de tokens em aplicações Web sensíveis.
 - Mantém os serviços financeiros independentes do canal de entrada.
 
