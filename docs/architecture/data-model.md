@@ -24,7 +24,7 @@ Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL 
 | Lançamentos | **Transaction** | Registro financeiro confirmado: tipo, valor, data e identificador. |
 | Lançamentos | **OutboxEvent** | Evento persistido junto ao lançamento, aguardando publicação confiável. |
 | Lançamentos | **AuditEvent** | Trilha de auditoria sobre ações relevantes, especialmente criação, tentativa de correção, estorno e operações administrativas. |
-| Consolidado diário | **DailyBalance** | Visão calculada para consulta dos valores de um dia. |
+| Consolidado diário | **DailyBalance** | Projeção dos totais de crédito/débito e movimento líquido por dia, com saldo acumulado para consulta. A materialização do acumulado e seu recálculo após movimentos retroativos ainda devem ser definidos. |
 | Consolidado diário | **ProcessedEvent** | Identificadores de eventos já aplicados, impedindo contagem dupla. |
 
 O **Keycloak é a fonte de identidade e autenticação**, incluindo o identificador estável do sujeito (`sub`), credenciais e configuração OIDC. A **autorização de negócio e os vínculos com comerciantes pertencem ao CashFlow**, com persistência e estratégia de consulta a definir na Issue #9. O `merchant_id` e o `actor_id` em registros financeiros são referências lógicas, **sem FK física** entre domínios. O `actor_id` foi representado como **STRING** no modelo lógico para acomodar o claim `sub` OIDC sem presumir UUID; caso adotemos um identificador interno distinto, será necessário documentar o mapeamento e a escolha do namespace do emissor. O banco de lançamentos continua sendo a fonte de verdade dos registros financeiros. O consolidado guarda uma visão derivada que deve poder ser reconstruída, conforme estratégia a ser definida na Issue #8.
@@ -80,7 +80,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 ## 5. Campos ainda não fechados
 
-- **Saldo diário:** movimento líquido do dia ou saldo acumulado, incluindo saldo inicial.
+- **Saldo diário: decidido exibir ambos.** `net_amount = credit_total - debit_total`; `closing_balance` corresponde ao saldo inicial somado aos movimentos líquidos até a data. O saldo inicial e a estratégia física para calcular/materializar o acumulado, incluindo lançamentos retroativos, ainda dependem de definição.
 - **Dia financeiro:** definição de data de referência e fuso horário.
 - **Identidade e autorização:** Keycloak é o provedor escolhido para autenticação. `actor_id` representa referência textual ao sujeito OIDC, não UUID obrigatório. Definir issuer/namespace e, se houver ID interno, o mapeamento. A segregação por comerciante é uma regra do CashFlow; armazenamento, cardinalidades e fluxos de cadastro ainda precisam ser validados.
 - **Moeda e arredondamento:** precisão e convenção.
