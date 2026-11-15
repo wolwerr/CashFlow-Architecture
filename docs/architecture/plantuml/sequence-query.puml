@@ -40,6 +40,6 @@ note over C,DB
 Consolidation nao consulta Transactions.
 Liquido e acumulado sao apresentados.
 Dias vazios mantem saldo anterior.
-Atraso e retroatividade seguem pendentes.
+Retroativos corrigem saldos acumulados.\nAtraso e estrategia de recomposicao pendentes.
 end note
 @enduml
