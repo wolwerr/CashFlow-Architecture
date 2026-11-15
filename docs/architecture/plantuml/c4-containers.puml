@@ -9,8 +9,8 @@ Person(comerciante, "Comerciante", "Registra lançamentos e consulta saldos")
 Person(admin, "Administrador de acessos", "Gerencia usuários e permissões")
 
 System_Boundary(cashflow, "CashFlow") {
-  Container(web, "Aplicação Web/Mobile", "Web / Mobile", "Interface financeira e administrativa")
-  Container(gateway, "API Gateway", "HTTPS / REST", "Roteamento e controles de acesso")
+  Container(web, "Aplicação Web responsiva", "React / TypeScript", "Interface financeira e administrativa")
+  Container(gateway, "NGINX (proxy opcional)", "Reverse proxy / HTTPS", "Serve o React e encaminha chamadas HTTP quando necessário")
   Container(iam, "Keycloak", "OIDC / OAuth 2.0", "Identidades, login, sessões e tokens")
   ContainerDb(db_iam, "Banco do Keycloak", "Persistência IAM", "Usuários, credenciais e configuração do provedor")
   Container(lancamentos, "Serviço de lançamentos", "API REST + Outbox", "Registra créditos e débitos")
@@ -36,33 +36,39 @@ Lay_D(db_consolidado, telemetria)
 ' Atores e canais
 Rel(comerciante, web, "Registra e consulta", "HTTPS")
 Rel(admin, web, "Administra acessos", "HTTPS")
-Rel_D(web, gateway, "Consome APIs", "HTTPS / JSON")
+Rel_D(web, gateway, "Consome APIs via proxy, se adotado", "HTTPS / JSON")
 
 ' Identidade
-Rel_D(gateway, iam, "Administra identidades (proposto)", "HTTPS / REST")
+Rel_D(gateway, iam, "Proxy administrativo, se configurado", "HTTPS / REST")
 Rel_D(iam, db_iam, "Persiste identidades e sessões", "SQL / TCP")
 
 ' Fluxo financeiro
-Rel_R(gateway, lancamentos, "Registra movimentações", "HTTPS / REST")
+Rel_R(gateway, lancamentos, "Encaminha registros, se adotado", "HTTPS / REST")
 Rel_D(lancamentos, db_lancamentos, "Persiste lançamento + Outbox", "SQL / TCP")
 Rel_R(lancamentos, mensageria, "Publica eventos", "AMQP")
 Rel_R(mensageria, consolidado, "Entrega eventos", "AMQP")
 Rel_D(consolidado, db_consolidado, "Atualiza e consulta saldos", "SQL / TCP")
-Rel(gateway, consolidado, "Consulta saldos", "HTTPS / REST")
+Rel(gateway, consolidado, "Encaminha consultas, se adotado", "HTTPS / REST")
 
 ' Integrações transversais apresentadas em notas
 note right of iam
-  Login via Keycloak e OIDC.
+  Login direto no Keycloak via OIDC.
   APIs validam JWT localmente.
   Vínculos de comerciantes são
   autorizados no CashFlow.
 end note
 
 note right of telemetria
-  Gateway, IAM e serviços
+  Proxy opcional, Keycloak e serviços
   financeiros exportam
   métricas, logs e traces
   via OTLP.
+end note
+
+note bottom of gateway
+  Proxy reverso opcional no MVP.
+  API Gateway dedicado e BFF:
+  evolucoes futuras (ADR-007).
 end note
 
 SHOW_LEGEND()
