@@ -33,7 +33,7 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Gateway gerenciado na cloud** | Operação de borda delegada, funcionalidades condicionadas ao produto | Dependência do provedor e custos variáveis; menor reprodução em Docker Compose |
 | **Acesso direto às duas APIs** | Menos infraestrutura e menor latência inicial | Clientes conhecem múltiplas origens/endereços; políticas de borda dispersas |
 
-**Proposta:** manter **um API Gateway no desenho-alvo**, preferindo **YARP** para desenvolvimento e demonstração caso o Gateway seja implementado. No MVP financeiro, as duas APIs podem ser expostas separadamente para testes, sem invalidar o desenho-alvo. A decisão de deploy real do Gateway ficará condicionada ao escopo e à ADR-009.
+**Proposta revisada:** manter **um API Gateway no desenho-alvo**, preferindo **NGINX** como reverse proxy para desenvolvimento e demonstração quando o Gateway for implementado. O NGINX é suportado oficialmente como reverse proxy para ASP.NET Core; YARP permanece uma alternativa quando forem necessárias extensões avançadas escritas em C#. No MVP financeiro, as duas APIs podem ser expostas separadamente para testes, sem invalidar o desenho-alvo. A decisão de deploy real do Gateway ficará condicionada ao escopo e à ADR-009.
 
 O Gateway pode centralizar TLS (conforme infraestrutura), roteamento `/api/transactions/*` e `/api/consolidation/*`, limites de requisição, correlação e logs. **O Gateway não deve ser a única camada de autenticação/autorização**: cada API financeira valida JWT e verifica escopo do comerciante.
 
@@ -43,11 +43,11 @@ O Gateway pode centralizar TLS (conforme infraestrutura), roteamento `/api/trans
 
 | Padrão | Funcionamento | Trade-off |
 | --- | --- | --- |
-| **SPA pública com Authorization Code + PKCE** | React realiza o fluxo OIDC diretamente com Keycloak e usa access token nas APIs | Simpler de operar, mas tokens podem ficar acessíveis ao JavaScript e a riscos de XSS; exigir controles de segurança apropriados |
+| **SPA pública com Authorization Code + PKCE** | React realiza o fluxo OIDC diretamente com Keycloak e usa access token nas APIs | Mais simples de operar, mas tokens podem ficar acessíveis ao JavaScript e a riscos de XSS; exigir controles de segurança apropriados |
 | **Backend for Frontend (BFF)** | Backend confidencial realiza OIDC com Keycloak, mantém tokens no servidor e expõe sessão ao navegador por cookie seguro | Protege melhor os tokens da exposição ao JavaScript, mas exige sessão, proteção CSRF, disponibilidade do BFF e uma implantação adicional |
 | **Aplicação Web renderizada no servidor** | Servidor administra autenticação/sessão e gera parte ou toda a interface | Pode reduzir exposição de tokens, com outro modelo de desenvolvimento e renderização |
 
-**Direção preferida para produção Web financeira:** **BFF em ASP.NET Core**, a detalhar na Issue #9. **Para o MVP**, o BFF não é obrigatório enquanto a interface não for parte do escopo implementado. Não confundir BFF com o Gateway: o BFF administra a sessão do navegador; o Gateway fornece roteamento e políticas de borda. Eles podem compartilhar infraestrutura *somente após* desenho explícito e testes, não por pressuposição.
+**Decisão de escopo proposta:** para uma interface React no **MVP**, adotar SPA pública com OIDC Authorization Code + PKCE no Keycloak, controles rigorosos contra XSS e sem armazenamento persistente de tokens em `localStorage`. **BFF fica explicitamente fora do MVP e é evolução futura a avaliar para produção Web financeira**, com ASP.NET Core como candidato e detalhamento na Issue #9. Não confundir BFF com o Gateway: o BFF administra a sessão do navegador; o Gateway fornece roteamento e políticas de borda. Eles podem compartilhar infraestrutura *somente após* desenho explícito e testes, não por pressuposição.
 
 O BFF deve usar OIDC Authorization Code com cliente confidencial, cookies `HttpOnly`, `Secure`, política `SameSite` adequada, proteção anti-CSRF, sessão/expiração, armazenamento seguro de tokens e logout. Não colocar refresh tokens em `localStorage`.
 
@@ -60,8 +60,8 @@ O Keycloak é acessado pelo cliente (ou BFF) para login. **As APIs validam acces
 ```text
 Comerciante / Administrador
    -> React Web responsivo
-   -> (BFF Web, se adotado) <-> Keycloak (login OIDC)
-   -> API Gateway YARP (se adotado)
+   -> Keycloak (login OIDC + PKCE no MVP)
+   -> API Gateway NGINX (se adotado)
       -> Transactions API (JWT + autorização por comerciante)
       -> Consolidation API (JWT + autorização por comerciante)
 
@@ -69,13 +69,13 @@ Transactions -> PostgreSQL Transactions (lançamento + Outbox)
 Outbox worker -> RabbitMQ -> Consolidation consumer -> PostgreSQL Consolidation
 ```
 
-O fluxo acima é **lógico**; o fluxo OIDC e a posição do BFF serão refletidos nos diagramas C4 e de sequência **depois da aprovação desta ADR**, para não misturar alternativas pendentes com decisões aceitas.
+**Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**; os diagramas C4 e de sequência só serão alterados após aprovação da ADR para não confundir proposta e decisão aceita.
 
 ## 5. Consequências positivas
 
 - Interface responsiva evita multiplicar aplicativos logo no início.
 - React permite entrega incremental de formulários de lançamentos, consulta de saldo e administração.
-- YARP pode oferecer uma única entrada HTTP quando o ambiente demandar.
+- NGINX pode fornecer uma única entrada HTTP e hospedar os assets estáticos do React; aproveita a experiência operacional já existente.
 - BFF pode reduzir exposição de tokens em aplicações Web sensíveis.
 - Mantém os serviços financeiros independentes do canal de entrada.
 
@@ -86,7 +86,7 @@ O fluxo acima é **lógico**; o fluxo OIDC e a posição do BFF serão refletido
 | Frontend, Gateway e BFF ampliam o escopo | Entrega financeira atrasa | Priorizar duas APIs, integração e testes exigidos pelo desafio |
 | Gateway único | Ponto único de falha | Escalar/redundar conforme ambiente; health checks, observabilidade e regras de roteamento |
 | BFF único ou sessão não compartilhada | Sessões indisponíveis na falha do BFF | HA e estratégia de estado da sessão em produção |
-| XSS em SPA | Roubo de tokens ou ações em nome do usuário | Preferir BFF para Web sensível, CSP, validação de entradas, dependências atualizadas |
+| XSS em SPA no MVP | Roubo de tokens ou ações em nome do usuário | CSP, dependências atualizadas, saneamento apropriado, evitar armazenamento persistente de tokens; reavaliar BFF quando houver usuários reais |
 | CSRF em BFF | Ações indevidas usando cookies | Proteção antifalsificação, SameSite, verificação de origem e testes |
 | Autorização somente no Gateway | Bypass de controles e vazamento entre comerciantes | Revalidar JWT e autorização de negócio em cada API |
 | Falha no Keycloak | Login e renovação afetados | Cache seguro de chaves para tokens válidos, sem aceitar tokens expirados; ADR-006 |
@@ -95,7 +95,7 @@ O fluxo acima é **lógico**; o fluxo OIDC e a posição do BFF serão refletido
 ## 7. Testes e critérios de aceite
 
 1. React (caso implementado) consome contratos explícitos das APIs sem fazer cálculos financeiros como fonte de verdade.
-2. Gateway YARP (caso implementado) encaminha rotas corretas, mantém correlação e aplica políticas configuradas.
+2. NGINX como Gateway (caso implementado) encaminha rotas corretas, preserva cabeçalhos de correlação e aplica políticas configuradas.
 3. Transactions e Consolidation rejeitam tokens inválidos mesmo se chamadas diretamente, sem passar pelo Gateway.
 4. Usuário autenticado não acessa `merchant_id` sem vínculo autorizado.
 5. Se o BFF for adotado, tokens OAuth não ficam disponíveis ao JavaScript do navegador; testar cookie, CSRF, sessão e logout.
@@ -112,8 +112,8 @@ O fluxo acima é **lógico**; o fluxo OIDC e a posição do BFF serão refletido
 
 ## Referências externas
 
-- [Microsoft: YARP autenticação e autorização](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/yarp/authn-authz?view=aspnetcore-10.0)
-- [Microsoft: configuração de rotas YARP](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/yarp/config-files?view=aspnetcore-10.0)
+- [Microsoft: hospedar ASP.NET Core com NGINX](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/linux-nginx?view=aspnetcore-10.0)
+- [Microsoft: YARP como alternativa de proxy .NET](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/yarp/yarp-overview?view=aspnetcore-10.0)
 - [Keycloak: JavaScript adapter](https://www.keycloak.org/securing-apps/javascript-adapter)
 - [RFC 10017 (agosto de 2026): OAuth 2.0 para aplicações de navegador](https://www.rfc-editor.org/rfc/rfc10017.html)
 
