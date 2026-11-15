@@ -13,6 +13,8 @@ As representações dos serviços financeiros mantêm PostgreSQL, RabbitMQ, Keyc
 
 ## 1. Frontend React e TypeScript
 
+![C4 Nível 3: Frontend React](images/c4-components-frontend.png)
+
 **[Fonte PlantUML editável](plantuml/c4-components-frontend.puml)**
 
 | Componente | Responsabilidade |
@@ -30,6 +32,8 @@ As representações dos serviços financeiros mantêm PostgreSQL, RabbitMQ, Keyc
 **Segurança:** proteger rotas no React é apenas UX. Ambas as APIs devem validar JWT e autorização por `merchant_id` no backend. Não armazenar tokens em `localStorage`.
 
 ## 2. Transactions, API de lançamentos e Outbox
+
+![C4 Nível 3: Transactions](images/c4-components-transactions.png)
 
 **[Fonte PlantUML editável](plantuml/c4-components-transactions.puml)**
 
@@ -49,6 +53,8 @@ As representações dos serviços financeiros mantêm PostgreSQL, RabbitMQ, Keyc
 A ADR-002 permite que o `BackgroundService` seja registrado no mesmo processo host que a API. Portanto, **o worker Outbox é um componente de Transactions, não um terceiro microsserviço**. Se for necessário separá-lo em processo no futuro, a propriedade do evento e do banco permanece com Transactions.
 
 ## 3. Consolidation, consumidor e consulta do consolidado
+
+![C4 Nível 3: Consolidation](images/c4-components-consolidation.png)
 
 **[Fonte PlantUML editável](plantuml/c4-components-consolidation.puml)**
 
@@ -85,7 +91,7 @@ plantuml -tpng docs/architecture/plantuml/c4-components-transactions.puml
 plantuml -tpng docs/architecture/plantuml/c4-components-consolidation.puml
 ```
 
-A renderização gera imagens ao lado das fontes; imagens finais podem ser colocadas em `docs/architecture/images/` e incorporadas aqui. **As fontes PlantUML são a referência editável**. Não afirmar que existe PNG no repositório antes de renderizar.
+As imagens acima devem ser colocadas em `docs/architecture/images/` com os nomes `c4-components-frontend.png`, `c4-components-transactions.png` e `c4-components-consolidation.png`. **As fontes PlantUML são a referência editável**. Os links de imagem funcionarão após adicionar os PNGs ao repositório.
 
 ## Protocolos e portas de destino
 
