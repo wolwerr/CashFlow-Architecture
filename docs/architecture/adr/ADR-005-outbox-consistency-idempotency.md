@@ -21,7 +21,7 @@ Precisamos evitar o problema de **dual write**, quando o serviço grava no banco
 | **Transactional Outbox + mensagens at-least-once + consumidor idempotente** | Transação local única; desacoplamento; recuperação de falhas | Consistência eventual, worker adicional e necessidade de deduplicação |
 | Event Sourcing como registro de verdade | Log completo de mudanças, replay e reconstrução de projeções | Remodelagem do domínio, versionamento e replay mais complexos; não é requisito do desafio |
 
-## Decisão decidida
+## Decisão registrada
 
 Adotar **Transactional Outbox** em Transactions e **consumo idempotente** em Consolidation, com consistência eventual entre os bancos. O registro de lançamentos é a fonte de verdade das movimentações financeiras; a projeção diária é derivada e pode ser reconstruída mediante uma estratégia de reconciliação/reprocessamento que será detalhada na implementação. **Não adotar Event Sourcing como modelo primário no MVP.**
 
