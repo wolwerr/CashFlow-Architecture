@@ -87,6 +87,83 @@ Os centavos do rateio são arredondados e ajustados na linha residual para recon
 
 **Para arquitetura e comparação inicial**, basta uma tabela transparente com fórmulas e fontes, como esta. **Para orçamento a ser apresentado como previsão de fatura**, usar as calculadoras oficiais: [Azure Pricing Calculator](https://azure.microsoft.com/en-us/pricing/calculator/) e [AWS Pricing Calculator](https://calculator.aws/). Elas ajudam a completar LB, NAT, armazenamento, backup, transferências, monitoramento e descontos contratados, e precisam ser complementadas com premissas de consumo e retenção.
 
+## Refinamento de storage, entrada e rede (cenário econômico)
+
+> **Revisado em 2026-11-15.** Esta tabela amplia o cenário anterior com volumes, object storage e alguns itens de rede. **Não corresponde à fatura completa nem à mesma topologia de HA**. As tarifas de terceiros regionais foram pesquisadas em 15/11/2026, e as premissas seguem abertas para a calculadora oficial.
+
+### Premissas de dimensionamento para cotação
+
+| Categoria | Hipótese de projeto | Trade-off |
+| --- | --- | --- |
+| RabbitMQ | 1 PV de 128 GiB | Não é quorum cluster/HA; volume de eventos e taxa de publicação podem exigir mais IOPS |
+| Prometheus | 1 PV de 128 GiB | Retenção temporal, séries ativas e cardinalidade determinam espaço real |
+| Grafana / componentes auxiliares | 1 PV de 128 GiB **compartilhado apenas para estimativa de preço** | Em Kubernetes, não presumir que vários pods compartilham um único disco RWO; separar PVCs conforme o desenho definitivo |
+| Loki + Tempo | **200 GB de armazenamento de objetos no total** | Volume médio armazenado; quantidade de requests, lifecycle e taxa de ingestão não incluídos |
+| RDS PostgreSQL | 32 GiB como alvo de comparação | Preço gp3 RDS **não inferido** de EBS; validar na calculadora RDS |
+| LB público | 1 ingresso para o NGINX | EKS usa exemplo de ALB 1 LCU médio; AKS necessita preço regional de LB, IP e dados |
+| NAT | Para AWS, 1 NAT Gateway, 50 GB processados/mês | Apenas cenário econômico de zona única; para HA em múltiplas AZs ou múltiplos gateways, custo aumenta |
+| Tráfego de internet e entre zonas | Não quantificado | Pode superar armazenamento em ambientes com tráfego elevado |
+| Snapshots e backup | Não cotados | Precisam de política de retenção e RPO/RTO |
+
+**Atenção:** os três volumes de 128 GiB são uma **estimativa de capacidade provisionada**, não definição de três PVCs compartilhados, e os valores não garantem que RabbitMQ, Prometheus, Loki e Tempo estejam operacionais ou dimensionados. Azure Premium SSD P10 possui 128 GiB, enquanto EBS gp3 cobra por GB provisionado.
+
+### Tarifas adicionais com fontes
+
+| Meter | Azure East US | AWS us-east-1 | Evidência |
+| --- | --- | --- | --- |
+| Persistent block storage | P10 de 128 GiB, **US$ 0,027/h**, ~US$ 19,71/mês | EBS gp3 **US$ 0,08/GB-mês**, 128 GiB ~US$ 10,24/mês | Azure [S1], AWS [S2] |
+| Object storage Hot/Standard | Azure Blob Hot LRS **US$ 0,0208/GB-mês** | Amazon S3 Standard **US$ 0,023/GB-mês** | [S3], [S4] |
+| ALB da AWS | não se aplica | **US$ 0,0225/h** + **US$ 0,008/LCU-h** | AWS [S5] |
+| NAT Gateway AWS | ainda não cotado na Azure | **US$ 0,045/h** + **US$ 0,045/GB processado** (cenário regional de referência) | AWS [S6] |
+| Azure LB e NAT | **pendente de valor regional verificável** | não se aplica | Consultar calculadora [S7] |
+| ACR Basic | **aprox. US$ 5/mês**, estimativa | Amazon ECR: cobrança por storage/transferência, sem cotação aqui | Guia de meters da Microsoft [S8] |
+
+Tarifas podem variar com acordo, horário, redundância, operações e região. O preço de **EBS gp3 NÃO serve como preço do volume de RDS**.
+
+### Custo mensal de componentes adicionais
+
+| Item | AKS (USD/mês) | EKS (USD/mês) | Fórmula |
+| --- | ---: | ---: | --- |
+| **Subtotal anterior** (nós + control plane + PostgreSQL compute + storage Azure) | **552,64** | **587,65** | Tabela anterior |
+| 3 volumes persistentes de 128 GiB | **59,13** | **30,72** | Azure 3 × 0,027 × 730; AWS 3 × 128 × 0,08 |
+| 200 GB object storage | **4,16** | **4,60** | Azure 200 × 0,0208; AWS 200 × 0,023 |
+| Registry | **~5,00** | **pendente** | ACR Basic, sem excedentes |
+| ALB, assumindo 1 LCU médio | **pendente** | **22,27** | 730 × (0,0225 + 0,008) |
+| NAT, 1 gateway + 50 GB | **pendente** | **35,10** | 730 × 0,045 + 50 × 0,045 |
+| PostgreSQL RDS: 32 GiB storage | já incluído no subtotal Azure | **pendente** | Custo RDS não cotado |
+| **SUBTOTAL AMPLIADO DOS ITENS PRECIFICADOS** | **~US$ 620,93** | **US$ 680,34** | Não inclui todos os mesmos itens |
+| **Itens abertos** | LB, NAT, IP, egress, backups, snapshots e outros | RDS storage, ECR, IP, egress, backups, snapshots e outros | **Não tratar como zero** |
+
+**Não use o subtotal ampliado para decretar vencedor:** AWS inclui ALB e NAT que ainda não foram precificados na Azure, enquanto Azure inclui ACR e storage PostgreSQL não cotados na AWS. Os dois ambientes também apresentam potencialmente diferentes arranjos de AZ, e os custos de discos podem ser revistos após sizing real.
+
+### Variações úteis, sem inventar tarifas
+
+| Cenário | Modificação de premissa | Impacto previsível |
+| --- | --- | --- |
+| **Econômico / laboratório cloud** | 1 nó RabbitMQ, menos retenção, 1 ingresso, 1 zona para dados | Menor custo, mas sem HA de broker/banco e falhas correlacionadas |
+| **Base para testes de resiliência** | 3 nós Kubernetes, 2+ réplicas de APIs, medir requests/limits reais | Recursos disponíveis para pods diminuem; calcular se nós suportam carga e falha de um nó |
+| **Produção com HA** | Múltiplas AZs, RabbitMQ quorum com pelo menos 3 réplicas, banco HA/Multi-AZ, retenção e backups | Exige novos PVCs/discos, mais throughput, control plane/ingress redundantes e possivelmente nós adicionais; **não há cotação de HA ainda** |
+| **Uso alto de telemetria** | Mais GB/dia de logs e traces, maior retenção | Aumenta armazenamento, operações, rede e recursos do Collector/Loki/Tempo |
+
+**Kubernetes não reduz a necessidade de infraestrutura:** manter serviços com estado em pods desloca sua operação para a equipe, em vez de eliminá-la. AKS/EKS são escolhas comparáveis para Kubernetes gerenciado, mas não asseguram HA nem bancos independentes.
+
+### Fontes do refinamento
+
+- **[S1]** Discos Premium SSD em East US, P10 (referência da Azure Retail Prices API, atualizada 05/11/2026): https://instances.usage.ai/azure/disks/category/premium-ssd ; documentação oficial https://azure.microsoft.com/en-us/pricing/details/managed-disks/
+- **[S2]** EBS gp3 (US$ 0,08/GB-mês; IOPS/throughput além do baseline cobrado separadamente): https://aws.amazon.com/ebs/general-purpose/
+- **[S3]** Azure Blob Hot LRS East US: https://instances.usage.ai/azure/blob-storage?region=eastus
+- **[S4]** S3 Standard us-east-1: https://aws.amazon.com/s3/pricing/ ; referência de preços: https://github.com/janwilmake/state-of-cloud-pricing/blob/main/comparisons/storage.md
+- **[S5]** ALB por hora e LCUs: https://aws.amazon.com/elasticloadbalancing/pricing/
+- **[S6]** NAT Gateway: https://aws.amazon.com/vpc/pricing/
+- **[S7]** Load Balancer Azure: https://azure.microsoft.com/en-us/pricing/details/load-balancer/ ; NAT Azure: https://azure.microsoft.com/en-us/pricing/details/virtual-network/
+- **[S8]** Guia da Microsoft sobre meters de ACR Basic: https://github.com/microsoft/azure-skills/blob/main/skills/azure-app-onboard/prepare/references/pricing-guide-services.md
+
+### Próxima validação para fechar o orçamento
+
+Na **Azure Pricing Calculator** e **AWS Pricing Calculator**, informar nós, control plane, PostgreSQL gerenciado (32 GiB), volumes (384 GiB), object storage (200 GB), 1 ingress/LB, 1 NAT, registry, 50 GB de tráfego processado no NAT, serviços de secrets, e taxa de saída de internet. Salvar as premissas usadas, não apenas o total.
+
+Para a variante HA, rodar outro cenário com múltiplas AZs e dimensionamento N+1, adicionando todas as cópias do RabbitMQ, PostgreSQL HA e storage/banda. Só depois declarar uma previsão de custo total de produção.
+
 ## Recomendação para a ADR-009
 
 **Shortlist principal: AKS versus EKS**, com preferência técnica provisória por **AKS** para manter a arquitetura Kubernetes e aproveitar custos de compute ligeiramente menores na região de referência. Essa preferência **não é uma escolha final de cloud**: requer estimativa de rede/armazenamento/HA, execução dos testes de 50 RPS e avaliação de governança, equipe e contratos. Container Apps e ECS/Fargate permanecem documentados como alternativas, mas não são equivalentes diretos de *Kubernetes completo com pods de todos os componentes*.
