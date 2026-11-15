@@ -1,0 +1,54 @@
+@startuml CashFlow_Frontend_Components
+!include <C4/C4_Component>
+
+title CashFlow | C4 Nível 3: Aplicação Web React
+LAYOUT_LEFT_RIGHT()
+
+Person(user, "Comerciante / administrador", "Usa o navegador para operações financeiras")
+Container_Ext(nginx, "NGINX (reverse proxy)", "HTTP interno :8080; HTTPS público :443 previsto", "Entrega assets do React e encaminha /api/*")
+Container_Ext(keycloak, "Keycloak", "OIDC / OAuth 2.0, HTTPS :443 público", "Autentica usuários com Authorization Code + PKCE")
+Container_Ext(transactions, "Transactions API", "ASP.NET Core, HTTP interno :8080 (referência)", "Registra créditos e débitos")
+Container_Ext(consolidation, "Consolidation API", "ASP.NET Core, HTTP interno :8080 (referência)", "Consulta saldos diários")
+
+Container_Boundary(frontend, "Aplicação Web | React + TypeScript (executa no navegador)") {
+  Component(shell, "App Shell e rotas", "React / TypeScript", "Inicialização, navegação e layout responsivo")
+  Component(auth, "Autenticação OIDC", "OIDC Authorization Code + PKCE", "Login/logout, callback e gerenciamento de tokens em memória")
+  Component(access, "Estado de sessão e permissões", "React / TypeScript", "Protege rotas por sessão; não substitui autorização das APIs")
+  Component(form, "Tela de lançamentos", "React / TypeScript", "Formulários de crédito/débito, validações de UX e feedback")
+  Component(balance, "Tela de consolidado", "React / TypeScript", "Consulta e exibe saldos por data e comerciante")
+  Component(api, "Cliente HTTP CashFlow", "Fetch / REST / JSON", "Inclui Bearer token e envia requisições relativas a /api/*")
+  Component(ui, "Componentes de interface", "React / TypeScript", "Estados de carregamento, erros, acessibilidade e componentes compartilhados")
+}
+
+Rel(user, nginx, "Abre a aplicação", "HTTPS :443 (público previsto)")
+Rel(nginx, shell, "Entrega HTML, JS, CSS (assets estáticos)", "HTTPS :443 via navegador")
+Rel(shell, auth, "Inicializa sessão OIDC")
+Rel(shell, access, "Controla navegação conforme sessão")
+Rel(shell, form, "Exibe lançamentos")
+Rel(shell, balance, "Exibe consulta")
+Rel(form, ui, "Usa componentes e mensagens")
+Rel(balance, ui, "Usa componentes e mensagens")
+Rel(form, api, "Registra crédito ou débito")
+Rel(balance, api, "Consulta saldo diário")
+Rel(api, auth, "Obtém access token válido")
+Rel(auth, keycloak, "Redirect, code + PKCE; tokens via endpoint OIDC", "HTTPS :443 público (URL/rota a definir)")
+Rel(api, nginx, "Chama /api/transactions/* e /api/consolidation/*", "HTTPS :443 / REST + Bearer JWT")
+Rel(nginx, transactions, "Proxy /api/transactions/*", "HTTP :8080 na rede privada")
+Rel(nginx, consolidation, "Proxy /api/consolidation/*", "HTTP :8080 na rede privada")
+
+note bottom of frontend
+  React não abre porta de servidor própria.
+  O build estático é servido pelo NGINX;
+  o JavaScript executa no navegador.
+  Portas externas dependem do ingress/TLS.
+end note
+
+note bottom of access
+  A UI não autoriza acesso financeiro.
+  Transactions e Consolidation validam JWT
+  e merchant_id no backend (ADR-006/007).
+  Não persistir tokens em localStorage.
+end note
+
+SHOW_LEGEND()
+@enduml
