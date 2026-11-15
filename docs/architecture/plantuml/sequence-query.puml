@@ -25,10 +25,14 @@ else Consulta autorizada
       DB --> C: DailyBalance
       C --> G: Resultado diario\ncontrato e semantica ainda pendentes
       G --> W: Apresenta saldo
-    else Dia sem projecao ou dados em atraso
-      DB --> C: Nenhum resultado ou projecao anterior
-      C --> G: Resposta conforme regra de negocio pendente
-      G --> W: Exibe estado apropriado
+    else Dia sem movimentacao
+      DB --> C: Sem movimento no dia; consulta ultimo saldo ate a data
+      C --> G: Credito 0, debito 0, liquido 0; acumulado anterior
+      G --> W: Mostra movimento zero e saldo mantido
+    else Dados atrasados ou falha na projecao
+      DB --> C: Projecao potencialmente desatualizada
+      C --> G: Tratamento conforme contrato a definir
+      G --> W: Exibe estado adequado
     end
   end
 end
