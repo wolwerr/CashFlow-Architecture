@@ -79,7 +79,11 @@ Os dois bancos relacionais são tecnicamente adequados ao desafio. Não há benc
 - Migrations versionadas **por serviço**, executadas por processo controlado; não aplicar migrations automaticamente em toda subida de réplica de produção.
 - Backups, restauração, retenção, índices e segurança devem ser definidos para o ambiente real; Docker Compose não fornece alta disponibilidade por si só.
 
-## Complemento de decisão do MVP, 15/11/2026\n\nPersistir em Consolidation **totais diários por `(merchant_id, reference_date)`**, calculando `closing_balance` **na leitura** como soma dos movimentos líquidos históricos até a competência. Não persistir `closing_balance` como coluna autoritativa no MVP; lançamentos retroativos atualizam os totais de seu dia e o acumulado das datas posteriores é recalculado na consulta. A estratégia precisa de índices, atomicidade de updates e medição em 50 RPS. O CashFlow terá **banco lógico próprio de autorização**, separado de Transactions, Consolidation e Keycloak, sem FKs cross-domain. A retenção de Outbox/ProcessedEvent será configurável com expurgo seguro. [Registro completo](../mvp-decisions.md).\n\n## Dependências com Clean Architecture
+## Complemento de decisão do MVP, 15/11/2026
+
+Persistir em Consolidation **totais diários por `(merchant_id, reference_date)`**, calculando `closing_balance` **na leitura** como soma dos movimentos líquidos históricos até a competência. Não persistir `closing_balance` como coluna autoritativa no MVP; lançamentos retroativos atualizam os totais de seu dia e o acumulado das datas posteriores é recalculado na consulta. A estratégia precisa de índices, atomicidade de updates e medição em 50 RPS. O CashFlow terá **banco lógico próprio de autorização**, separado de Transactions, Consolidation e Keycloak, sem FKs cross-domain. A retenção de Outbox/ProcessedEvent será configurável com expurgo seguro. [Registro completo](../mvp-decisions.md).
+
+## Dependências com Clean Architecture
 
 - **Domain:** entidades, value objects, invariantes; sem dependência de EF Core.
 - **Application:** casos de uso e portas, como `ITransactionRepository` e `IUnitOfWork` somente quando fizerem sentido; evitar abstrações genéricas redundantes.
