@@ -18,7 +18,7 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 | [ADR-004](ADR-004-async-messaging.md) | Comunicação assíncrona | RabbitMQ / AMQP 0-9-1, publisher confirms e ACK manual | **Aceita** |
 | [ADR-005](ADR-005-outbox-consistency-idempotency.md) | Consistência e publicação | Transactional Outbox, consistência eventual e consumidor idempotente; sem Event Sourcing no MVP | **Aceita** |
 | [ADR-006](ADR-006-identity-and-access.md) | Autenticação e autorização | Keycloak / OIDC / OAuth 2.0, JWT validado localmente e autorização por comerciante no CashFlow | **Aceita** |
-| [ADR-007](ADR-007-clients-api-gateway.md) | Clientes e borda | React + TypeScript; NGINX como Gateway proposto; OIDC + PKCE no MVP e BFF como evolução futura | **Proposta para aprovação** |
+| [ADR-007](ADR-007-clients-api-gateway.md) | Clientes e borda | React + TypeScript; sem Gateway dedicado no MVP; NGINX como proxy opcional e Gateway/BFF como evoluções futuras | **Proposta para aprovação** |
 | ADR-008 | Observabilidade | Logs estruturados, métricas e tracing com OpenTelemetry | **Proposto** |
 | ADR-009 | Implantação e cloud | Docker Compose para avaliação local; cloud de referência a comparar | **Pendente** |
 | ADR-010 | Estratégia de testes e cobertura | Mínimo de **80% de cobertura de linhas**, além de testes de integração, carga e resiliência | **Proposto** |
