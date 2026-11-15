@@ -13,12 +13,12 @@ database "PostgreSQL\nConsolidation" as DBC
 
 note over CON: Consumer indisponivel
 U -> W: Registra credito ou debito
-W -> G: POST /api/transactions/*\nHTTPS :443 + Bearer
+W -> G: POST /api/v1/transactions/*\nHTTPS :443 + Bearer
 G -> API: Proxy HTTP :8080
 API -> API: Valida JWT e merchant_id
-API -> DBT: Grava Transaction + OutboxEvent\nmesmo commit SQL TCP :5432
+API -> DBT: Grava chave idempotente + Transaction\nOutbox + auditoria no mesmo commit
 DBT --> API: COMMIT confirmado
-API --> G: Sucesso, status a definir
+API --> G: HTTP 201 Created
 G --> W: Registro confirmado
 W --> U: Exibe confirmacao
 
@@ -44,7 +44,7 @@ CON -> MQ: Inscreve-se na fila\nAMQP TCP :5672
 MQ --> CON: Entrega / reentrega event_id
 CON -> DBC: BEGIN; tenta registrar ProcessedEvent unico
 alt Evento novo
-  CON -> DBC: Atualiza DailyBalance atomicamente
+  CON -> DBC: Atualiza totais diarios da competencia
   CON -> DBC: COMMIT do evento e saldo
   DBC --> CON: Commit confirmado
 else Evento repetido
