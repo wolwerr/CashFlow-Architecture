@@ -48,7 +48,7 @@ A validação compara a ordem das interações nos quatro arquivos PlantUML exis
 | **Alta** | Determinar política de publisher confirm, mandatory/returns, binding, retry/DLQ e estado da Outbox | Evitar dar por concluído um evento que não alcançou o destino |
 | **Alta** | Detalhar idempotência HTTP e concorrência da projeção | Evitar duplicação em repetição de requisição ou eventos simultâneos |
 | **Alta** | Definir fonte e consulta segura de vínculos `subject ↔ merchant_id` | Necessário para autorização sem acoplamento impróprio ao IAM |
-| **Média** | Confirmar data de competência, fuso, moeda e arredondamento | Afetam o contrato e a projeção diária |
+| **Decidido em 15/11/2026** | **RN-04**: competência informada pelo comerciante; criação UTC | O consolidado agrupa por `reference_date`; fuso de exibição, retroatividade, moeda e arredondamento ainda pendentes |
 | **Média** | Fixar mecanismo de reconciliação e recuperação de backlog | Recuperação deve ser reproduzível; RabbitMQ não é um log histórico ilimitado |
 | **Média** | Regenerar PNGs e validar visualmente os quatro PlantUML | As imagens Markdown podem apresentar a versão anterior até atualização |
 
