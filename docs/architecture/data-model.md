@@ -71,7 +71,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 ## 4. Regras de integridade propostas
 
-1. Valores financeiros devem usar precisão decimal adequada, **nunca números de ponto flutuante** para cálculos monetários.
+1. **RN-07 decidida:** apenas BRL no MVP; montantes financeiros são `decimal` no .NET e `numeric(19,2)` no PostgreSQL, **nunca ponto flutuante binário**. `Transaction.amount > 0`; rejeitar valores com mais de duas casas decimais, sem arredondamento implícito; `CREDIT` aumenta e `DEBIT` reduz o movimento líquido, sem guardar débito como valor negativo.
 2. Lançamentos confirmados devem preservar histórico. Correção por estorno é uma possibilidade de negócio ainda pendente.
 3. `AuditEvent` deve ter identificador próprio e data/hora de ocorrência.
 4. A confirmação do registro depende do armazenamento confiável do lançamento e da Outbox, **não** da disponibilidade do consolidado.
@@ -83,7 +83,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 - **Saldo diário: decidido exibir ambos.** `net_amount = credit_total - debit_total`; `closing_balance` corresponde ao saldo inicial somado aos movimentos líquidos até a data. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**, sem lançamento de abertura ou campo configurável obrigatório. **RN-09 decidida:** quando não houver movimentações em uma data, créditos/débitos/líquido são zero e o saldo acumulado permanece igual ao anterior (ou R$ 0,00 antes do primeiro lançamento). **Não é obrigatório persistir uma linha de `DailyBalance` para cada dia sem lançamentos.** A estratégia de consulta do último saldo, cálculo/materialização do acumulado e recomposição após lançamentos retroativos ainda depende de definição.
 - **RN-04 decidida:** `Transaction.reference_date` guarda a **data de competência informada pelo comerciante** (`DATE`), independente do instante de criação; `Transaction.created_at` guarda o **instante real de registro em UTC**. O `DailyBalance.reference_date` representa o dia de competência. Fuso de exibição, data padrão e política de datas retroativas/futuras continuam em aberto.
 - **Identidade e autorização:** Keycloak é o provedor escolhido para autenticação. `actor_id` representa referência textual ao sujeito OIDC, não UUID obrigatório. Definir issuer/namespace e, se houver ID interno, o mapeamento. A segregação por comerciante é uma regra do CashFlow; armazenamento, cardinalidades e fluxos de cadastro ainda precisam ser validados.
-- **Moeda e arredondamento:** precisão e convenção.
+- **Moeda e arredondamento (RN-07 decidida):** BRL, escala 2, `decimal`/`numeric(19,2)`, valores de lançamento estritamente positivos e rejeição de precisão acima de duas casas. `credit_total`/`debit_total` são totais não negativos; `net_amount` e `closing_balance` podem ser negativos pelo cálculo. Impor as regras nos contratos, domínio e constraints de banco. A política de valores máximos e overflow deve ser verificada no modelo físico.
 - **Correções:** se serão implementadas no MVP e qual regra de estorno.
 - **Auditoria:** quais ações exigem registro transacional, prazo de retenção e quem pode consultar.
 - **Tecnologia:** tipos SQL, índices, constraints e migrations ficarão para as Issues #7 e #11–#14.
