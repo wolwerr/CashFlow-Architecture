@@ -56,7 +56,7 @@ Outros SLOs, como p95 inferior a 500 ms, 95% das atualizações em 30 s, continu
 | **Decidido em 15/11/2026** | **RN-03**: saldo inicial de R$ 0,00 por comerciante | O acumulado parte de zero, sem saldo manual de abertura no MVP | Refletir em cálculos e testes |
 | **Decidido em 15/11/2026** | **RN-09**: dia sem movimentação | Totais e líquido zero, saldo acumulado anterior mantido; antes da primeira transação, saldo zero | Cobrir com testes de consulta em dia vazio |
 | **Decidido em 15/11/2026** | **RN-04**: competência informada pelo comerciante, criação UTC | `reference_date` define dia financeiro e `created_at` registra instante UTC | Definir regras para datas passadas/futuras e fuso de apresentação |
-| **Alta** | **RN-07**: moeda, precisão e arredondamento | ADR-005 recomenda `decimal`/`numeric(p,s)`, mas escala de negócio continua aberta | Definir moeda, escala e convenção |
+| **Decidido em 15/11/2026** | **RN-07**: BRL com duas casas, `decimal` no .NET, `numeric(19,2)` no PostgreSQL | Montantes de lançamento > 0; rejeitar precisão excessiva; `CREDIT`/`DEBIT` determina o efeito; validar em contratos/constraints/testes |
 | **Alta** | **RNF-03**: significado dos 5% de perda e janela | Sem definição não há aceite inequívoco de desempenho | Confirmar erro/timeout/resposta útil, carga e janela |
 | **Alta** | **RN-06 / Issue #9**: vínculo sujeito-comerciante | Segurança multi-comerciante proposta; Keycloak não autoriza `merchant_id` automaticamente | Definir fonte e mecanismo de autorização; testar isolamento |
 | **Média** | **RN-08**: atraso aceitável de consolidação | Consistência eventual decidida, mas experiência e SLO de frescor ainda propostos | Definir atraso tolerável e comunicação ao usuário |
@@ -80,7 +80,7 @@ Outros SLOs, como p95 inferior a 500 ms, 95% das atualizações em 30 s, continu
 - [x] Identificadas as regras financeiras que impedem fixar o resultado esperado do consolidado.
 - [x] Confirmado que os critérios de 50 RPS e 5% ainda necessitam execução e interpretação oficial.
 - [x] Confirmada a diferenciação entre decisão arquitetural, critério proposto e teste executado.
-- [ ] Obter decisão/premissas explícitas para saldo, data, moeda, escopo e limiar de perda.
+- [ ] Concluir decisões ainda abertas sobre datas retroativas, escopo, autorização por comerciante e interpretação da perda de requisições; verificar RN-07 em testes.
 - [ ] Implementar e executar cenários automatizados; registrar relatórios.
 - [ ] Aceite funcional e não funcional após revisão dos resultados.
 
