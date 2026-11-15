@@ -62,8 +62,8 @@ package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
     merchant_id : UUID <<identificador externo>>
     type : CREDIT | DEBIT
     amount : DECIMAL
-    reference_date : DATE
-    created_at : TIMESTAMP
+    reference_date : DATE <<competencia informada>>
+    created_at : TIMESTAMPTZ <<instante UTC>>
     actor_id : STRING <<OIDC sub / referencia>>
     reversal_of_id : UUID (opcional)
   }
@@ -133,6 +133,6 @@ note bottom of D
   Dia vazio: movimento zero e saldo mantido.
   Nao exige linha para todo dia sem eventos.
   Recomputacao retroativa,
-  data, moeda e estorno pendentes.
+  datas retroativas, moeda e estorno pendentes.
 end note
 @enduml
