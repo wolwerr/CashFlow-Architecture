@@ -11,11 +11,11 @@ queue "RabbitMQ\nexchange + fila duravel" as MQ
 participant "Consolidation\nconsumer" as CON
 database "PostgreSQL\nConsolidation" as DBC
 
-U -> W: Informa credito ou debito
+U -> W: Informa credito/debito e data de competencia
 W -> G: POST /api/transactions/*\nBearer JWT; HTTPS :443 publico
 G -> API: Proxy + Authorization\nHTTP :8080 privado
-API -> API: Valida JWT, merchant_id, regras\ne dados da operacao
-API -> DBT: BEGIN; INSERT Transaction + OutboxEvent\nmesma transacao SQL TCP :5432
+API -> API: Valida JWT, merchant_id, valor\ne data de competencia
+API -> DBT: BEGIN; grava reference_date informada\ne created_at UTC com Transaction + OutboxEvent\nmesma transacao SQL TCP :5432
 DBT --> API: COMMIT confirmado
 API --> G: Sucesso de registro\nstatus e payload a definir
 G --> W: Confirma registro persistido
