@@ -33,9 +33,9 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Gateway gerenciado na cloud** | Operação de borda delegada, funcionalidades condicionadas ao produto | Dependência do provedor e custos variáveis; menor reprodução em Docker Compose |
 | **Acesso direto às duas APIs** | Menos infraestrutura e menor latência inicial | Clientes conhecem múltiplas origens/endereços; políticas de borda dispersas |
 
-**Proposta revisada:** manter **um API Gateway no desenho-alvo**, preferindo **NGINX** como reverse proxy para desenvolvimento e demonstração quando o Gateway for implementado. O NGINX é suportado oficialmente como reverse proxy para ASP.NET Core; YARP permanece uma alternativa quando forem necessárias extensões avançadas escritas em C#. No MVP financeiro, as duas APIs podem ser expostas separadamente para testes, sem invalidar o desenho-alvo. A decisão de deploy real do Gateway ficará condicionada ao escopo e à ADR-009.
+**Decisão de escopo proposta:** **não implementar um API Gateway dedicado no MVP**. Para a demonstração, as duas APIs financeiras podem ser acessadas diretamente em ambiente local/controlado e protegidas por seus próprios controles de autenticação e autorização. Um NGINX simples pode ser adicionado somente se for necessário servir o React, concentrar origens ou fazer proxy/TLS; sua presença não deve ser apresentada automaticamente como implantação de uma plataforma completa de API Gateway. **Na arquitetura-alvo**, manter o papel de API Gateway como evolução futura, com **NGINX como tecnologia candidata**, reavaliando necessidade, recursos, custo e operação quando houver múltiplos clientes ou requisitos explícitos de políticas de borda. YARP permanece alternativa se houver necessidade de extensões em C#.
 
-O Gateway pode centralizar TLS (conforme infraestrutura), roteamento `/api/transactions/*` e `/api/consolidation/*`, limites de requisição, correlação e logs. **O Gateway não deve ser a única camada de autenticação/autorização**: cada API financeira valida JWT e verifica escopo do comerciante.
+Um Gateway futuro pode centralizar TLS (conforme infraestrutura), roteamento `/api/transactions/*` e `/api/consolidation/*`, limites de requisição, correlação e logs. **O Gateway não deve ser a única camada de autenticação/autorização**: cada API financeira valida JWT e verifica escopo do comerciante.
 
 ## 3. Autenticação Web, Mobile e BFF
 
@@ -61,7 +61,8 @@ O Keycloak é acessado pelo cliente (ou BFF) para login. **As APIs validam acces
 Comerciante / Administrador
    -> React Web responsivo
    -> Keycloak (login OIDC + PKCE no MVP)
-   -> API Gateway NGINX (se adotado)
+   -> APIs diretamente no MVP (ou NGINX simples, se necessário)
+   -> API Gateway NGINX somente em evolução futura
       -> Transactions API (JWT + autorização por comerciante)
       -> Consolidation API (JWT + autorização por comerciante)
 
@@ -69,13 +70,13 @@ Transactions -> PostgreSQL Transactions (lançamento + Outbox)
 Outbox worker -> RabbitMQ -> Consolidation consumer -> PostgreSQL Consolidation
 ```
 
-**Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**; os diagramas C4 e de sequência só serão alterados após aprovação da ADR para não confundir proposta e decisão aceita.
+**Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**; o Gateway mostrado no C4 corresponde à **arquitetura-alvo**, não a uma obrigação de implementação no MVP. Os diagramas C4 e de sequência só serão alterados após aprovação da ADR para não confundir proposta e decisão aceita.
 
 ## 5. Consequências positivas
 
 - Interface responsiva evita multiplicar aplicativos logo no início.
 - React permite entrega incremental de formulários de lançamentos, consulta de saldo e administração.
-- NGINX pode fornecer uma única entrada HTTP e hospedar os assets estáticos do React; aproveita a experiência operacional já existente.
+- Adiar o Gateway reduz componentes e pontos de falha no MVP. NGINX pode futuramente oferecer uma entrada HTTP comum; no MVP, seu uso como proxy simples permanece opcional.
 - BFF pode reduzir exposição de tokens em aplicações Web sensíveis.
 - Mantém os serviços financeiros independentes do canal de entrada.
 
@@ -84,7 +85,7 @@ Outbox worker -> RabbitMQ -> Consolidation consumer -> PostgreSQL Consolidation
 | Risco | Consequência | Mitigação |
 | --- | --- | --- |
 | Frontend, Gateway e BFF ampliam o escopo | Entrega financeira atrasa | Priorizar duas APIs, integração e testes exigidos pelo desafio |
-| Gateway único | Ponto único de falha | Escalar/redundar conforme ambiente; health checks, observabilidade e regras de roteamento |
+| Gateway futuro centralizado | Pode virar ponto único de falha | Antes da adoção, definir HA, health checks, observabilidade e regras de roteamento |
 | BFF único ou sessão não compartilhada | Sessões indisponíveis na falha do BFF | HA e estratégia de estado da sessão em produção |
 | XSS em SPA no MVP | Roubo de tokens ou ações em nome do usuário | CSP, dependências atualizadas, saneamento apropriado, evitar armazenamento persistente de tokens; reavaliar BFF quando houver usuários reais |
 | CSRF em BFF | Ações indevidas usando cookies | Proteção antifalsificação, SameSite, verificação de origem e testes |
@@ -95,7 +96,7 @@ Outbox worker -> RabbitMQ -> Consolidation consumer -> PostgreSQL Consolidation
 ## 7. Testes e critérios de aceite
 
 1. React (caso implementado) consome contratos explícitos das APIs sem fazer cálculos financeiros como fonte de verdade.
-2. NGINX como Gateway (caso implementado) encaminha rotas corretas, preserva cabeçalhos de correlação e aplica políticas configuradas.
+2. No MVP sem Gateway, validar rotas e segurança diretamente nas duas APIs. Se NGINX for utilizado apenas como proxy Web, testar o encaminhamento sem alegar políticas de gateway não implementadas. Ao adotar um Gateway no futuro, validar roteamento, correlação, limites e observabilidade.
 3. Transactions e Consolidation rejeitam tokens inválidos mesmo se chamadas diretamente, sem passar pelo Gateway.
 4. Usuário autenticado não acessa `merchant_id` sem vínculo autorizado.
 5. Se o BFF for adotado, tokens OAuth não ficam disponíveis ao JavaScript do navegador; testar cookie, CSRF, sessão e logout.
