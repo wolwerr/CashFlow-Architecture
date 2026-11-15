@@ -9,16 +9,16 @@ Person(comerciante, "Comerciante", "Registra lançamentos e consulta saldos")
 Person(admin, "Administrador de acessos", "Gerencia usuários e permissões")
 
 System_Boundary(cashflow, "CashFlow") {
-  Container(web, "Aplicação Web responsiva", "React / TypeScript", "Interface financeira e administrativa")
-  Container(gateway, "NGINX (reverse proxy)", "Reverse proxy / HTTPS", "Serve o React e encaminha requisições às APIs")
-  Container(iam, "Keycloak", "OIDC / OAuth 2.0", "Identidades, login, sessões e tokens")
-  ContainerDb(db_iam, "Banco do Keycloak", "Persistência IAM", "Usuários, credenciais e configuração do provedor")
-  Container(lancamentos, "Serviço de lançamentos", "API REST + Outbox", "Registra créditos e débitos")
-  ContainerDb(db_lancamentos, "Banco de lançamentos", "Banco transacional", "Movimentações, auditoria e Outbox")
-  ContainerQueue(mensageria, "Mensageria", "Broker de eventos", "Distribui eventos financeiros")
-  Container(consolidado, "Serviço de consolidado", "API REST + consumidor", "Calcula e consulta saldos diários")
-  ContainerDb(db_consolidado, "Banco do consolidado", "Banco de projeções", "Saldos e eventos processados")
-  Container(telemetria, "Stack de observabilidade", "OTel Collector + Prometheus + Loki + Tempo + Grafana", "Coleta OTLP; métricas, logs, traces e dashboards")
+  Container(web, "Aplicação Web responsiva", "React / TypeScript (SPA no navegador)", "Interface financeira e administrativa")
+  Container(gateway, "NGINX (reverse proxy)", "HTTP interno :8080; HTTPS público :443 previsto", "Serve o React e encaminha requisições às APIs")
+  Container(iam, "Keycloak", "OIDC / OAuth 2.0; HTTPS público :443 previsto", "Identidades, login, sessões e tokens")
+  ContainerDb(db_iam, "Banco do Keycloak", "PostgreSQL / TCP :5432 (referência)", "Usuários, credenciais e configuração do provedor")
+  Container(lancamentos, "Serviço de lançamentos", "ASP.NET Core HTTP interno :8080 (referência)", "Registra créditos e débitos")
+  ContainerDb(db_lancamentos, "Banco de lançamentos", "PostgreSQL / TCP :5432", "Movimentações, auditoria e Outbox")
+  ContainerQueue(mensageria, "RabbitMQ", "AMQP / TCP :5672 (referência)", "Distribui eventos financeiros")
+  Container(consolidado, "Serviço de consolidado", "ASP.NET Core HTTP interno :8080 (referência)", "Calcula e consulta saldos diários")
+  ContainerDb(db_consolidado, "Banco do consolidado", "PostgreSQL / TCP :5432", "Saldos e eventos processados")
+  Container(telemetria, "Stack de observabilidade", "OTLP gRPC :4317 / HTTP :4318 (referência)", "Coleta OTLP; métricas, logs, traces e dashboards")
 }
 
 ' Posicionamento principal
@@ -34,21 +34,21 @@ Lay_D(consolidado, db_consolidado)
 Lay_D(db_consolidado, telemetria)
 
 ' Atores e canais
-Rel(comerciante, web, "Registra e consulta", "HTTPS")
-Rel(admin, web, "Administra acessos", "HTTPS")
-Rel_D(web, gateway, "Consome APIs pelo NGINX", "HTTPS / JSON")
+Rel(comerciante, web, "Registra e consulta", "HTTPS / TCP :443 público previsto")
+Rel(admin, web, "Administra acessos", "HTTPS / TCP :443 público previsto")
+Rel_D(web, gateway, "Consome APIs e assets pelo NGINX", "HTTPS / TCP :443 público previsto")
 
 ' Identidade
-Rel_D(gateway, iam, "Proxy administrativo, se necessário", "HTTPS / REST")
-Rel_D(iam, db_iam, "Persiste identidades e sessões", "SQL / TCP")
+Rel_D(web, iam, "Login OIDC direto via navegador (PKCE)", "HTTPS / TCP :443 público previsto")
+Rel_D(iam, db_iam, "Persiste identidades e sessões", "PostgreSQL / TCP :5432")
 
 ' Fluxo financeiro
-Rel_R(gateway, lancamentos, "Encaminha registros", "HTTPS / REST")
-Rel_D(lancamentos, db_lancamentos, "Persiste lançamento + Outbox", "SQL / TCP")
-Rel_R(lancamentos, mensageria, "Publica eventos", "AMQP")
-Rel_R(mensageria, consolidado, "Entrega eventos", "AMQP")
-Rel_D(consolidado, db_consolidado, "Atualiza e consulta saldos", "SQL / TCP")
-Rel(gateway, consolidado, "Encaminha consultas", "HTTPS / REST")
+Rel_R(gateway, lancamentos, "Encaminha registros", "HTTP / TCP :8080 privado (referência)")
+Rel_D(lancamentos, db_lancamentos, "Persiste lançamento + Outbox", "PostgreSQL / TCP :5432")
+Rel_R(lancamentos, mensageria, "Publica eventos", "AMQP 0-9-1 / TCP :5672 (referência)")
+Rel_R(mensageria, consolidado, "Entrega eventos", "AMQP 0-9-1 / TCP :5672 (referência)")
+Rel_D(consolidado, db_consolidado, "Atualiza e consulta saldos", "PostgreSQL / TCP :5432")
+Rel(gateway, consolidado, "Encaminha consultas", "HTTP / TCP :8080 privado (referência)")
 
 ' Integrações transversais apresentadas em notas
 note right of iam
@@ -70,6 +70,10 @@ note right of telemetria
 end note
 
 note bottom of gateway
+  Template atual: listen :8080 HTTP.
+  TLS e porta :443 externa são previstos.
+  Porta :8080 das APIs é exemplo de upstream.
+  HTTPS interno requer configuração adicional.
   Reverse proxy adotado no MVP.
   API Gateway dedicado e BFF:
   evolucoes futuras (ADR-007).
