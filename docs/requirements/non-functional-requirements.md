@@ -2,7 +2,7 @@
 
 > **Projeto:** CashFlow Architecture  
 > **Issue:** #4 | **Milestone:** M1 - Descoberta e requisitos  
-> **Situação:** proposta para revisão  
+> **Situação:** interpretação e SLOs do MVP aprovados em 15/11/2026; execução de testes pendente  
 > **Base:** enunciado do desafio de Arquitetura de Soluções e [requisitos funcionais](functional-requirements.md)
 
 ## 1. O que precisamos garantir
@@ -32,7 +32,7 @@ O documento também solicita considerar escalabilidade, resiliência, segurança
 
 ## 3. Metas sugeridas para o MVP
 
-Uma **métrica** é o que medimos; um **SLI** é o indicador que mostra a qualidade percebida; um **SLO** é a meta para esse indicador. As metas desta tabela são sugestões iniciais para o desafio, sujeitas à validação e à capacidade do ambiente de testes.
+Uma **métrica** é o que medimos; um **SLI** é o indicador que mostra a qualidade percebida; um **SLO** é a meta para esse indicador. As metas adicionais são **decisões de aceite do MVP aprovadas pelo projeto em 15/11/2026**, não exigências adicionais do enunciado. Sua execução e viabilidade ainda devem ser verificadas.
 
 | Indicador (SLI) | Meta proposta (SLO) | Janela de medição | Evidência |
 | --- | --- | --- | --- |
@@ -44,7 +44,7 @@ Uma **métrica** é o que medimos; um **SLI** é o indicador que mostra a qualid
 | **Atualização do consolidado** | **95% dos lançamentos refletidos em até 30 s** após registro, em operação saudável | Teste de integração de 5 minutos | Diferença entre horário do registro e atualização |
 | **Recuperação após retorno do consolidado** | Fila de lançamentos pendentes processada em até **2 minutos**, para o volume definido no teste | Cenário de recuperação controlada | Medição do backlog e do atraso |
 
-**Observações:** p95 significa que 95% das respostas foram concluídas dentro do tempo indicado. Metas de latência, atraso e recuperação dependem do volume de dados e do ambiente. Por isso não devem ser vendidas como garantias universais ou produção real. O limite de 95% de sucesso está baseado na interpretação inicial de “até 5% de perda” como requisições que não obtêm resposta útil. Essa interpretação precisa ser confirmada.
+**Observações:** p95 significa que 95% das respostas foram concluídas dentro do tempo indicado. Metas de latência, atraso e recuperação dependem do volume de dados e do ambiente. Por isso não devem ser vendidas como garantias universais ou produção real. O limite de 95% de sucesso está baseado na interpretação inicial de “até 5% de perda” como requisições que não obtêm resposta útil. Essa interpretação foi **aprovada internamente para o MVP**; não representa confirmação formal externa do enunciado.
 
 ## 4. Cenários que precisamos testar
 
@@ -101,7 +101,7 @@ Taxa de falha (%) =
     total de consultas válidas enviadas
 ```
 
-A empresa deve confirmar se aceita essa interpretação e qual janela de medição deseja. **Perder uma requisição de consulta não significa perder um lançamento financeiro.** Para registros confirmados, propomos tolerância zero a perda de dados no teste.
+Para os testes do CashFlow, o projeto **aprovou** essa interpretação e a janela de **5 minutos após aquecimento** em 15/11/2026; eventual exigência externa diferente deverá ser identificada separadamente. **Perder uma requisição de consulta não significa perder um lançamento financeiro.** Para registros confirmados, propomos tolerância zero a perda de dados no teste.
 
 ## 6. Segurança, operação e limites da solução
 
@@ -116,15 +116,15 @@ A execução local com Docker Compose servirá para demonstrar os comportamentos
 
 ## 7. Pontos pendentes
 
-1. Qual a definição oficial de “perda de requisições” e a janela da meta de 5%?
-2. O consolidado aceita dados temporariamente desatualizados? Por quanto tempo?
+1. **Definido para o MVP:** contabilizar erro, timeout ou ausência de resposta útil em consultas válidas efetivamente enviadas, durante 50 RPS por 5 minutos após aquecimento. Confirmar separadamente eventual interpretação externa.
+2. **SLO aprovado:** ao menos 95% dos registros refletidos em até 30 segundos em operação saudável. Implementar e medir atraso fim a fim e sinalização de defasagem.
 3. Qual volume de lançamentos e tamanho do histórico devem ser considerados?
 4. Há metas corporativas de disponibilidade, retenção, recuperação (RTO/RPO) ou segurança?
 5. Os testes precisam considerar uma cloud específica ou somente o ambiente local?
 
 Se não houver respostas, registraremos explicitamente as premissas do MVP. Nenhuma meta proposta será apresentada como exigência confirmada.
 
-## 8. Checklist da Issue #4
+## 8. Decisões aprovadas para teste\n\n**RNF-02/RNF-03:** 50 consultas por segundo por 5 minutos após aquecimento, até 5% de erros/timeouts/ausência de resposta útil de consultas válidas enviadas. **RNF-06:** p95 < 500 ms durante o mesmo teste. **Frescor:** 95% dos lançamentos devem aparecer no consolidado em até 30 s após registro em operação saudável. Políticas de retry limitado, backoff e DLQ são aprovadas, mas parâmetros e testes estão pendentes. [Registro completo das decisões](../architecture/mvp-decisions.md).\n\n## 9. Checklist da Issue #4
 
 - [x] Requisitos não funcionais identificados e numerados.
 - [x] Exigências explícitas separadas de metas sugeridas.
