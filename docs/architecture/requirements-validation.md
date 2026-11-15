@@ -22,7 +22,7 @@ Não transformar propostas em requisitos obrigatórios nem caracterizar o percen
 | --- | --- | --- | --- | --- |
 | **RF-01** Registro de crédito | Exigido, essencial | [ADR-002](adr/ADR-002-architecture-style-clean-architecture.md), [ADR-005](adr/ADR-005-outbox-consistency-idempotency.md), C4 Transactions e `Transaction` | **Conforme no desenho** | Crédito válido persiste com Outbox no mesmo commit, resposta coerente e sem aguardar Consolidation |
 | **RF-02** Registro de débito | Exigido, essencial | Mesmas decisões de Transactions e modelo `Transaction` | **Conforme no desenho** | Débito válido persiste com Outbox e altera a projeção segundo regra de negócio definida |
-| **RF-03** Consultar consolidado diário | Exigido, essencial | C4 Consolidation, `DailyBalance`, ADR-002 e ADR-005 | **Parcial**: consulta prevista, cálculo e dia sem lançamentos indefinidos | Consulta por data e comerciante com valores esperados derivados da regra aprovada |
+| **RF-03** Consultar consolidado diário | Exigido, essencial | C4 Consolidation, `DailyBalance`, ADR-002 e ADR-005 | **Parcial**: movimento líquido e saldo acumulado decididos; saldo inicial e dia sem lançamentos indefinidos | Consulta por data e comerciante com valores esperados derivados da regra aprovada |
 | **RF-04** Validar dados de lançamento | **Proposto** como essencial ao MVP | Domain e Application de Transactions, endpoints e critérios da HU-04 | **Parcial**: campos, limites, valor e data ainda a definir | Rejeições não persistem lançamentos confirmados |
 | **RF-05** Consultar histórico | **Proposto**, desejável | `Transaction` como registro de referência; fluxo opcional nos casos de uso | **Pendente de escopo** | Se incluído, consulta paginada/filtrada e autorização por comerciante |
 | **RF-06** Corrigir por estorno | **Proposto**, futuro/a validar | `Transaction`, `AuditEvent` proposto e referência potencial `reversal_of_id` no modelo de dados | **Pendente de escopo e regra** | Se incluído, efeito contábil correto, preservação de histórico e idempotência |
@@ -52,7 +52,7 @@ Outros SLOs, como p95 inferior a 500 ms, 95% das atualizações em 30 s, continu
 
 | Prioridade | Tema | Fontes e impacto | Ação de validação |
 | --- | --- | --- | --- |
-| **Alta** | **RN-02**: saldo é líquido diário ou acumulado? | RF-03, UC-03, `DailyBalance`: sem essa decisão não há resultado esperado para teste financeiro | Definir regra de cálculo e exemplos de dias consecutivos |
+| **Decidido em 15/11/2026** | **RN-02**: exibir movimento líquido diário e saldo acumulado | RF-03, UC-03 e `DailyBalance` devem refletir ambos; saldo inicial e retroatividade seguem abertos | Registrar regra e conferir documentos/contratos |
 | **Alta** | **RN-03 e RN-09**: saldo inicial e dia sem movimentação | RF-03, cálculo, consultas sem eventos | Definir semântica da resposta e efeito do saldo anterior |
 | **Alta** | **RN-04**: data de referência/fuso e competência | RF-01 a RF-03 e agregação por dia | Definir fuso financeiro, entrada retroativa e fronteira diária |
 | **Alta** | **RN-07**: moeda, precisão e arredondamento | ADR-005 recomenda `decimal`/`numeric(p,s)`, mas escala de negócio continua aberta | Definir moeda, escala e convenção |
