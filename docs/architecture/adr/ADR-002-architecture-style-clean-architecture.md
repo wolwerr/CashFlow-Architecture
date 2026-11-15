@@ -24,7 +24,7 @@ Esta ADR decide **as fronteiras de implantação e a estrutura interna do backen
 
 **Observação:** separar processos não garante resiliência automaticamente. Ela depende da inexistência de chamadas síncronas ao consolidado no caminho de registro, da persistência confiável e dos testes de falha.
 
-## 3. Decisão decidida
+## 3. Decisão registrada
 
 Adotar **dois serviços financeiros implantáveis de forma independente**:
 
