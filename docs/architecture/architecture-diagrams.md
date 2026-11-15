@@ -32,4 +32,4 @@ O comando gera PNGs na pasta das fontes; para atualizar as imagens referenciadas
 - **Issue #9:** controles de segurança, retenção, acesso à auditoria e proteção de dados.
 - **Issue #10:** custo, implantação e impactos operacionais.
 
-A descrição da arquitetura não comprova, por si só, a implementação ou a execução de testes. A Issue #6 foi concluída; após a decisão pelo Keycloak na ADR-006, os fontes C4 e sequência de autenticação foram atualizados e os PNGs afetados precisam ser renderizados novamente.
+A descrição da arquitetura não comprova, por si só, implementação ou execução de testes. A Issue #6 foi concluída. Após a [ADR-008](adr/ADR-008-observability.md), o C4 Nível 2 passou a mostrar a stack de observabilidade escolhida (OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana). É necessário **regenerar `images/c4-containers.png`** para refletir a fonte PlantUML atualizada.
