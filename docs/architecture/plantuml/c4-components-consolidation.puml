@@ -4,11 +4,11 @@
 title CashFlow | C4 Nível 3: Serviço Consolidation (Consolidado Diário)
 LAYOUT_LEFT_RIGHT()
 
-Container_Ext(nginx, "NGINX", "Reverse proxy", "Encaminha consultas autenticadas")
-Container_Ext(keycloak, "Keycloak", "OIDC / JWKS", "Emite tokens; APIs validam JWT localmente")
-ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1", "Entrega eventos de Transactions")
-ContainerDb_Ext(consolidationDb, "Banco de Consolidation", "PostgreSQL / EF Core", "DailyBalance e ProcessedEvent")
-Container_Ext(otel, "OpenTelemetry Collector", "OTLP", "Recebe telemetria técnica")
+Container_Ext(nginx, "NGINX", "HTTP interno :8080", "Encaminha consultas autenticadas")
+Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443 (público previsto)", "Emite tokens; APIs validam JWT localmente")
+ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672 (referência)", "Entrega eventos de Transactions")
+ContainerDb_Ext(consolidationDb, "Banco de Consolidation", "PostgreSQL / TCP :5432", "DailyBalance e ProcessedEvent")
+Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318 (referência)", "Recebe telemetria técnica")
 
 Container_Boundary(consolidation, "Consolidation | API + consumidor (.NET 10)") {
   Component(api, "Endpoints de consulta", "ASP.NET Core", "REST: consulta consolidado e validação JWT")
@@ -21,20 +21,20 @@ Container_Boundary(consolidation, "Consolidation | API + consumidor (.NET 10)") 
   Component(repo, "Repositórios + Unit of Work", "Infrastructure / EF Core", "Consulta DailyBalance; grava saldo + ProcessedEvent atomicamente")
 }
 
-Rel(nginx, api, "Consulta saldo diário", "HTTPS / JSON")
-Rel(api, keycloak, "Busca chaves públicas quando necessário; valida JWT localmente", "HTTPS / JWKS")
+Rel(nginx, api, "Consulta saldo diário", "HTTP / TCP :8080 privado (referência)")
+Rel(api, keycloak, "Busca chaves públicas quando necessário; valida JWT localmente", "HTTPS / TCP :443 (público previsto)")
 Rel(api, auth, "Verifica acesso do comerciante")
 Rel(auth, query, "Autoriza consulta")
 Rel(api, query, "Consulta")
 Rel(query, ports, "Busca projeção")
-Rel(consumer, rabbit, "Consome eventos", "AMQP")
+Rel(consumer, rabbit, "Consome eventos", "AMQP / TCP :5672 (referência)")
 Rel(consumer, process, "Entrega evento para aplicação")
 Rel(process, domain, "Calcula atualização do saldo")
 Rel(process, ports, "Exige atualização idempotente")
 Rel(repo, ports, "Implementa interfaces")
-Rel(repo, consolidationDb, "Consulta saldos; grava DailyBalance + ProcessedEvent", "SQL")
-Rel(consumer, rabbit, "ACK somente após commit; NACK/retry em falha", "AMQP")
-Rel(api, otel, "Emite sinais técnicos", "OTLP")
+Rel(repo, consolidationDb, "Consulta saldos; grava DailyBalance + ProcessedEvent", "PostgreSQL / TCP :5432")
+Rel(consumer, rabbit, "ACK somente após commit; NACK/retry em falha", "AMQP / TCP :5672 (referência)")
+Rel(api, otel, "Emite sinais técnicos", "OTLP gRPC :4317 ou HTTP :4318 (referência)")
 Rel(consumer, otel, "Emite sinais técnicos", "OTLP")
 
 note bottom of process
