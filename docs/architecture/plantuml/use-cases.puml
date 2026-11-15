@@ -13,8 +13,8 @@ rectangle "CashFlow" {
   usecase "UC-01\nRegistrar crédito" as UC01
   usecase "UC-02\nRegistrar débito" as UC02
   usecase "UC-03\nConsultar consolidado diário" as UC03
-  usecase "UC-04\nConsultar histórico\n(proposto)" as UC04
-  usecase "UC-05\nEstornar lançamento\n(proposto)" as UC05
+  usecase "UC-04\nConsultar histórico\n(MVP)" as UC04
+  usecase "UC-05\nEstornar lançamento\n(próxima versão)" as UC05
 }
 comerciante --> UC01
 comerciante --> UC02
@@ -23,6 +23,6 @@ comerciante --> UC04
 comerciante --> UC05
 legend bottom
   UC-01 a UC-03: exigidos pelo desafio
-  UC-04 e UC-05: propostas a validar
+  UC-04: aprovado para MVP\n  UC-05: proxima versao
 endlegend
 @enduml
