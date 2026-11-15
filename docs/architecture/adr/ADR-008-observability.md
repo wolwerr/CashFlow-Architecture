@@ -1,6 +1,6 @@
 # ADR-008: Observabilidade com OpenTelemetry
 
-> **Status:** aceita  
+> **Status:** decidida  
 > **Data:** 2026-11-14  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-004](ADR-004-async-messaging.md), [ADR-005](ADR-005-outbox-consistency-idempotency.md), [ADR-007](ADR-007-clients-api-gateway.md)
@@ -22,7 +22,7 @@ Para demonstrar o comportamento sob falha e sob carga, precisamos tornar observ�
 
 OpenTelemetry é um conjunto de especificações, APIs, SDKs e ferramentas de coleta e exportação. **Não substitui sozinho o armazenamento, a visualização nem o alerta.**
 
-## Decisão aceita
+## Decisão decidida
 
 1. **Instrumentar Transactions e Consolidation com OpenTelemetry para .NET**, usando atributos de recurso como `service.name`, ambiente e versão; incluir requisições HTTP, chamadas ao banco e processamento de eventos.
 2. **Logs estruturados** por meio das APIs de logging do .NET, contendo identificadores de correlação, resultado da operação, duração e categoria de erro. Não registrar tokens, credenciais, payloads financeiros sensíveis ou dados pessoais desnecessários.
@@ -37,7 +37,7 @@ OpenTelemetry é um conjunto de especificações, APIs, SDKs e ferramentas de co
 11. **Riscos e segurança:** manter sampling, retenção, volumes, acesso aos dashboards, TLS/autenticação e custos sob controle. No MVP local, sem dados reais, podem ser usadas configurações simplificadas; não considerá-las seguras para produção.
 12. **Ambientes futuros:** preservar instrumentação OTLP e permitir migração de backends para serviço gerenciado caso custo, escala, política corporativa ou HA justifiquem; isso requer revisão arquitetural e operacional.
 
-### Stack aprovada por responsabilidade
+### Stack escolhida por responsabilidade
 
 | Papel | Tecnologia | Compromisso arquitetural |
 | --- | --- | --- |
