@@ -7,7 +7,7 @@
 
 ## Contexto
 
-A arquitetura-alvo do CashFlow contempla Web/Mobile, API Gateway e um bloco de identidade e acessos (IAM). Usuários podem estar vinculados a comerciantes distintos; autenticar um usuário não lhe concede autorização sobre qualquer `merchant_id`. O MVP de demonstração prioriza os dois serviços financeiros, mas a arquitetura deve evitar desenvolvimento de autenticação caseira e impedir dependência síncrona do IAM em toda operação de lançamento.
+A arquitetura do CashFlow contempla cliente Web responsivo, Keycloak para identidade e, opcionalmente, NGINX como proxy HTTP. Um API Gateway dedicado e o BFF ficam para evolução futura conforme a ADR-007. Usuários podem estar vinculados a comerciantes distintos; autenticar um usuário não lhe concede autorização sobre qualquer `merchant_id`. O MVP de demonstração prioriza os dois serviços financeiros, mas a arquitetura deve evitar desenvolvimento de autenticação caseira e impedir dependência síncrona do IAM em toda operação de lançamento.
 
 ## Alternativas avaliadas
 
@@ -34,7 +34,7 @@ As comparações tratam de **soluções de identidade**, não de desempenho comp
 
 **Login:** cliente inicia fluxo OIDC com o provedor, obtém token de acesso para a API; desenho detalhado do cliente e armazenamento de tokens pertencem à ADR-007 e Issue #9.
 
-**Operação financeira:** Gateway (se adotado) encaminha request, e **cada API** valida access token. A autorização do comerciante deve derivar de associação confiável, com verificação servidor-side. Não aceitar `merchant_id` enviado pelo usuário como prova de autorização.
+**Operação financeira:** o cliente chama as APIs diretamente no ambiente controlado ou via NGINX como proxy simples, e **cada API** valida access token. A autorização do comerciante deve derivar de associação confiável, com verificação servidor-side. Não aceitar `merchant_id` enviado pelo usuário como prova de autorização.
 
 **Falha de IAM:** se um token estiver válido e as chaves em cache forem suficientes, o serviço financeiro pode continuar autorizando operações até os limites previstos na política. Login, refresh, revogação imediata e atualização de associações podem ficar indisponíveis; **não aceitar tokens expirados, assinatura desconhecida ou falha aberta (fail-open)**.
 
