@@ -33,7 +33,7 @@ A estratégia detalhada de **testes, ferramentas de teste e meta de cobertura** 
 3. **Registry:** publicar imagens no **Azure Container Registry (ACR)** definido como SHARED na ADR-009. Usar tags imutáveis/identificáveis e manter vínculo com o commit, evitando depender da tag `latest`.
 4. **Deploy DEV:** promover automaticamente ou sob gatilho definido as imagens correspondentes aos serviços alterados para o AKS de DEV, sujeito aos checks.
 5. **Deploy HOM:** promover **a mesma imagem** já produzida, sem rebuild por ambiente, para o cluster isolado de HOM, com controles e verificações adequados. HOM mantém seu porte econômico definido na ADR-009.
-6. **Deploy PROD:** promover imagem previamente validada em HOM para o AKS de produção, com **aprovação humana por GitHub Environment** quando o plano/repositório permitir as regras necessárias; caso contrário, implementar um controle manual explícito equivalente e registrar a limitação.
+6. **Deploy PROD:** promover imagem previamente validada em HOM para o AKS de produção, com **aprovação humana obrigatória via GitHub Environments**, conforme decisão do MVP. Validar antes da implantação se as regras de proteção estão disponíveis no plano/repositório; **não liberar PROD sem a proteção efetiva**, ajustando o plano/repositório se necessário.
 7. **Rollback:** manter versões anteriores das imagens/manifests e procedimento de rollback do Deployment/Helm, sem presumir que rollback de schema de banco seja sempre seguro; migrations exigem compatibilidade e estratégia separada.
 
 ### Independência entre os serviços
@@ -82,7 +82,7 @@ A estratégia detalhada de **testes, ferramentas de teste e meta de cobertura** 
 6. Uma falha de build, testes exigidos ou deploy interrompe o pipeline e preserva evidências de diagnóstico.
 7. Existe procedimento documentado para reversão de versão, observando as limitações de migrations.
 
-## Detalhes de implantação ainda pendentes
+## Complemento de governança, 15/11/2026\n\nO gate de produção via **GitHub Environments com aprovação manual** é obrigatório na arquitetura aprovada. Disponibilidade/configuração do recurso ainda não foram verificadas, portanto o deploy PROD permanece bloqueado até que o ambiente protegido funcione e seja testado. A liberação exige **backups automáticos e execução documentada de teste de restauração** dos dados críticos. [Decisões do MVP](../mvp-decisions.md).\n\n## Detalhes de implantação ainda pendentes
 
 - Definir os nomes concretos dos workflows, estrutura das pastas, gatilhos e filtros de dependências compartilhadas.
 - Selecionar scripts ou Helm/Kustomize/manifests para implantação no AKS e estratégia para migrations.
