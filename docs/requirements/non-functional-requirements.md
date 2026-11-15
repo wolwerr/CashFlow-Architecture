@@ -26,7 +26,7 @@ O documento também solicita considerar escalabilidade, resiliência, segurança
 | **RNF-04** | Um lançamento confirmado deve permanecer registrado, mesmo que o consolidado não esteja disponível. | Proposto como critério de integridade | Registrar dados durante a falha, recuperar o serviço e conferir os lançamentos. |
 | **RNF-05** | Repetir o processamento de um lançamento não deve contabilizá-lo duas vezes. | Proposto | Simular reentrega e comparar saldos antes e depois. |
 | **RNF-06** | A consulta do consolidado deve ter tempo de resposta previsível. | Proposto | Medir latência em percentis durante a carga. |
-| **RNF-07** | O sistema deve disponibilizar informações para detectar e investigar falhas. | Proposto | Verificar logs, indicadores de erro e atraso de atualização. |
+| **RNF-07** | O sistema deve disponibilizar informações para detectar e investigar falhas. | Proposto | Verificar logs, indicadores de erro e atraso de atualização utilizando a stack da [ADR-008](../architecture/adr/ADR-008-observability.md), sem confundir telemetria com auditoria financeira. |
 | **RNF-08** | Acessos e informações sensíveis devem ser protegidos. | Recomendação arquitetural do desafio, detalhamento proposto | Testes de acesso, verificação de segredos e políticas de armazenamento. |
 | **RNF-09** | A solução deve permitir ampliar capacidade sem alteração das regras de negócio. | Recomendação arquitetural do desafio, detalhamento proposto | Explicar estratégia de escala e validar cenários de carga. |
 
@@ -112,7 +112,7 @@ Para a arquitetura alvo, vamos detalhar na Milestone M2:
 - **Escalabilidade:** possibilidade de aumentar a capacidade de consulta independentemente do registro de lançamentos.
 - **Recuperação:** retomada após falhas e tratamento de mensagens pendentes.
 
-A execução local com Docker Compose servirá para demonstrar os comportamentos. Alta disponibilidade de infraestrutura, metas anuais de uptime, recuperação de desastres e conformidade formal exigem informações e recursos que **não foram fornecidos**; não serão presumidos como implementados.
+A execução local com Docker Compose servirá para demonstrar os comportamentos. Para observabilidade, a [ADR-008](../architecture/adr/ADR-008-observability.md) aprovou OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. Os dashboards ajudam a investigar, mas a medição de 50 RPS e de até 5% sem resposta útil deve continuar apoiada no relatório do gerador de carga. A implantação da stack ainda não foi validada. Alta disponibilidade de infraestrutura, metas anuais de uptime, recuperação de desastres e conformidade formal exigem informações e recursos que **não foram fornecidos**; não serão presumidos como implementados.
 
 ## 7. Pontos pendentes
 
