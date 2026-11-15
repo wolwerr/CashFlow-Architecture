@@ -34,7 +34,7 @@ Adotar **Transactional Outbox** em Transactions e **consumo idempotente** em Con
 5. Um `BackgroundService` interno ao Transactions busca eventos pendentes em lotes e publica no RabbitMQ. Concorrência entre workers precisa de estratégia segura de claim/lock, evitando publicação excessiva.
 6. Só marcar publicação concluída depois de publisher confirm positivo **e confirmação de roteamento ao destino esperado**, conforme a ADR-004. Se a confirmação for perdida ou o processo cair, publicar novamente é permitido.
 
-A resposta de sucesso significa **lançamento registrado**, não **saldo consolidado atualizado**. Status HTTP (201 ou 202) e contrato de consulta de acompanhamento serão definidos na API.
+A resposta de sucesso significa **lançamento registrado**, não **saldo consolidado atualizado**. **HTTP 201 Created após o commit** foi aprovado para o MVP; resposta não aguarda publicação nem consolidação. Esquema JSON, `Location` e rotas específicas exigem OpenAPI.
 
 ### Atualização da projeção (Consolidation)
 
@@ -49,12 +49,12 @@ Falha antes do commit implica rollback e reentrega possível. Falha após commit
 
 ### Ordenação, valores e concorrência
 
-- **RN-04 complementada em 15/11/2026:** competências passadas ou atuais são aceitas; futuras são rejeitadas. Eventos retroativos devem corrigir os saldos acumulados na data afetada e nas posteriores. Consumo fora de ordem exige projeção consistente, cuja estratégia física ainda será detalhada.\n- A soma de créditos e débitos de uma mesma data/comerciante pode ser comutativa para movimentos independentes, mas isso precisa ser conferido contra regras de negócio como estorno, cancelamento e ajustes posteriores. Não presumir ordem global do RabbitMQ.
+- **RN-04 complementada em 15/11/2026:** competências passadas ou atuais são aceitas; futuras são rejeitadas. Eventos retroativos devem corrigir os saldos acumulados na data afetada e nas posteriores. **Estratégia definida no MVP:** atualizar atomicamente totais diários por competência e calcular acumulados na leitura pela soma dos dias, sem persistir um saldo acumulado autoritativo.\n- A soma de créditos e débitos de uma mesma data/comerciante pode ser comutativa para movimentos independentes, mas isso precisa ser conferido contra regras de negócio como estorno, cancelamento e ajustes posteriores. Não presumir ordem global do RabbitMQ.
 - Atualizações concorrentes para o mesmo saldo devem ser **atômicas** (por exemplo, UPSERT incremental ou bloqueio/transação compatível), evitando *lost updates*. Unicidade do `event_id` sozinha não resolve concorrência entre eventos distintos.
 - **RN-07 decidida:** valores de lançamento são `decimal` no código e `numeric(19,2)` no PostgreSQL, em BRL, estritamente positivos, com até duas casas decimais. Rejeitar precisão excessiva antes de gravar ou publicar, sem arredondamento silencioso. `CREDIT`/`DEBIT` determina o efeito contábil; totais líquidos podem ser negativos. **RN-04 decidida:** a competência vem da data informada pelo comerciante e o instante de criação é registrado em UTC.
 - Não criar uma segunda fonte de verdade no consumidor: o consolidado é uma projeção, não o livro de lançamentos.
 
-## Semântica de garantias
+## Complemento do MVP, 15/11/2026\n\n- **Idempotência HTTP:** header `Idempotency-Key` obrigatório no registro; vincular comerciante/rota/chave e hash do payload a resultado estável, com persistência transacional. Reutilização da mesma chave com payload diferente deve produzir conflito. O prazo de retenção da chave e os detalhes de concorrência serão fechados no contrato/implementação.\n- **Eventos:** envelope JSON com `event_id`, `event_type`, `schema_version`, `correlation_id` e dados financeiros/competência, garantindo identificador estável sob reentregas.\n- **Falhas:** retentativas **limitadas** com backoff, DLQ, alerta e replay controlado. Configurações de contagem e intervalos ainda não foram determinadas; não ACK antes de persistência segura.\n- **Retenção:** Outbox e ProcessedEvent com políticas configuráveis, expurgo seguro e reconciliação; impedir perda da capacidade de deduplicar mensagens tardias.\n- **Frescor:** SLO aprovado de 95% dos registros refletidos em até 30 segundos em operação saudável, **a testar**.\n\n[Decisões consolidadas do MVP](../mvp-decisions.md).\n\n## Semântica de garantias
 
 | Propriedade | O que é prometido |
 | --- | --- |
@@ -105,9 +105,9 @@ O desafio exige auditabilidade e recuperação, **não exige que o estado seja r
 
 ## Limites e pontos pendentes
 
-- Especificar contrato JSON, schema versioning, estratégia de chaves de idempotência HTTP, ordenação/competência de eventos e correções/estornos.
+- **Decididos:** envelope JSON versionado, Idempotency-Key obrigatório, competência passada/atual e estorno fora do MVP. **Ainda especificar:** JSON Schema, headers, timeout, período de retenção da chave, mecanismo de retry/ordenação e contrato de erros.
 - Definir comportamento de reconciliação e ferramenta operacional para reprocessamento.
-- Definir SLO realista de atraso do consolidado e retenção conforme requisitos de negócio; as metas existentes são propostas e precisam de validação.
+- **SLO do MVP aprovado:** 95% dos lançamentos visíveis em até 30 segundos em operação saudável, ainda não demonstrado. Retenção Outbox/ProcessedEvent configurável; valores concretos e segurança do expurgo são detalhes de operação.
 - Detalhar índices, concorrência de workers e política DLQ/retry na implementação.
 
 ## Referências
