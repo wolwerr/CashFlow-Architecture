@@ -4,6 +4,7 @@
 > **Data:** 2026-11-15  
 > **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
 > **Orçamento detalhado de referência:** [CashFlow | Orçamento Azure dos quatro ambientes](../four-environment-total-cost-plan.md)  
+> **Deployment View:** [Distribuição dos ambientes e portabilidade](../deployment-view.md)  
 > **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), [ADR-004](ADR-004-async-messaging.md), [ADR-005](ADR-005-outbox-consistency-idempotency.md), [ADR-006](ADR-006-identity-and-access.md), [ADR-007](ADR-007-clients-api-gateway.md), [ADR-008](ADR-008-observability.md)
 
 ## Contexto e problema
