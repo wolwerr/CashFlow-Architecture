@@ -103,6 +103,35 @@ A decisão sobre armazenamento deve distinguir PVs (RabbitMQ, Prometheus e estad
 
 **Aprovação ainda pendente:** manter AKS como preferência preliminar, com EKS como alternativa equivalente em Kubernetes, até termos uma versão com preço total de rede, storage, banco, egress e HA, além de teste de 50 RPS.
 
+## Ambientes obrigatórios: LOCAL, DEV, HOM e PROD
+
+A arquitetura será organizada em **quatro ambientes**, com separação explícita de configurações, dados, credenciais e deploys:
+
+| Ambiente | Hospedagem proposta | Economia | Disponibilidade proposta |
+| --- | --- | --- | --- |
+| **LOCAL** | Docker Compose no computador do desenvolvedor | Sem gastos de cloud modelados | Não há HA; para desenvolvimento |
+| **DEV** | AKS Free ou EKS, **1 nó 4vCPU/16 GiB**, banco pequeno gerenciado externo | Uma réplica, baixo volume e retenção mínima; possibilidade de desligar não produção fora de uso | Sem HA; ambiente descartável/reconstruível |
+| **HOM** | AKS Free ou EKS, **1 nó 4vCPU/16 GiB**, banco pequeno gerenciado externo | Uma réplica; ampliar temporariamente para testar carga semelhante à PROD | Sem HA contínua; staging funcional e de aceite |
+| **PROD** | AKS Standard ou EKS, **3 nós 4vCPU/16 GiB** como baseline, banco gerenciado externo | Nodes compartilhados por pods, HPA para APIs com mínimo de 2 réplicas | **HA planejada, ainda não comprovada**, requer banco HA/Multi-AZ, quorum RabbitMQ, topology spread, PDB e capacidade N+1 |
+
+A [planilha textual do estudo AKS x EKS](../aks-eks-cost-breakdown.md) apresenta o rateio dos componentes e detalha os **custos por ambiente**. A escolha do **AKS Free em DEV/HOM** é uma premissa econômica sem garantia de SLA de control plane; EKS cobra control plane para cada cluster mesmo sem nós.
+
+### Custo cloud por ambiente: subtotal preliminar de itens precificados
+
+| Ambiente | AKS Azure East US (USD/mês) | EKS AWS us-east-1 (USD/mês) |
+| --- | ---: | ---: |
+| LOCAL (Docker Compose) | 0,00 de cloud | 0,00 de cloud |
+| DEV | **161,78** | **247,22** |
+| HOM | **161,78** | **247,22** |
+| PROD | **615,93** | **622,97** |
+| **Total três ambientes cloud** | **939,49** | **1.117,41** |
+
+**Não são faturas totais, nem prova de custo menor do AKS.** Os números incluem nós/cluster, instância PostgreSQL, apenas armazenamento PostgreSQL Azure, uma reserva ilustrativa de PVs e object storage. Excluem, entre outros, **LB/NAT/ingress em ambos, RDS storage, registry, backups, IPs, egress, secrets e produção HA**. A estimativa de DEV/HOM com um nó precisa ser testada: Keycloak, RabbitMQ e stack Grafana podem exigir mais recursos, especialmente em HOM durante testes de carga.
+
+**Alternativa a analisar:** **um único cluster compartilhado para DEV e HOM** com namespaces, quotas, identidades e bancos logicamente segregados. Isso pode economizar taxa de control plane no EKS e recursos ociosos, mas cria risco de interferência, falha comum e menor equivalência entre HOM e PROD. A tabela principal assume **clusters separados**.
+
+**Estratégia HPA:** usar HPA apenas quando há métricas, requests de CPU e capacidade de nós; com HPA desativado em DEV/HOM como baseline econômico, sem SLA. Em PROD, HPA para Transactions e Consolidation com `minReplicas: 2` é ponto de partida, junto a topology spread e probes, **não garantia de HA sem nós e banco capazes de sobreviver a falhas**.
+
 ## Disponibilidade, consistência e recuperação
 
 **RNF-01:** falha de Consolidation deve ser isolada; Transactions confirma gravação de lançamento + Outbox no banco próprio e continua operando enquanto esse banco e seu caminho de entrada estiverem disponíveis. Falha de banco de Transactions, rede/NGINX ou host compartilhado não é coberta pela garantia.
@@ -143,6 +172,7 @@ A decisão sobre armazenamento deve distinguir PVs (RabbitMQ, Prometheus e estad
 ## Pendências para a decisão final de cloud
 
 - Região e exigências de localização de dados.
+- Validar tamanho mínimo de DEV/HOM (1 nó cada), suporte a toda a stack e possível compartilhamento de cluster entre esses ambientes.
 - Distinção entre **demonstração cloud** e **produção HA**.
 - Recursos realmente medidos sob carga, 50 RPS e volume de eventos/dados.
 - Requisitos de RTO/RPO, retenção de dados, backup e disponibilidade.
