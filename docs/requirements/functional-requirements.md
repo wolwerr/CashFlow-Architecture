@@ -2,7 +2,7 @@
 
 > **Projeto:** CashFlow Architecture  
 > **Issue:** #3 | **Milestone:** M1 - Descoberta e requisitos  
-> **Status:** proposta para revisão  
+> **Status:** requisitos do desafio identificados; decisões adicionais do MVP aprovadas em 15/11/2026  
 > **Referências:** enunciado do desafio e [mapeamento de domínios](../domain/business-capabilities-and-context-map.md)
 
 ## 1. Objetivo
@@ -30,9 +30,9 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 | RF-02 | Registrar débito | Permitir que o comerciante registre uma movimentação classificada como débito. | Exigido | Essencial |
 | RF-03 | Consultar consolidado diário | Permitir consultar o saldo consolidado referente a um dia. | Exigido | Essencial |
 | RF-04 | Validar dados do lançamento | Recusar lançamentos incompletos ou inválidos e informar o problema ao comerciante. | Proposto | Essencial para o MVP |
-| RF-05 | Consultar histórico | Permitir visualizar os lançamentos registrados para conferência. | Proposto | Desejável |
-| RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
-| RF-07 | Manter trilha de auditoria | Registrar ações financeiras relevantes com autor, operação, horário, resultado e correlação. Não é uma funcionalidade de consulta pública. | Proposto | Importante para integridade |
+| RF-05 | Consultar histórico | Consultar lançamentos por intervalo de competência, com paginação e segregação por comerciante. | Proposto, **aprovado para MVP** | MVP |
+| RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto, **fora do MVP** | Próxima versão |
+| RF-07 | Manter trilha de auditoria | Auditar registros financeiros confirmados com ator, comerciante, identificador, instante UTC e correlação. | Proposto, **aprovado para MVP** | MVP |
 
 **Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. **RN-09 decidida:** em dias sem lançamentos, totais de crédito e débito e movimento líquido são zero, e o saldo acumulado é mantido. **RN-04 decidida:** o comerciante informa a data de competência; o sistema registra o instante da criação em UTC. **RN-04 complementada:** aceitar competências passadas ou atuais e rejeitar competências futuras; lançamentos retroativos corrigem os saldos acumulados desde a competência afetada.
 
@@ -74,7 +74,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 - Um valor inválido não poderá ser registrado, incluindo zero, negativos e valores com mais de duas casas decimais (RN-07).
 - O comerciante deverá receber uma mensagem compreensível sem que um lançamento rejeitado seja contabilizado.
 
-**Campos do registro:** valor, tipo de movimentação e data de competência informada pelo comerciante (RN-04). Identificador do lançamento pode ser gerado pelo sistema. **RN-07 decidida:** BRL com duas casas, valor estritamente positivo, rejeição de precisão maior que duas casas, sem arredondamento automático de entradas. A data padrão da interface permanece a definir.
+**Decisões adicionais aprovadas:** o dia atual é determinado em `America/Sao_Paulo`; o formulário sugere hoje, editável. Competências passadas são aceitas sem limite de dias para usuário autorizado. `Idempotency-Key` é obrigatório no registro e a confirmação HTTP é **201 Created somente após commit de Transaction + Outbox**, sem esperar a consolidação.\n\n**Campos do registro:** valor, tipo de movimentação e data de competência informada pelo comerciante (RN-04). Identificador do lançamento pode ser gerado pelo sistema. **RN-07 decidida:** BRL com duas casas, valor estritamente positivo, rejeição de precisão maior que duas casas, sem arredondamento automático de entradas. A data padrão da interface permanece a definir.
 
 ### HU-05: Consultar histórico (RF-05, proposto)
 
@@ -82,7 +82,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 
 **Critérios de aceite propostos:**
 - Permitir localizar os lançamentos de um intervalo de datas.
-- Apresentar as informações necessárias para reconhecer cada lançamento.
+- Apresentar as informações necessárias para reconhecer cada lançamento, paginando resultados e aplicando autorização por `merchant_id`.
 
 ### HU-06: Estornar lançamento (RF-06, proposto)
 
@@ -156,7 +156,7 @@ O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será
 
 **Tratamento proposto:** caso não seja possível obter respostas da empresa, documentar as premissas adotadas para o MVP, explicitar seus impactos e evitar apresentá-las como requisitos fornecidos pela banca.
 
-## 8. Rastreabilidade e conclusão
+## 8. Aprovações de MVP\n\nO escopo de histórico paginado, auditoria básica de registros confirmados, multicomerciante, papéis ADMIN/OPERATOR, fuso `America/Sao_Paulo`, persistência de totais diários com acumulado calculado na leitura e API versionada foram **aprovados pelo projeto**, não impostos pelo enunciado. A especificação integral das 24 decisões encontra-se em [Decisões consolidadas do MVP](../architecture/mvp-decisions.md). Estorno e exclusão/edição de fatos confirmados ficam fora do MVP.\n\n## 9. Rastreabilidade e conclusão
 
 | Requisito | Contexto responsável | Validação prevista |
 | --- | --- | --- |
@@ -174,4 +174,4 @@ O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será
 - [x] Documento versionado no repositório.
 - [ ] Validar premissas e aprovar escopo final para o MVP.
 
-**Próximo passo após revisão:** Issue #4, requisitos não funcionais e SLOs.
+**Próximo passo:** especificar os contratos e implementar as regras aprovadas; os testes e o aceite de execução permanecem pendentes.
