@@ -1,5 +1,8 @@
 # Estimativa por componente: Azure AKS versus Amazon EKS
 
+> **ESTUDO COMPARATIVO HISTÓRICO, NÃO É O ORÇAMENTO AKS APROVADO.** As primeiras tabelas abaixo cotam uma única configuração ilustrativa com **PostgreSQL Azure B2ms (US$ 99,28/mês de compute, sem HA)** e **RDS AWS Single-AZ (US$ 94,17/mês de compute, sem storage)**. Elas **não** representam o custo de PROD. A [ADR-009 aceita](adr/ADR-009-deployment-cloud.md) adotou **Azure AKS**; os preços atualizados da Azure Pricing Calculator estão no [orçamento por ambiente](four-environment-total-cost-plan.md): **DEV 204,34; HOM 204,34; PROD 890,44; SHARED 5,90; total US$ 1.305,02/mês**. PostgreSQL: **DEV US$ 16,09, HOM US$ 16,09 e PROD US$ 257,02 com HA habilitada**. A comparação EKS continua referência de trade-offs, e não uma cotação AWS integral.
+
+
 > **Data:** 2026-11-15. **Status:** hipótese de referência; não é cotação. **ADR:** [ADR-009](adr/ADR-009-deployment-cloud.md)  
 > **Moeda:** USD/mês, 730 horas, sem impostos, reservas, descontos ou HA garantida.  
 > **Regiões:** Azure East US e AWS us-east-1.  
@@ -23,7 +26,7 @@
 | Quantidade de nós | 3 | 3 | Premissa |
 | Computação dos 3 nós, 730h | **US$ 376,68** | **US$ 420,48** | 3 × valor/h × 730 |
 | Plano de controle Kubernetes | **US$ 73,00** | **US$ 73,00** | AKS Standard e EKS standard version: US$ 0,10/h, fontes oficiais [2], [3] |
-| Banco PostgreSQL gerenciado, compute | **US$ 99,28** | **US$ 94,17** | Azure Flexible Server B2ms e AWS RDS db.t4g.large Single-AZ, fontes [4], [5] |
+| Banco PostgreSQL gerenciado, compute (**sem HA; histórico**) | **US$ 99,28** | **US$ 94,17** | Azure Flexible Server B2ms e AWS RDS db.t4g.large Single-AZ, fontes [4], [5] |
 | Banco PostgreSQL, storage | **US$ 3,68**, 32 GiB | **a cotar** | Azure 32 × US$ 0,115/GiB; EBS/RDS AWS volume ainda não especificado |
 | **Subtotal de itens precificados** | **US$ 552,64** | **US$ 587,65** | **Não são TCO, nem totalmente equivalentes** |
 
@@ -244,7 +247,7 @@ Para manter rastreabilidade com o refinamento anterior, existem parcelas *já il
 
 ## Recomendação para a ADR-009
 
-**Shortlist principal: AKS versus EKS**, com preferência técnica provisória por **AKS** para manter a arquitetura Kubernetes e aproveitar custos de compute ligeiramente menores na região de referência. Essa preferência **não é uma escolha final de cloud**: requer estimativa de rede/armazenamento/HA, execução dos testes de 50 RPS e avaliação de governança, equipe e contratos. Container Apps e ECS/Fargate permanecem documentados como alternativas, mas não são equivalentes diretos de *Kubernetes completo com pods de todos os componentes*.
+**Decisão posterior ao estudo:** a [ADR-009](adr/ADR-009-deployment-cloud.md) foi **aceita** com **Azure AKS em East US**. EKS foi avaliado e não escolhido. Os valores anteriores são estimativas preliminares de alternativas e devem ser substituídos, para apresentação do projeto, pelo [orçamento aprovado dos quatro ambientes](four-environment-total-cost-plan.md). ACA e ECS/Fargate permanecem alternativas documentadas com custos e capacidades não homogêneos.
 
 **Ponto crítico:** se RabbitMQ, Loki, Tempo ou Prometheus ficarem no cluster, planejar explicitamente volumes persistentes, recuperação e HA. PostgreSQL gerenciado externo ao cluster reduz o custo operacional do banco, mas não elimina o risco de indisponibilidade.
 
