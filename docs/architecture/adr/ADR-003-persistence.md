@@ -58,7 +58,7 @@ Os dois bancos relacionais são tecnicamente adequados ao desafio. Não há benc
 | **Dapper** | Micro-ORM leve, controle explícito de SQL e mapeamento enxuto | Exige SQL manual e uma estratégia separada de migrations/modelagem |
 | **ADO.NET/Npgsql diretamente** | Controle máximo e poucas abstrações | Mais código repetitivo de conexão, parâmetros e mapeamento |
 
-## Decisão decidida
+## Decisão registrada
 
 1. Adotar **PostgreSQL** como SGBD dos dois domínios financeiros.
 2. Utilizar **Entity Framework Core 10**, com o provider **Npgsql.EntityFrameworkCore.PostgreSQL** compatível, como acesso a dados principal.
