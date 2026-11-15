@@ -1,41 +1,60 @@
 @startuml CashFlow_Consolidation_Failure
-title CashFlow | Registro Web/Mobile com consolidado indisponível
+title CashFlow | Consolidation indisponivel e recuperacao
 autonumber
-actor Comerciante
-participant "Aplicação Web/Mobile" as W
-participant "NGINX (reverse proxy)" as G
-participant "Serviço de lançamentos\n(API + Outbox)" as L
-database "Banco de lançamentos" as BL
-queue "Mensageria" as M
-participant "Serviço de consolidado" as C
-note over C: Serviço indisponível
-Comerciante -> W: Registra lançamento
-W -> G: POST /lançamentos (via NGINX)
-G -> L: Encaminha operação
-L -> L: Valida JWT, autorização e dados
-L -> BL: Grava lançamento + Outbox (transação)
-BL --> L: Commit confirmado
-L --> G: 201 Created
-G --> W: 201 Created
-W --> Comerciante: Confirma registro
-... Processo assíncrono ...
-L -> BL: Worker busca evento pendente
-BL --> L: Evento
-L -> M: Publica (AMQP, proposto)
-M --> L: Confirma publicação
-L -> BL: Marca evento publicado
-M ->x C: Entrega falhou
-note over M,C
-O broker deve manter a mensagem recuperável
-conforme política de retry/DLQ a definir.
-end note
-... Consolidado recuperado ...
-M -> C: Reentrega evento
-C --> M: ACK após processamento idempotente
-note over G,L
-NGINX encaminha a requisicao para Transactions.
-Falha no consolidado não bloqueia registro.
-NGINX e banco de lançamentos precisam
-permanecer disponíveis para o acesso correspondente.
+actor Comerciante as U
+participant "React SPA" as W
+participant "NGINX" as G
+participant "Transactions API" as API
+database "PostgreSQL\nTransactions" as DBT
+participant "Transactions\nOutbox worker" as OUT
+queue "RabbitMQ\nfila duravel" as MQ
+participant "Consolidation\nconsumer" as CON
+database "PostgreSQL\nConsolidation" as DBC
+
+note over CON: Consumer indisponivel
+U -> W: Registra credito ou debito
+W -> G: POST /api/transactions/*\nHTTPS :443 + Bearer
+G -> API: Proxy HTTP :8080
+API -> API: Valida JWT e merchant_id
+API -> DBT: Grava Transaction + OutboxEvent\nmesmo commit SQL TCP :5432
+DBT --> API: COMMIT confirmado
+API --> G: Sucesso, status a definir
+G --> W: Registro confirmado
+W --> U: Exibe confirmacao
+
+... Etapa assincrona durante a falha ...
+OUT -> DBT: Busca e reivindica pendencias
+DBT --> OUT: Eventos
+alt RabbitMQ disponivel e mensagem roteada
+  OUT -> MQ: Publica evento AMQP :5672
+  MQ --> OUT: Publisher confirm + roteamento ok
+  OUT -> DBT: Marca Outbox publicada
+  note over MQ,CON
+    Fila duravel retém mensagem sem consumer
+    conforme limites e politica de retencao.
+  end note
+else Broker indisponivel, unroutable ou confirm incerto
+  OUT -> MQ: Tenta publicar
+  MQ --> OUT: Falha / timeout / retorno
+  OUT -> OUT: Retry, sem descartar Outbox
+end
+
+... Consolidation reiniciado e consumer reconectado ...
+CON -> MQ: Inscreve-se na fila\nAMQP TCP :5672
+MQ --> CON: Entrega / reentrega event_id
+CON -> DBC: BEGIN; tenta registrar ProcessedEvent unico
+alt Evento novo
+  CON -> DBC: Atualiza DailyBalance atomicamente
+  CON -> DBC: COMMIT do evento e saldo
+  DBC --> CON: Commit confirmado
+else Evento repetido
+  DBC --> CON: event_id ja existe
+  CON -> DBC: Encerra sem alterar saldo
+end
+CON -> MQ: ACK somente depois de resultado persistido seguro
+note over API,OUT
+Falha de Consolidation nao impede registro.
+Banco Transactions, API e proxy devem
+continuar disponiveis no ensaio.
 end note
 @enduml
