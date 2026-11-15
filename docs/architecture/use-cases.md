@@ -75,7 +75,7 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 
 **Pós-condição:** o comerciante visualiza o resultado ou recebe uma indicação apropriada da indisponibilidade.
 
-**Regra pendente:** definir se “saldo diário” representa movimento líquido ou saldo acumulado, e como tratar dias sem lançamentos.
+**RN-02 decidida em 15/11/2026:** a consulta apresenta totais de crédito, débito, **movimento líquido do dia** e **saldo acumulado**. Permanecem pendentes saldo inicial, dias sem movimento e lançamentos retroativos.
 
 ## 4. Casos de uso sugeridos
 
