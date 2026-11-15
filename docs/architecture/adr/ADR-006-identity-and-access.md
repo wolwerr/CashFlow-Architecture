@@ -30,7 +30,16 @@ As comparações tratam de **soluções de identidade**, não de desempenho comp
 6. **Autorização de negócio:** verificar `merchant_id`, associação do sujeito ao comerciante e permissões exigidas no serviço de negócio, não apenas no Gateway. O MVP adota **ADMIN e OPERATOR por comerciante**; VIEWER não integra o MVP. A matriz de permissões por ação será especificada.
 7. **Dados:** identidades e segredos de autenticação ficam sob responsabilidade do provedor. Vínculos de usuários com comerciantes e regras de domínio pertencem à camada de autorização do CashFlow, com esquema e ciclo de vida específicos a definir, evitando acessos diretos entre os bancos financeiros.
 
-## Complemento de autorização, 15/11/2026\n\n- Multi-comerciante obrigatório no MVP: dados e comandos segregados por `merchant_id`, com checagem de vínculo **servidor-side** e papel ADMIN/OPERATOR em cada contexto financeiro.\n- Banco lógico **próprio de autorização CashFlow**, isolado de Keycloak e bancos financeiros. Consulta com cache curto **e invalidação em alteração/revogação**; TTL, implementação de revogação e ownership da interface de autorização a detalhar. Em situação de dúvida sobre vínculo, **falhar fechado**. Não pressupor nova API financeira nem joins cross-domain.\n- Autenticação com JWT validado em cada serviço, JWKS em cache. A indisponibilidade do banco/cache de autorização pode comprometer operações não autorizáveis, e não deve ser mascarada como disponibilidade garantida.\n- Trilha de criação financeira confirmada contém ator/merchant/time/correlation, retenção inicial de 365 dias, sujeita a revisão legal e controles de acesso.\n\n[Registro de decisões](../mvp-decisions.md).\n\n## Fluxos e decisões de segurança
+## Complemento de autorização, 15/11/2026
+
+- Multi-comerciante obrigatório no MVP: dados e comandos segregados por `merchant_id`, com checagem de vínculo **servidor-side** e papel ADMIN/OPERATOR em cada contexto financeiro.
+- Banco lógico **próprio de autorização CashFlow**, isolado de Keycloak e bancos financeiros. Consulta com cache curto **e invalidação em alteração/revogação**; TTL, implementação de revogação e ownership da interface de autorização a detalhar. Em situação de dúvida sobre vínculo, **falhar fechado**. Não pressupor nova API financeira nem joins cross-domain.
+- Autenticação com JWT validado em cada serviço, JWKS em cache. A indisponibilidade do banco/cache de autorização pode comprometer operações não autorizáveis, e não deve ser mascarada como disponibilidade garantida.
+- Trilha de criação financeira confirmada contém ator/merchant/time/correlation, retenção inicial de 365 dias, sujeita a revisão legal e controles de acesso.
+
+[Registro de decisões](../mvp-decisions.md).
+
+## Fluxos e decisões de segurança
 
 **Login:** cliente inicia fluxo OIDC com o provedor, obtém token de acesso para a API; desenho detalhado do cliente e armazenamento de tokens pertencem à ADR-007 e Issue #9.
 
