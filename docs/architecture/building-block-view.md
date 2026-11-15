@@ -220,6 +220,8 @@ A indisponibilidade do Keycloak **não deve parar o registro de movimentações 
 
 ## Próximas leituras
 
+- [Deployment View](deployment-view.md), para visualizar a distribuição cloud dos componentes, ambientes isolados, serviços compartilhados e alternativas multi-cloud.
+
 - [Diagramas de sequência](sequence-diagrams.md), para ver as interações passo a passo.
 - [Casos de Uso](use-cases.md), para entender as ações do comerciante e os fluxos de negócio.
 - [Modelo de Dados](data-model.md), para entender os registros financeiros, a Outbox, a projeção e a auditoria.
