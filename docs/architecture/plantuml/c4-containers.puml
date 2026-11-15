@@ -39,23 +39,29 @@ Rel(admin, web, "Administra acessos", "HTTPS / TCP :443 público previsto")
 Rel_D(web, gateway, "Consome APIs e assets pelo NGINX", "HTTPS / TCP :443 público previsto")
 
 ' Identidade
-Rel_D(web, iam, "Login OIDC direto via navegador (PKCE)", "HTTPS / TCP :443 público previsto")
+Rel_D(web, iam, "Login OIDC direto do navegador; Authorization Code + PKCE", "HTTPS / TCP :443 público previsto")
+Rel(lancamentos, iam, "Obtém metadata OIDC / JWKS quando necessário; valida JWT localmente", "HTTPS / TCP :443 (referência)")
+Rel(consolidado, iam, "Obtém metadata OIDC / JWKS quando necessário; valida JWT localmente", "HTTPS / TCP :443 (referência)")
 Rel_D(iam, db_iam, "Persiste identidades e sessões", "PostgreSQL / TCP :5432")
 
 ' Fluxo financeiro
-Rel_R(gateway, lancamentos, "Encaminha registros", "HTTP / TCP :8080 privado (referência)")
+Rel_R(gateway, lancamentos, "Encaminha registro + Authorization: Bearer", "HTTP / TCP :8080 privado (referência)")
 Rel_D(lancamentos, db_lancamentos, "Persiste lançamento + Outbox", "PostgreSQL / TCP :5432")
 Rel_R(lancamentos, mensageria, "Publica eventos", "AMQP 0-9-1 / TCP :5672 (referência)")
 Rel_R(consolidado, mensageria, "Consome eventos e confirma ACK após commit", "AMQP 0-9-1 / TCP :5672 (referência)")
 Rel_D(consolidado, db_consolidado, "Atualiza e consulta saldos", "PostgreSQL / TCP :5432")
-Rel(gateway, consolidado, "Encaminha consultas", "HTTP / TCP :8080 privado (referência)")
+Rel(gateway, consolidado, "Encaminha consulta + Authorization: Bearer", "HTTP / TCP :8080 privado (referência)")
 
 ' Integrações transversais apresentadas em notas
 note right of iam
-  Login direto no Keycloak via OIDC.
-  APIs validam JWT localmente.
-  Vínculos de comerciantes são
-  autorizados no CashFlow.
+  React inicia login OIDC com PKCE.
+  NGINX apenas encaminha Bearer.
+  Cada API valida assinatura, issuer,
+  audience e expiracao do access token.
+  JWKS consultado sob demanda/cache.
+  Merchant_id autorizado nas APIs.
+  Nao existe introspeccao no Keycloak
+  a cada requisicao por padrao.
 end note
 
 note right of telemetria
@@ -79,6 +85,9 @@ note bottom of gateway
   PostgreSQL: TCP :5432 privado.
   RabbitMQ: TCP :5672 sem TLS,
   ou :5671 com AMQPS/TLS.
+  NGINX nao valida JWT no template.
+  Nao ha relacao NGINX -> Keycloak
+  para autenticar a cada requisicao.
   Reverse proxy adotado no MVP.
   API Gateway dedicado e BFF:
   evolucoes futuras (ADR-007).
