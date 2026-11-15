@@ -142,3 +142,7 @@ Reenviar evento existente; registrar ocorrência de duplicata e comprovar que o 
 - [Grafana Tempo](https://grafana.com/docs/tempo/latest/)
 - [RNFs do CashFlow](../../requirements/non-functional-requirements.md)
 - [Building Block View](../building-block-view.md)
+
+## Complemento do MVP, 15/11/2026
+
+Metas **aprovadas pelo projeto e ainda não testadas**: 50 consultas/s por 5 minutos após aquecimento, até 5% de consultas válidas enviadas terminando em erro, timeout ou sem resposta útil; latência p95 inferior a 500 ms e 95% dos lançamentos visíveis no consolidado em até 30 segundos em operação saudável. Instrumentar commit de Transactions, processamento Consolidation, latência de consulta e backlog. Auditoria financeira básica de registros confirmados é separada de logs técnicos, com retenção inicial de 365 dias sujeita a revisão legal. [Decisões do MVP](../mvp-decisions.md).
