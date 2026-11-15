@@ -14,7 +14,7 @@ database "PostgreSQL\nConsolidation" as DBC
 U -> W: Informa credito/debito e data de competencia
 W -> G: POST /api/transactions/*\nBearer JWT; HTTPS :443 publico
 G -> API: Proxy + Authorization\nHTTP :8080 privado
-API -> API: Valida JWT, merchant_id e competencia\nBRL: valor > 0, ate 2 casas, sem arredondar
+API -> API: Valida JWT, merchant_id, BRL e competencia\nAceita passada/atual; rejeita futura
 API -> DBT: BEGIN; grava reference_date informada\ne created_at UTC com Transaction + OutboxEvent\nmesma transacao SQL TCP :5432
 DBT --> API: COMMIT confirmado
 API --> G: Sucesso de registro\nstatus e payload a definir
