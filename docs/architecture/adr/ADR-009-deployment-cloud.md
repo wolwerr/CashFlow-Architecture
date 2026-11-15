@@ -98,7 +98,9 @@ Não prometer HA em Compose com um nó para cada infraestrutura. Não interpreta
 
 A escolha da cloud também deve considerar capacidades e experiência da equipe, requisitos de rede, localização de dados, oferta de broker, acordos comerciais e custos de suporte.
 
-## Comparação homogênea de Kubernetes (AKS x EKS)
+> **Aviso de leitura:** as três seções comparativas a seguir mantêm os **números históricos usados na análise das alternativas**, antes da escolha do AKS e da configuração de DEV/HOM/PROD. O PostgreSQL Azure **US$ 99,28** era um **B2ms sem HA**; no orçamento aceito, o PostgreSQL de PROD é **US$ 257,02 com HA habilitada**, e DEV/HOM são **US$ 16,09 cada**. As tabelas antigas de ACA, AKS e ECS/Fargate **não representam custo total**, nem substituem a tabela aprovada de **US$ 1.305,02/mês** no início desta ADR.
+
+## Comparação histórica de Kubernetes (AKS x EKS, pré-decisão)
 
 | Item | AKS Standard (Azure East US) | Amazon EKS (AWS us-east-1) |
 | --- | ---: | ---: |
@@ -110,7 +112,7 @@ A escolha da cloud também deve considerar capacidades e experiência da equipe,
 
 Os serviços como Transactions, Consolidation, RabbitMQ, Keycloak, NGINX, Collector, Prometheus, Loki, Tempo e Grafana **compartilham nós**. Portanto, seus custos de computação não aparecem separadamente na fatura: o [documento de rateio](../aks-eks-cost-breakdown.md) atribui valores ilustrativos por componente segundo vCPU hipotética e apresenta os recursos efetivamente faturáveis. **Não confundir rateio com cobrança por pod.** O cenário não inclui PVs/EBS, object storage, rede, load balancer, NAT, registry, backups, zonas ou HA.
 
-## Comparação de custo já calculada
+## Comparação histórica de custos calculados (pré-decisão)
 
 O [estudo FinOps](../cloud-cost-comparison.md) documenta 730 h/mês e tarifas verificadas em novembro/2026, para **East US** e **us-east-1**:
 
@@ -122,7 +124,7 @@ O [estudo FinOps](../cloud-cost-comparison.md) documenta 730 h/mês e tarifas ve
 
 Os totais são **não comparáveis como faturas completas**. Devem ser apresentados como **subtotais de itens precificados**, com escopo e capacidade diferentes. Valores de entrada podem mudar. Não atribuir custo zero a serviços sem preços calculados.
 
-## Refinamento de custos: volumes, object storage e rede
+## Refinamento histórico de custos: volumes, object storage e rede
 
 O [comparativo AKS x EKS](../aks-eks-cost-breakdown.md) agora inclui um **cenário ampliado de itens precificados**, ainda não equivalente a TCO e sem HA:
 
