@@ -53,7 +53,8 @@ Outros SLOs, como p95 inferior a 500 ms, 95% das atualizações em 30 s, continu
 | Prioridade | Tema | Fontes e impacto | Ação de validação |
 | --- | --- | --- | --- |
 | **Decidido em 15/11/2026** | **RN-02**: exibir movimento líquido diário e saldo acumulado | RF-03, UC-03 e `DailyBalance` devem refletir ambos; saldo inicial de R$ 0,00 decidido; retroatividade segue aberta | Registrar regra e conferir documentos/contratos |
-| **Decidido em 15/11/2026** | **RN-03**: saldo inicial de R$ 0,00 por comerciante | O acumulado parte de zero, sem saldo manual de abertura no MVP | Refletir em cálculos e testes |\n| **Decidido em 15/11/2026** | **RN-09**: dia sem movimentação | Totais e líquido zero, saldo acumulado anterior mantido; antes da primeira transação, saldo zero | Cobrir com testes de consulta em dia vazio |
+| **Decidido em 15/11/2026** | **RN-03**: saldo inicial de R$ 0,00 por comerciante | O acumulado parte de zero, sem saldo manual de abertura no MVP | Refletir em cálculos e testes |
+| **Decidido em 15/11/2026** | **RN-09**: dia sem movimentação | Totais e líquido zero, saldo acumulado anterior mantido; antes da primeira transação, saldo zero | Cobrir com testes de consulta em dia vazio |
 | **Alta** | **RN-04**: data de referência/fuso e competência | RF-01 a RF-03 e agregação por dia | Definir fuso financeiro, entrada retroativa e fronteira diária |
 | **Alta** | **RN-07**: moeda, precisão e arredondamento | ADR-005 recomenda `decimal`/`numeric(p,s)`, mas escala de negócio continua aberta | Definir moeda, escala e convenção |
 | **Alta** | **RNF-03**: significado dos 5% de perda e janela | Sem definição não há aceite inequívoco de desempenho | Confirmar erro/timeout/resposta útil, carga e janela |
