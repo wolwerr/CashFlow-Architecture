@@ -38,7 +38,8 @@ else Consulta autorizada
 end
 note over C,DB
 Consolidation nao consulta Transactions.
-Saldo liquido x acumulado, dias vazios
-e indicacao de atraso aguardam decisao.
+Liquido e acumulado sao apresentados.
+Dias vazios mantem saldo anterior.
+Atraso e retroatividade seguem pendentes.
 end note
 @enduml
