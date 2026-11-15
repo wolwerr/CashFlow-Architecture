@@ -49,7 +49,8 @@ A validação compara a ordem das interações nos quatro arquivos PlantUML exis
 | **Alta** | Detalhar idempotência HTTP e concorrência da projeção | Evitar duplicação em repetição de requisição ou eventos simultâneos |
 | **Alta** | Definir fonte e consulta segura de vínculos `subject ↔ merchant_id` | Necessário para autorização sem acoplamento impróprio ao IAM |
 | **Decidido em 15/11/2026** | **RN-04**: competência informada pelo comerciante; criação UTC | O consolidado agrupa por `reference_date`; fuso de referência/exibição e estratégia física de recomposição retroativa ainda pendentes; RN-07 já fixou BRL com duas casas e rejeição de precisão excessiva |
-| **Decidido em 15/11/2026** | **Complemento RN-04**: aceitar competência passada/atual, rejeitar futura, recompor saldos acumulados desde a data afetada | Testar reentrega e eventos fora de ordem sem dupla contabilização; estratégia física ainda pendente |\n| **Média** | Fixar mecanismo de reconciliação e recuperação de backlog | Recuperação deve ser reproduzível; RabbitMQ não é um log histórico ilimitado |
+| **Decidido em 15/11/2026** | **Complemento RN-04**: aceitar competência passada/atual, rejeitar futura, recompor saldos acumulados desde a data afetada | Testar reentrega e eventos fora de ordem sem dupla contabilização; estratégia física ainda pendente |
+| **Média** | Fixar mecanismo de reconciliação e recuperação de backlog | Recuperação deve ser reproduzível; RabbitMQ não é um log histórico ilimitado |
 | **Média** | Regenerar PNGs e validar visualmente os quatro PlantUML | As imagens Markdown podem apresentar a versão anterior até atualização |
 
 ## Critérios para aceitar a validação de execução
