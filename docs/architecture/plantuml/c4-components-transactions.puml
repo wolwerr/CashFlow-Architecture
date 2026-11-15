@@ -1,0 +1,55 @@
+@startuml CashFlow_Transactions_Components
+!include <C4/C4_Component>
+
+title CashFlow | C4 Nível 3: Serviço Transactions (Lançamentos)
+LAYOUT_LEFT_RIGHT()
+
+Container_Ext(nginx, "NGINX", "Reverse proxy", "Encaminha chamadas autenticadas")
+Container_Ext(keycloak, "Keycloak", "OIDC / JWKS", "Emite tokens; APIs validam JWT localmente")
+ContainerDb_Ext(transactionsDb, "Banco de Transactions", "PostgreSQL / EF Core", "Transactions, OutboxEvent e auditoria")
+ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1", "Recebe eventos publicados pela Outbox")
+Container_Ext(otel, "OpenTelemetry Collector", "OTLP", "Recebe telemetria técnica")
+
+Container_Boundary(transactions, "Transactions | API + Outbox worker (.NET 10)") {
+  Component(api, "Endpoints / API Host", "ASP.NET Core", "REST: crédito/débito; autenticação, entrada e composição")
+  Component(auth, "Autorização por comerciante", "Application / Policy", "Valida acesso do sujeito ao merchant_id; mecanismo/persistência pendentes")
+  Component(usecase, "Registrar lançamento", "Application", "Orquestra crédito/débito, invariantes e persistência atômica")
+  Component(domain, "Modelo financeiro", "Domain", "Entidades, value objects e regras financeiras")
+  Component(ports, "Portas de persistência e Outbox", "Application", "Interfaces para transação, repositório e publicação")
+  Component(repo, "Repositórios + Unit of Work", "Infrastructure / EF Core", "Grava Transaction + OutboxEvent no mesmo commit")
+  Component(worker, "Outbox BackgroundService", "Host + Infrastructure", "Busca eventos pendentes e coordena a publicação sem bloquear a API")
+  Component(publisher, "RabbitMQ Publisher", "Infrastructure / AMQP", "Publica eventos persistidos com publisher confirms")
+}
+
+Rel(nginx, api, "Registra créditos/débitos", "HTTPS / JSON")
+Rel(api, keycloak, "Busca chaves públicas, quando necessário; valida JWT localmente", "HTTPS / JWKS")
+Rel(api, auth, "Verifica acesso do comerciante")
+Rel(auth, usecase, "Autoriza operação")
+Rel(api, usecase, "Invoca caso de uso")
+Rel(usecase, domain, "Aplica regras")
+Rel(usecase, ports, "Exige commit atômico")
+Rel(repo, ports, "Implementa interfaces")
+Rel(repo, transactionsDb, "Persiste lançamento + Outbox", "SQL")
+Rel(worker, repo, "Busca/atualiza eventos pendentes")
+Rel(worker, publisher, "Publica e aguarda confirmação")
+Rel(publisher, rabbit, "Envia evento", "AMQP")
+Rel(api, otel, "Emite sinais técnicos", "OTLP")
+Rel(worker, otel, "Emite sinais técnicos", "OTLP")
+
+note bottom of worker
+  Worker pertence a Transactions.
+  Pode executar no mesmo host da API,
+  conforme ADR-002. Não depende
+  de Consolidation para confirmar
+  um lançamento.
+end note
+
+note bottom of auth
+  Keycloak autentica.
+  A regra de merchant_id pertence
+  ao CashFlow. O armazenamento
+  da associação ainda será definido.
+end note
+
+SHOW_LEGEND()
+@enduml
