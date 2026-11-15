@@ -1,5 +1,8 @@
 # Comparativo de custos: Azure Container Apps, AKS e AWS ECS/Fargate
 
+> **ESTUDO HISTÓRICO, NÃO UTILIZAR COMO ORÇAMENTO APROVADO.** Os valores desta comparação são hipóteses iniciais de um único ambiente, com dimensionamentos e recursos diferentes entre plataformas. O PostgreSQL Azure B2ms de **US$ 99,28/mês** não corresponde ao PostgreSQL de PROD adotado. A [ADR-009 aceita](adr/ADR-009-deployment-cloud.md) selecionou **AKS em East US**, com os valores efetivamente configurados na Azure Pricing Calculator, documentados no [orçamento dos quatro ambientes](four-environment-total-cost-plan.md): **DEV US$ 204,34/mês; HOM US$ 204,34/mês; PROD US$ 890,44/mês; SHARED US$ 5,90/mês; total US$ 1.305,02/mês**. Dentro de cada ambiente, o PostgreSQL custa **US$ 16,09 (DEV), US$ 16,09 (HOM), US$ 257,02 (PROD, HA habilitada)**, total **US$ 289,20/mês**. Estes valores aprovados não recalculam os cenários históricos ACA ou ECS, que não foram precificados de forma completa.
+
+
 > **Data da pesquisa:** 2026-11-15  
 > **Status:** estudo preliminar de referência, **não cotação nem decisão de fornecedor**  
 > **Vinculado à:** [ADR-009](adr/ADR-009-deployment-cloud.md)  
@@ -57,7 +60,7 @@ As reservas são **hipóteses iniciais**, não medições:
 | ACA, franquia mensal | 180.000 vCPU-s + 360.000 GiB-s + 2 milhões requests | Não abatida dos valores abaixo; aplicação real depende da assinatura [F2] |
 | VM Azure D4as v5 Linux East US | US$ 0,172/h, 4 vCPU / 16 GiB | Listagem de preços de referência [F3] |
 | AKS Standard, plano de controle | US$ 0,10/h por cluster | Microsoft Learn [F4]; nós, storage e redes cobrados à parte |
-| PostgreSQL Azure Flexible Server B2ms | US$ 99,28/mês, 2 vCores / 8 GiB | Tabela Azure [F5]; classe Burstable não é garantia de performance |
+| PostgreSQL Azure Flexible Server B2ms (**cenário antigo, sem HA**) | US$ 99,28/mês, 2 vCores / 8 GiB | Tabela Azure [F5]; classe Burstable não é garantia de performance |
 | PostgreSQL Azure, disco Premium SSD | US$ 0,115/GiB-mês | [F5]; 32 GiB ilustrativos = US$ 3,68 |
 | AWS Fargate Linux x86 us-east-1 | US$ 0,04048/vCPU-h + US$ 0,004445/GB-h | Fonte oficial [F6], cobrança por recurso e segundo |
 | AWS EC2 m6i.xlarge | US$ 0,192/h, 4 vCPU / 16 GiB | Preço público de referência [F7] |
