@@ -11,7 +11,7 @@ Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL 
 
 ![Modelo lógico preliminar de dados do CashFlow](images/data-model.png)
 
-> **PNG desatualizado após a ADR-006:** renderizar `plantuml/data-model.puml` novamente e substituir `images/data-model.png`. O `.puml` já separa identidade Keycloak de vínculos e permissões CashFlow.
+> **PNG a regenerar após a Validação 03:** a fonte `plantuml/data-model.puml` foi ajustada para representar `actor_id` como identificador textual OIDC e explicitar a unicidade de `ProcessedEvent.event_id`. Substituir `images/data-model.png` após a renderização.
 
 ## 2. Dados por contexto
 
@@ -27,7 +27,7 @@ Mostrar **quais informações cada domínio precisa manter**, sem antecipar SQL 
 | Consolidado diário | **DailyBalance** | Visão calculada para consulta dos valores de um dia. |
 | Consolidado diário | **ProcessedEvent** | Identificadores de eventos já aplicados, impedindo contagem dupla. |
 
-O **Keycloak é a fonte de identidade e autenticação**, incluindo o identificador estável do sujeito (`sub`), credenciais e configuração OIDC. A **autorização de negócio e os vínculos com comerciantes pertencem ao CashFlow**, com persistência e estratégia de consulta a definir na Issue #9. O `merchant_id` e o `actor_id` em registros financeiros são referências lógicas, **sem FK física** entre domínios. O banco de lançamentos continua sendo a fonte de verdade dos registros financeiros. O consolidado guarda uma visão derivada que deve poder ser reconstruída, conforme estratégia a ser definida na Issue #8.
+O **Keycloak é a fonte de identidade e autenticação**, incluindo o identificador estável do sujeito (`sub`), credenciais e configuração OIDC. A **autorização de negócio e os vínculos com comerciantes pertencem ao CashFlow**, com persistência e estratégia de consulta a definir na Issue #9. O `merchant_id` e o `actor_id` em registros financeiros são referências lógicas, **sem FK física** entre domínios. O `actor_id` foi representado como **STRING** no modelo lógico para acomodar o claim `sub` OIDC sem presumir UUID; caso adotemos um identificador interno distinto, será necessário documentar o mapeamento e a escolha do namespace do emissor. O banco de lançamentos continua sendo a fonte de verdade dos registros financeiros. O consolidado guarda uma visão derivada que deve poder ser reconstruída, conforme estratégia a ser definida na Issue #8.
 
 ### Relações importantes
 
@@ -39,7 +39,7 @@ O **Keycloak é a fonte de identidade e autenticação**, incluindo o identifica
 - Um lançamento pode originar um evento da Outbox; no futuro pode originar outros eventos do ciclo de vida. A Outbox e o lançamento podem ser gravados **na mesma transação**.
 - Um lançamento pode estar relacionado a registros de auditoria. A auditoria de sua criação, quando for requisito de consistência, deve ser persistida **na mesma transação** do lançamento, ou por um mecanismo com garantias equivalentes.
 - **AuditEvent não substitui Transaction**, e não transforma a solução automaticamente em Event Sourcing.
-- O **correlation_id** é um metadado técnico presente em **OutboxEvent** e **AuditEvent**, propagado também nos headers da mensagem. Ele associa registros, eventos e logs da mesma operação; não identifica o lançamento nem substitui o ID do evento.
+- O **event_id** de `ProcessedEvent` deve ser **único** no banco de Consolidation, sem FK física para Outbox. O identificador do registro de Outbox que originou o evento deve ser estável durante retries, mas o mapeamento do envelope e do ID do evento será detalhado no contrato.\n- O **correlation_id** é um metadado técnico presente em **OutboxEvent** e **AuditEvent**, propagado também nos headers da mensagem. Ele associa registros, eventos e logs da mesma operação; não identifica o lançamento nem substitui o ID do evento.
 - **Transaction** não precisa de correlation_id para representar o fato financeiro. **DailyBalance** não deve receber esse campo, pois agrega várias operações; em **ProcessedEvent** ele é opcional, já que o event_id permite rastrear a origem.
 - **ProcessedEvent e DailyBalance** devem ser atualizados atomicamente ao consumir um evento; em caso de reentrega, o ID já processado impede a soma novamente.
 - **Não existem chaves estrangeiras entre domínios** de Keycloak, autorização CashFlow, Lançamentos e Consolidado. A ligação entre identidades e regras de acesso ocorre por identificadores estáveis; entre os serviços financeiros, também por eventos.
@@ -82,7 +82,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 - **Saldo diário:** movimento líquido do dia ou saldo acumulado, incluindo saldo inicial.
 - **Dia financeiro:** definição de data de referência e fuso horário.
-- **Identidade e autorização:** Keycloak é o provedor escolhido para autenticação. A segregação por comerciante é uma regra do CashFlow; armazenamento, cardinalidades e fluxos de cadastro ainda precisam ser validados.
+- **Identidade e autorização:** Keycloak é o provedor escolhido para autenticação. `actor_id` representa referência textual ao sujeito OIDC, não UUID obrigatório. Definir issuer/namespace e, se houver ID interno, o mapeamento. A segregação por comerciante é uma regra do CashFlow; armazenamento, cardinalidades e fluxos de cadastro ainda precisam ser validados.
 - **Moeda e arredondamento:** precisão e convenção.
 - **Correções:** se serão implementadas no MVP e qual regra de estorno.
 - **Auditoria:** quais ações exigem registro transacional, prazo de retenção e quem pode consultar.
@@ -90,7 +90,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 **Nota:** `actor_id`, `reversal_of_id` e a chave de `DailyBalance` são indicativos. Poderão mudar conforme a definição de multiusuário, comerciantes e cálculo do saldo.
 
-## 6. Rastreabilidade
+## 6. Validação do modelo lógico\n\nA [Validação 03](data-model-validation.md) confere a correspondência do modelo com as ADR-003/005 e os requisitos. Permanecem pendentes o modelo físico (tipos SQL, índices, constraints e migrations), o cálculo aprovado do saldo, política de autorização por comerciante e contratos de evento. A revisão do diagrama **não é evidência de migrations executadas ou integridade verificada em banco**.\n\n## 7. Rastreabilidade
 
 | Requisito / risco | Elementos relacionados |
 | --- | --- |
