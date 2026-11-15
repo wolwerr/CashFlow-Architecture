@@ -16,7 +16,7 @@ Verificar se a propriedade dos dados entre Transactions, Consolidation, Keycloak
 | `Transaction` | Registro de fato financeiro, tipo CREDIT/DEBIT, valor, comerciante e data de referência | **Conforme com ressalva**: BRL, escala de duas casas e valor positivo decididos; competência e instante UTC decididos | Validar `amount` com decimal/numeric, tipo válido e data definida; dados de teste e constraints |
 | `OutboxEvent` | Evento durável vinculado ao lançamento, status, payload e `correlation_id` | **Conforme no desenho** | Mesmo commit de Transaction, ID de evento estável, retries e claim concorrente |
 | `AuditEvent` | Auditoria persistida, separada de logs operacionais | **Parcial**: RF-07 é proposta | Fechar atos auditáveis, quando exige atomicidade, acesso, retenção e proteção |
-| `DailyBalance` | Projeção por comerciante/data, totais de crédito/débito e líquido | **Parcial**: pressupõe segregação por comerciante e movimento líquido; saldo acumulado decidido junto com o movimento líquido; saldo inicial zero decidido por comerciante; estratégia de recálculo ainda aberta | Definir semântica e chave `merchant_id + reference_date`; testes de concorrência e dias vazios com carry-forward do saldo |
+| `DailyBalance` | Projeção por comerciante/data, totais de crédito/débito e líquido | **Parcial**: pressupõe segregação por comerciante e movimento líquido; saldo acumulado decidido junto com o movimento líquido; saldo inicial zero decidido por comerciante; regra de recomposição retroativa decidida; estratégia física e concorrência ainda abertas | Definir semântica e chave `merchant_id + reference_date`; testes de concorrência e dias vazios com carry-forward do saldo |
 | `ProcessedEvent` | ID de evento aplicado, chave única para idempotência | **Conforme no desenho**, restrição física pendente | `UNIQUE(event_id)`, commit atômico com a projeção, reentrega sem duplicidade |
 | `Merchant`, `Membership`, `Role`, `Permission` | Vínculos e autorização próprios do CashFlow | **Proposto e pendente da Issue #9** | Definir contexto dono, armazenamento, revogação, vínculo sujeito/comerciante, enforcement |
 | User/Keycloak | Identidade OIDC mantida fora dos domínios financeiros | **Conforme com ajuste** | Confirmar contrato de identificador `sub`, issuer e mecanismo de verificação; não presumir UUID |
@@ -61,10 +61,10 @@ Keycloak mantém usuários, credenciais e configurações OIDC. O CashFlow é re
 
 | Prioridade | Ponto aberto | Impacto |
 | --- | --- | --- |
-| **Decidido em 15/11/2026** | Exibir movimento líquido diário e saldo acumulado | Fórmulas conceituais definidas; saldo inicial de R$ 0,00 decidido; materialização e atualização retroativa ainda em aberto |
+| **Decidido em 15/11/2026** | Exibir movimento líquido diário e saldo acumulado | Fórmulas conceituais definidas; saldo inicial de R$ 0,00 decidido; retroatividade aprovada com atualização dos acumulados afetados; materialização e estratégia física ainda abertas |
 | **Decidido em 15/11/2026** | **RN-03:** saldo inicial de R$ 0,00 por comerciante no MVP | Cálculo acumulado parte de zero; não exige saldo de abertura |
 | **Decidido em 15/11/2026** | **RN-09:** dia sem lançamentos retorna crédito, débito e líquido zero; saldo acumulado anterior é mantido | Não exige linha física por dia vazio; antes do primeiro lançamento, saldo acumulado zero |
-| **Decidido em 15/11/2026** | **RN-04**: data de competência informada e instante de criação UTC | `reference_date` é `DATE`, enquanto `created_at` representa instante UTC; agrupamento pela competência | Retroatividade, datas futuras e fuso de apresentação ainda a definir |
+| **Decidido em 15/11/2026** | **RN-04**: data de competência informada e instante de criação UTC | `reference_date` é `DATE`, enquanto `created_at` representa instante UTC; agrupamento pela competência | Competências passadas/atuais aceitas, futuras rejeitadas; saldos posteriores afetados devem ser corrigidos. Fuso de referência para a data atual e exibição a definir |
 | **Decidido em 15/11/2026** | **RN-07**: BRL, `decimal`/.NET, `numeric(19,2)`/PostgreSQL, montantes > 0 e até duas casas | Rejeitar mais de duas casas sem arredondar; tipo `CREDIT`/`DEBIT` determina efeito. Totais e saldos calculados podem ser negativos |
 | **Alta** | Vínculo e autorização de merchant_id | Define propriedade e persistência de Merchant/Membership |
 | **Alta** | Modelo físico de Outbox/ProcessedEvent e concorrência | Define garantias reais de idempotência e entrega |
@@ -82,7 +82,7 @@ Keycloak mantém usuários, credenciais e configurações OIDC. O CashFlow é re
 - [x] Registradas decisões abertas sem alterar regras financeiras.
 - [ ] Validar modelo físico e migrations com PostgreSQL real.
 - [ ] Executar testes de rollback, duplicidade e concorrência.
-- [ ] Confirmar políticas ainda abertas para competências retroativas, correção e autorização; verificar RN-07 em constraints, testes e contratos.
+- [ ] Definir fuso de referência para a data atual, recomposição física de acumulados retroativos, correção/estorno e autorização; verificar RN-07 em constraints, testes e contratos.
 - [ ] Renderizar novamente `images/data-model.png` e verificar a apresentação.
 
 **Conclusão:** estrutura lógica coerente com as ADRs após ajuste, mas **a integridade de execução e as regras contábeis não estão comprovadas**.
