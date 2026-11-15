@@ -6,7 +6,9 @@ Este documento reúne os **diagramas de sequência**. Eles detalham em que ordem
 
 ## Autenticação e autorização por comerciante
 
-Fluxo conceitual de autenticação no **Keycloak** com OIDC (Authorization Code + PKCE para clientes públicos), obtenção do access token, passagem pelo API Gateway e autorização por comerciante no serviço financeiro. O Keycloak não armazena necessariamente os vínculos financeiros entre usuários e comerciantes. A decisão está formalizada na [ADR-006](adr/ADR-006-identity-and-access.md). Ainda não existe PNG deste fluxo.
+Fluxo conceitual de autenticação no **Keycloak** com OIDC (Authorization Code + PKCE para clientes públicos), obtenção do access token, passagem pelo API Gateway e autorização por comerciante no serviço financeiro. O Keycloak não armazena necessariamente os vínculos financeiros entre usuários e comerciantes. A decisão está formalizada na [ADR-006](adr/ADR-006-identity-and-access.md).
+
+![Autenticação no Keycloak e autorização por comerciante](images/sequence-auth.png)
 
 [Fonte PlantUML](plantuml/sequence-auth.puml)
 
@@ -34,6 +36,6 @@ A aplicação Web/Mobile consulta pelo API Gateway. O serviço de consolidado va
 
 [Fonte PlantUML](plantuml/sequence-query.puml)
 
-**Atenção:** os PNGs de sequência precisam ser regenerados após a inclusão do frontend e do gateway. Renderize novamente os `.puml` e substitua os PNGs em `images/` após revisar o layout. Para a sequência de autenticação, gere `sequence-auth.png` e então podemos adicioná-la visualmente ao Markdown.
+**Manutenção:** regenerar os PNGs dos diagramas quando as respectivas fontes PlantUML forem alteradas. A ADR-007 poderá modificar os fluxos de clientes e autenticação após aprovação.
 
 **Nota:** os protocolos e as formas de integração são propostas de arquitetura, a confirmar nos ADRs. As regras exatas do cálculo de saldo e o tratamento de eventual atraso continuam pendentes na Issue #3.
