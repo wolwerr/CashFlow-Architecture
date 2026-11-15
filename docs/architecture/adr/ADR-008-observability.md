@@ -22,7 +22,7 @@ Para demonstrar o comportamento sob falha e sob carga, precisamos tornar observ�
 
 OpenTelemetry é um conjunto de especificações, APIs, SDKs e ferramentas de coleta e exportação. **Não substitui sozinho o armazenamento, a visualização nem o alerta.**
 
-## Decisão decidida
+## Decisão registrada
 
 1. **Instrumentar Transactions e Consolidation com OpenTelemetry para .NET**, usando atributos de recurso como `service.name`, ambiente e versão; incluir requisições HTTP, chamadas ao banco e processamento de eventos.
 2. **Logs estruturados** por meio das APIs de logging do .NET, contendo identificadores de correlação, resultado da operação, duração e categoria de erro. Não registrar tokens, credenciais, payloads financeiros sensíveis ou dados pessoais desnecessários.
