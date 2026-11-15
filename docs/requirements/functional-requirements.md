@@ -71,10 +71,10 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 
 **Critérios de aceite:**
 - O sistema deverá exigir os campos mínimos definidos para o lançamento.
-- Um valor inválido não poderá ser registrado.
+- Um valor inválido não poderá ser registrado, incluindo zero, negativos e valores com mais de duas casas decimais (RN-07).
 - O comerciante deverá receber uma mensagem compreensível sem que um lançamento rejeitado seja contabilizado.
 
-**Campos do registro:** valor, tipo de movimentação e data de competência informada pelo comerciante (RN-04). Identificador do lançamento pode ser gerado pelo sistema. Precisão monetária, sinal de valor e data padrão serão refinados.
+**Campos do registro:** valor, tipo de movimentação e data de competência informada pelo comerciante (RN-04). Identificador do lançamento pode ser gerado pelo sistema. **RN-07 decidida:** BRL com duas casas, valor estritamente positivo, rejeição de precisão maior que duas casas, sem arredondamento automático de entradas. A data padrão da interface permanece a definir.
 
 ### HU-05: Consultar histórico (RF-05, proposto)
 
@@ -150,7 +150,7 @@ O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será
 | RN-04 | **Decidido: data de competência informada pelo comerciante e instante de registro em UTC.** | `reference_date` representa a data de negócio; `created_at` registra o instante efetivo em UTC. Datas futuras, retroativas e data padrão da interface ainda exigem regras. |
 | RN-05 | Um lançamento pode ser excluído, editado ou estornado? | Define correções e preservação do histórico. |
 | RN-06 | É necessário separar dados de diferentes comerciantes? | Define o escopo da consulta e da identificação. |
-| RN-07 | Qual moeda e quais regras de arredondamento? | Evita divergências de valor. |
+| RN-07 | **Decidido: somente BRL, com duas casas decimais e montantes positivos no MVP.** | Usar `decimal` no .NET e `numeric(19,2)` no PostgreSQL; rejeitar `amount <= 0` e valores com mais de duas casas, sem arredondamento silencioso. `CREDIT`/`DEBIT` define o sinal contábil; saída no consolidado mantém duas casas. |
 | RN-08 | Quanto tempo após o registro o consolidado precisa refletir o lançamento? | Define a expectativa funcional de atualização; a meta técnica será tratada na Issue #4. |
 | RN-09 | **Decidido: movimento diário zero, mantendo o saldo acumulado no dia sem lançamentos.** | Crédito, débito e líquido = R$ 0,00; saldo acumulado é o último valor anterior, ou R$ 0,00 antes do primeiro registro. Não implica gravar linhas vazias no banco. |
 
