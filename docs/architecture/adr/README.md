@@ -6,7 +6,7 @@
 
 ## Objetivo
 
-Justificar decisões do CashFlow com **contexto, alternativas, benefícios, riscos e consequências operacionais**. O desenho-alvo contempla Web/Mobile, API Gateway e IAM, mas o desafio exige principalmente dois serviços financeiros, registro independente do consolidado e processamento sob carga. Não confundir capacidades propostas com funcionalidades obrigatórias para o MVP.
+Justificar decisões do CashFlow com **contexto, alternativas, benefícios, riscos e consequências operacionais**. O desenho-alvo contempla cliente Web, Keycloak e proxy NGINX opcional; Gateway dedicado e BFF são evoluções futuras, mas o desafio exige principalmente dois serviços financeiros, registro independente do consolidado e processamento sob carga. Não confundir capacidades propostas com funcionalidades obrigatórias para o MVP.
 
 ## Registro das decisões
 
@@ -51,7 +51,7 @@ Justificar decisões do CashFlow com **contexto, alternativas, benefícios, risc
 - A API financeira não deve depender da disponibilidade do consolidado para confirmar um lançamento.
 - O Outbox não evita entrega duplicada; o consolidado precisa registrar a aplicação de cada `event_id` de forma atômica com a atualização do saldo.
 - Em caso de falha do IAM, tokens e chaves em cache podem permitir continuidade temporária, mas revogação e alteração de permissões exigem política explícita.
-- Um API Gateway e uma interface Web/Mobile aumentam o escopo, os custos e os pontos de falha; são elementos propostos da arquitetura-alvo.
+- Interface Web, NGINX e componentes futuros como API Gateway dedicado ou BFF aumentam o escopo, custos e pontos de falha; sua implementação deve ser justificada separadamente.
 - Banco relacional por domínio não implica servidores físicos independentes para o MVP, mas deve preservar isolamento lógico e propriedade dos dados.
 - Metas de volume, latência, perdas e consistência precisam ser verificadas por testes, não apenas representadas em diagramas.
 
