@@ -14,7 +14,7 @@ O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos.
 
 ## C4 Nível 2: Contêineres
 
-A **solução completa proposta** contém uma aplicação React responsiva, NGINX como reverse proxy obrigatório no MVP, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
+A **solução completa proposta** contém uma aplicação React responsiva, NGINX como reverse proxy definido para implementação no MVP, os **dois serviços financeiros independentes** (Lançamentos e Consolidado diário), o Keycloak como provedor de identidade, bancos separados por domínio, mensageria e coleta de observabilidade. O worker Outbox continua interno ao serviço de lançamentos.
 
 ![Contêineres do CashFlow](images/c4-containers.png)
 
@@ -65,7 +65,7 @@ Os protocolos representam **propostas**, não decisões finais. Produtos e garan
 | Keycloak e seu banco | **Escolha arquitetural aceita (ADR-006)**; implantação e administração completas podem ficar fora do MVP financeiro |
 | Mensageria, Outbox e observabilidade | **Decisões de arquitetura propostas** para atender resiliência e operação |
 
-O MVP de código pode focar as APIs e o processamento financeiro, enquanto o desenho-alvo documenta a evolução da aplicação. Isso evita confundir a apresentação com uma promessa de implementar todas as interfaces.
+A implementação planejada do MVP inclui NGINX no caminho Web e mantém o foco funcional nas duas APIs e no processamento financeiro; a infraestrutura completa ainda precisa ser integrada e testada. Isso evita confundir a apresentação com uma promessa de implementar todas as interfaces.
 
 ## Autenticação, autorização e validação de JWT
 
@@ -83,7 +83,7 @@ Os serviços de **Lançamentos** e **Consolidado** são prioritários para instr
 | --- | --- |
 | **Logs estruturados** | Diagnóstico de erros, tentativas de acesso e processamento, sem expor tokens, senhas ou dados financeiros sensíveis. |
 | **Métricas** | Taxa de requisições, erros, latência, eventos pendentes na Outbox, tamanho das filas e atraso da consolidação. |
-| **Traces distribuídos** | Acompanhar operações que passam por proxy opcional, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
+| **Traces distribuídos** | Acompanhar operações que passam por NGINX, APIs, mensageria e consumidor, propagando contexto de rastreamento. |
 
 **OTLP** é o protocolo proposto para exportação dos sinais; **OpenTelemetry** é a opção de instrumentação/coleta. A escolha de armazenamento, dashboards, alertas e regras de retenção será formalizada nas próximas issues. A trilha de **auditoria financeira persistida** não é substituída por logs de aplicação.
 
