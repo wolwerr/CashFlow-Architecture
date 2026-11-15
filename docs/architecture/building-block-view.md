@@ -20,7 +20,7 @@ A **solução completa proposta** contém uma Aplicação Web/Mobile, um API Gat
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** o PlantUML do C4 Nível 2 já foi atualizado para Keycloak. Gere novamente `images/c4-containers.png` para refletir essa alteração.
+> O diagrama apresenta a arquitetura-alvo. A escolha de frontend e Gateway será formalizada na [ADR-007](adr/ADR-007-clients-api-gateway.md).
 
 | Bloco | Responsabilidade |
 | --- | --- |
