@@ -34,7 +34,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 | RF-06 | Corrigir por estorno | Permitir anular o efeito de um lançamento incorreto preservando o histórico. | Proposto | Futuro / a validar |
 | RF-07 | Manter trilha de auditoria | Registrar ações financeiras relevantes com autor, operação, horário, resultado e correlação. Não é uma funcionalidade de consulta pública. | Proposto | Importante para integridade |
 
-**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. Dia sem lançamentos, competência e retroatividade continuam pendentes.
+**Decisão de negócio registrada em 15/11/2026:** a consulta do consolidado exibirá **movimento líquido diário e saldo acumulado**, além dos totais de crédito e débito. O enunciado não exige expressamente essa combinação; é uma decisão do projeto. **RN-03 decidida:** saldo inicial de **R$ 0,00 por comerciante no MVP**. **RN-09 decidida:** em dias sem lançamentos, totais de crédito e débito e movimento líquido são zero, e o saldo acumulado é mantido. Competência e retroatividade continuam pendentes.
 
 ## 4. Histórias de usuário e critérios de aceite
 
@@ -63,7 +63,7 @@ Consulta de histórico, estorno e múltiplos comerciantes são possibilidades a 
 **Critérios de aceite:**
 - Dada uma data válida, quando o comerciante solicitar o consolidado, então o sistema deverá apresentar um resultado referente à data informada.
 - A consulta deverá retornar totais de crédito e débito, movimento líquido diário e saldo acumulado, conforme a decisão RN-02.
-- Para um dia sem lançamentos, a resposta deverá seguir a regra a ser definida (por exemplo, movimento zero ou manutenção do saldo anterior).
+- Para um dia sem lançamentos, a consulta deve retornar créditos, débitos e movimento líquido de **R$ 0,00**, mantendo o último saldo acumulado disponível. Antes da primeira movimentação, esse saldo é **R$ 0,00** (RN-03/RN-09).
 
 ### HU-04: Validar lançamento (RF-04, proposto)
 
@@ -124,7 +124,7 @@ Veja o [modelo de dados e auditoria](../architecture/data-model.md).
 2. O sistema localiza o consolidado correspondente.
 3. O sistema apresenta o resultado segundo a regra de cálculo aprovada.
 
-**Fluxos alternativos a detalhar:** dia sem lançamentos, consulta de data inválida, consolidado ainda não atualizado e indisponibilidade temporária.
+**Fluxos alternativos a detalhar:** consulta de data inválida, consolidado ainda não atualizado e indisponibilidade temporária. Para dia sem movimentações, aplicar RN-09.
 
 ## 6. Exemplo para discutir com o negócio
 
@@ -138,7 +138,7 @@ Considere que, em um mesmo dia, sejam registrados:
 
 Esse exemplo pressupõe, **apenas para ilustração**, que crédito soma e débito subtrai.
 
-O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será o saldo anterior mais R$ 150,00. No MVP, o saldo inicial de cada comerciante será **R$ 0,00**. Ainda precisamos decidir a apresentação de dias sem movimento e lançamentos retroativos.
+O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será o saldo anterior mais R$ 150,00. No MVP, o saldo inicial de cada comerciante será **R$ 0,00**. Em dias sem movimentos, o saldo acumulado permanece inalterado (RN-09). A política para lançamentos retroativos permanece pendente.
 
 ## 7. Regras e dúvidas que precisam de decisão
 
@@ -152,7 +152,7 @@ O **movimento líquido** deste exemplo é R$ 150,00. O **saldo acumulado** será
 | RN-06 | É necessário separar dados de diferentes comerciantes? | Define o escopo da consulta e da identificação. |
 | RN-07 | Qual moeda e quais regras de arredondamento? | Evita divergências de valor. |
 | RN-08 | Quanto tempo após o registro o consolidado precisa refletir o lançamento? | Define a expectativa funcional de atualização; a meta técnica será tratada na Issue #4. |
-| RN-09 | Como deve aparecer um dia sem lançamentos? | Define um caso de consulta frequente. |
+| RN-09 | **Decidido: movimento diário zero, mantendo o saldo acumulado no dia sem lançamentos.** | Crédito, débito e líquido = R$ 0,00; saldo acumulado é o último valor anterior, ou R$ 0,00 antes do primeiro registro. Não implica gravar linhas vazias no banco. |
 
 **Tratamento proposto:** caso não seja possível obter respostas da empresa, documentar as premissas adotadas para o MVP, explicitar seus impactos e evitar apresentá-las como requisitos fornecidos pela banca.
 
