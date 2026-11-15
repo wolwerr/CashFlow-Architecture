@@ -7,7 +7,7 @@
 
 ## Contexto e escopo
 
-O desafio CashFlow exige APIs para registrar créditos/débitos e consultar o consolidado diário. A arquitetura-alvo no [C4 Nível 2](../building-block-view.md) inclui Aplicação Web/Mobile, API Gateway e Keycloak, mas **o enunciado não exige frontend Web, aplicativo mobile nativo nem Gateway**. Estas capacidades facilitam uso e evolução, mas não devem comprometer a comprovação do requisito central: Transactions continua registrando quando Consolidation está indisponível.
+O desafio CashFlow exige APIs para registrar créditos/débitos e consultar o consolidado diário. A arquitetura-alvo no [C4 Nível 2](../building-block-view.md) apresentava Aplicação Web/Mobile, um Gateway genérico e Keycloak, mas **o enunciado não exige frontend Web, aplicativo mobile nativo nem Gateway**. Estas capacidades facilitam uso e evolução, mas não devem comprometer a comprovação do requisito central: Transactions continua registrando quando Consolidation está indisponível.
 
 A ADR-001 fixou C# / .NET 10 LTS para as APIs financeiras. A ADR-006 adotou **Keycloak** para identidade e autenticação com OIDC/OAuth 2.0; autorização por comerciante permanece nas APIs CashFlow.
 
@@ -33,7 +33,7 @@ Esta ADR avalia **tecnologia do cliente, experiência mobile, necessidade de Gat
 | **Gateway gerenciado na cloud** | Operação de borda delegada, funcionalidades condicionadas ao produto | Dependência do provedor e custos variáveis; menor reprodução em Docker Compose |
 | **Acesso direto às duas APIs** | Menos infraestrutura e menor latência inicial | Clientes conhecem múltiplas origens/endereços; políticas de borda dispersas |
 
-**Decisão de escopo aceita:** **não implementar um API Gateway dedicado no MVP**. Para a demonstração, as duas APIs financeiras podem ser acessadas diretamente em ambiente local/controlado e protegidas por seus próprios controles de autenticação e autorização. Um NGINX simples pode ser adicionado somente se for necessário servir o React, concentrar origens ou fazer proxy/TLS; sua presença não deve ser apresentada automaticamente como implantação de uma plataforma completa de API Gateway. **Na arquitetura-alvo**, manter o papel de API Gateway como evolução futura, com **NGINX como tecnologia candidata**, reavaliando necessidade, recursos, custo e operação quando houver múltiplos clientes ou requisitos explícitos de políticas de borda. YARP permanece alternativa se houver necessidade de extensões em C#.
+**Decisão de escopo aceita:** **não implementar um API Gateway dedicado no MVP**. Para a demonstração, as duas APIs financeiras podem ser acessadas diretamente em ambiente local/controlado e protegidas por seus próprios controles de autenticação e autorização. Um NGINX simples pode ser adicionado somente se for necessário servir o React, concentrar origens ou fazer proxy/TLS; sua presença não deve ser apresentada automaticamente como implantação de uma plataforma completa de API Gateway. **No C4 atualizado**, representar NGINX como proxy opcional e manter o papel de API Gateway dedicado apenas na documentação de evolução futura, com **NGINX como tecnologia candidata**, reavaliando necessidade, recursos, custo e operação quando houver múltiplos clientes ou requisitos explícitos de políticas de borda. YARP permanece alternativa se houver necessidade de extensões em C#.
 
 Um Gateway futuro pode centralizar TLS (conforme infraestrutura), roteamento `/api/transactions/*` e `/api/consolidation/*`, limites de requisição, correlação e logs. **O Gateway não deve ser a única camada de autenticação/autorização**: cada API financeira valida JWT e verifica escopo do comerciante.
 
@@ -47,7 +47,7 @@ Um Gateway futuro pode centralizar TLS (conforme infraestrutura), roteamento `/a
 | **Backend for Frontend (BFF)** | Backend confidencial realiza OIDC com Keycloak, mantém tokens no servidor e expõe sessão ao navegador por cookie seguro | Protege melhor os tokens da exposição ao JavaScript, mas exige sessão, proteção CSRF, disponibilidade do BFF e uma implantação adicional |
 | **Aplicação Web renderizada no servidor** | Servidor administra autenticação/sessão e gera parte ou toda a interface | Pode reduzir exposição de tokens, com outro modelo de desenvolvimento e renderização |
 
-**Decisão de escopo proposta:** para uma interface React no **MVP**, adotar SPA pública com OIDC Authorization Code + PKCE no Keycloak, controles rigorosos contra XSS e sem armazenamento persistente de tokens em `localStorage`. **BFF fica explicitamente fora do MVP e é evolução futura a avaliar para produção Web financeira**, com ASP.NET Core como candidato e detalhamento na Issue #9. Não confundir BFF com o Gateway: o BFF administra a sessão do navegador; o Gateway fornece roteamento e políticas de borda. Eles podem compartilhar infraestrutura *somente após* desenho explícito e testes, não por pressuposição.
+**Decisão de escopo aceita:** para uma interface React no **MVP**, adotar SPA pública com OIDC Authorization Code + PKCE no Keycloak, controles rigorosos contra XSS e sem armazenamento persistente de tokens em `localStorage`. **BFF fica explicitamente fora do MVP e é evolução futura a avaliar para produção Web financeira**, com ASP.NET Core como candidato e detalhamento na Issue #9. Não confundir BFF com o Gateway: o BFF administra a sessão do navegador; o Gateway fornece roteamento e políticas de borda. Eles podem compartilhar infraestrutura *somente após* desenho explícito e testes, não por pressuposição.
 
 O BFF deve usar OIDC Authorization Code com cliente confidencial, cookies `HttpOnly`, `Secure`, política `SameSite` adequada, proteção anti-CSRF, sessão/expiração, armazenamento seguro de tokens e logout. Não colocar refresh tokens em `localStorage`.
 
@@ -62,7 +62,7 @@ Comerciante / Administrador
    -> React Web responsivo
    -> Keycloak (login OIDC + PKCE no MVP)
    -> APIs diretamente no MVP (ou NGINX simples, se necessário)
-   -> API Gateway NGINX somente em evolução futura
+   -> API Gateway dedicado (fora do MVP, evolução futura)
       -> Transactions API (JWT + autorização por comerciante)
       -> Consolidation API (JWT + autorização por comerciante)
 
@@ -70,7 +70,7 @@ Transactions -> PostgreSQL Transactions (lançamento + Outbox)
 Outbox worker -> RabbitMQ -> Consolidation consumer -> PostgreSQL Consolidation
 ```
 
-**Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**; o Gateway mostrado no C4 corresponde à **arquitetura-alvo**, não a uma obrigação de implementação no MVP. Os diagramas C4 e de sequência só serão alterados após aprovação da ADR para não confundir proposta e decisão aceita.
+**Futuro opcional:** React -> BFF .NET (sessão por cookie; tokens no servidor) -> NGINX -> APIs. O fluxo acima é **lógico**. Os diagramas C4 e de sequência foram alinhados à decisão aprovada: NGINX é opcional como reverse proxy, enquanto API Gateway dedicado e BFF ficam para o futuro.
 
 ## 5. Consequências positivas
 
