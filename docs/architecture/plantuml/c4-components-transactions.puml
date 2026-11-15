@@ -6,7 +6,8 @@ LAYOUT_LEFT_RIGHT()
 
 Container_Ext(nginx, "NGINX", "HTTP interno :8080", "Encaminha chamadas autenticadas")
 Container_Ext(keycloak, "Keycloak", "JWKS / HTTPS :443", "Emite tokens; APIs validam JWT localmente")
-ContainerDb_Ext(transactionsDb, "Banco de Transactions", "PostgreSQL / TCP :5432", "Transactions, Outbox, auditoria e Idempotency-Key")\nContainerDb_Ext(authDb, "Banco Autorização CashFlow", "PostgreSQL lógico", "Vínculos e papéis por comerciante")
+ContainerDb_Ext(transactionsDb, "Banco de Transactions", "PostgreSQL / TCP :5432", "Transactions, Outbox, auditoria e Idempotency-Key")
+ContainerDb_Ext(authDb, "Banco Autorização CashFlow", "PostgreSQL lógico", "Vínculos e papéis por comerciante")
 ContainerQueue_Ext(rabbit, "RabbitMQ", "AMQP 0-9-1 / TCP :5672", "Recebe eventos publicados pela Outbox")
 Container_Ext(otel, "OpenTelemetry Collector", "OTLP gRPC :4317 / HTTP :4318", "Recebe telemetria técnica")
 
@@ -23,7 +24,8 @@ Container_Boundary(transactions, "Transactions | API + Outbox worker") {
 
 Rel(nginx, api, "Registra créditos/débitos", "HTTP / TCP :8080 privado")
 Rel(api, keycloak, "Busca chaves públicas, quando necessário; valida JWT localmente", "HTTPS / TCP :443")
-Rel(api, auth, "Verifica acesso do comerciante")\nRel(auth, authDb, "Consulta vínculo via interface controlada", "mecanismo a definir")
+Rel(api, auth, "Verifica acesso do comerciante")
+Rel(auth, authDb, "Consulta vínculo via interface controlada", "mecanismo a definir")
 Rel(auth, usecase, "Autoriza operação")
 Rel(api, usecase, "Invoca caso de uso")
 Rel(usecase, domain, "Aplica regras")
