@@ -29,6 +29,8 @@
 
 **Critério de conclusão:** evidência de testes e relatório; nenhuma métrica é presumida. Azure e promoção em environments futuras.
 
+**Progresso Trilha 04:** instrumento de carga local e testes automatizados documentados em [Hardening e evidências de carga](local-hardening-load.md). O benchmark real, as simulações de recuperação, auditoria, observabilidade e SLO de projeção continuam pendentes de execução e evidência.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
