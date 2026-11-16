@@ -3,6 +3,7 @@ using System.Security.Claims;
 using CashFlow.Consolidation.Application.Gateways;
 using CashFlow.Consolidation.Application.UseCases.GetDailyConsolidation;
 using CashFlow.Consolidation.Infrastructure.Gateways;
+using CashFlow.Security.Keycloak;
 
 namespace CashFlow.Consolidation.Api.Endpoints;
 
