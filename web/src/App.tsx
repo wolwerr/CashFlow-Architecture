@@ -4,6 +4,9 @@ import type { Balance, TransactionPage, TransactionRecord, Merchant } from './ap
 import { beginLogin, finishLogin, getSubject, logout, renewSession } from './auth/oidc';
 import type { TokenSet } from './auth/oidc';
 import { businessDate } from './time';
+import { normalizeBrl } from './api/brl';
+import { pollProjection } from './api/projection';
+import type { Projection } from './api/projection';
 
 type Notice = { text: string; isError: boolean };
 const formatMoney = (value: string) => new Intl.NumberFormat('pt-BR', {
@@ -34,6 +37,7 @@ export default function App() {
   const [newMerchantName, setNewMerchantName] = useState('');
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [pendingProjection, setPendingProjection] = useState<Projection | null>(null);
   const pendingKey = useRef<string | null>(null);
   const authStarted = useRef(false);
   const currentToken = activeAccessToken(session);
@@ -86,6 +90,23 @@ export default function App() {
     return () => { active = false; };
   }, [currentToken]);
 
+  useEffect(() => {
+    if (!pendingProjection || !currentToken) return;
+    let active = true;
+    const projection = pendingProjection;
+    const token = currentToken;
+    const read = () => dailyBalance(token, projection.merchantId, projection.referenceDate);
+    const delay = (ms: number) => new Promise<void>(resolve => { window.setTimeout(resolve, ms); });
+    void pollProjection(projection, read, setBalance, () => active, delay).then(updated => {
+      if (!active) return;
+      setPendingProjection(null);
+      setNotice(updated
+        ? { text: 'Lançamento consolidado. Saldo atualizado.', isError: false }
+        : { text: 'Lançamento registrado, mas o saldo ainda está pendente. Consulte novamente e verifique o Consolidation se persistir.', isError: false });
+    });
+    return () => { active = false; };
+  }, [pendingProjection, currentToken]);
+
   async function registerMerchant(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentToken || !newMerchantName.trim()) return;
@@ -121,6 +142,7 @@ export default function App() {
     setPage(1);
     pendingKey.current = null;
     setNotice(null);
+    setPendingProjection(null);
   }, []);
 
   const load = useCallback(async (token: string, merchantId: string, day: string, requestedPage: number) => {
@@ -151,8 +173,9 @@ export default function App() {
   async function submitTransaction(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentToken) { setNotice({ text: 'Sessão expirada. Faça login novamente.', isError: true }); return; }
-    if (!validMerchant(merchant) || !validBrl(amount)) {
-      setNotice({ text: 'Comerciante ou valor inválido. Use valor como 10.25.', isError: true }); return;
+    const normalized = normalizeBrl(amount);
+    if (!validMerchant(merchant) || !normalized) {
+      setNotice({ text: 'Comerciante ou valor inválido. Use 100, 100,00 ou 100.00.', isError: true }); return;
     }
     setBusy(true);
     setNotice(null);
@@ -160,11 +183,14 @@ export default function App() {
     pendingKey.current ??= crypto.randomUUID();
     try {
       const created = await createTransaction(currentToken, {
-        merchant_id: merchant, reference_date: date, type, amount
+        merchant_id: merchant, reference_date: date, type, amount: normalized
       }, pendingKey.current);
       pendingKey.current = null;
       setAmount('');
-      setNotice({ text: 'Lançamento ' + created.id + ' registrado. A consolidação é assíncrona.', isError: false });
+      setNotice({ text: 'Lançamento ' + created.id + ' registrado. Aguardando atualização do saldo.', isError: false });
+      setPendingProjection({
+        merchantId: merchant, referenceDate: date, type, amount: normalized, before: balance
+      });
       await load(currentToken, merchant, date, 1).catch(() => {
         setBalance(null);
         setHistory(null);
@@ -269,14 +295,14 @@ export default function App() {
               </select>
             </label>
             <label>Valor (BRL)
-              <input aria-label="Valor (BRL)" inputMode="decimal" placeholder="10.25"
+              <input aria-label="Valor (BRL)" inputMode="decimal" placeholder="100,00"
                 value={amount} onChange={event => changeInput(event.target.value)} />
             </label>
             <button disabled={busy || !validMerchant(merchant) || !validBrl(amount)} type="submit">
               {busy ? 'Processando...' : 'Registrar lançamento'}
             </button>
           </form>
-          <p className="muted">Use ponto decimal e duas casas, por exemplo, 125.50.</p>
+          <p className="muted">Informe em reais: 100, 100,00 ou 1.234,56.</p>
         </section>
         <section className="panel">
           <h2>Saldo diário</h2>
@@ -286,6 +312,9 @@ export default function App() {
             <div><span>Líquido do dia</span><strong>{formatMoney(balance.net_amount)}</strong></div>
             <div className="total"><span>Saldo acumulado</span><strong>{formatMoney(balance.closing_balance)}</strong></div>
           </div> : <p className="muted">Consulte um comerciante e uma data para visualizar o saldo.</p>}
+          {pendingProjection && <p className="muted" role="status">
+            Aguardando a consolidação do último lançamento. O histórico pode atualizar antes do saldo.
+          </p>}
           <p className="muted">O Consolidation é atualizado de forma assíncrona após o registro.</p>
         </section>
       </div>
