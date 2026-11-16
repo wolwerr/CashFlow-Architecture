@@ -1,7 +1,7 @@
 using CashFlow.Transactions.Domain.Entities;
 using CashFlow.Transactions.Domain.Enums;
 using CashFlow.Transactions.Domain.Exceptions;
-using CashFlow.Transactions.Domain.ValueObjects;
+using CashFlow.Transactions.Domain.Rules;
 using Xunit;
 
 namespace CashFlow.Transactions.UnitTests;
