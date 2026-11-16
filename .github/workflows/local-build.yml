@@ -309,6 +309,9 @@ jobs:
       - name: Sonar | Verify local recovery drill safety tests (no service disruption in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_recovery_drill.py'
 
+      - name: Sonar | Verify local backup and restore safety tests (no database changes in CI)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_backup_restore_check.py'
+
       - name: Sonar | Run CI severity policy tests
         run: python3 -m unittest discover -s .github/scripts -p 'test_sonar_severity_gate.py'
 
