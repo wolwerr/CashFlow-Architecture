@@ -42,6 +42,10 @@ function walk(root: unknown): Node[] {
   if (Array.isArray(root)) return root.flatMap(walk);
   if (typeof root !== 'object' || root === null || !('props' in root)) return [];
   const el = root as Node;
+  if (typeof el.type === 'function') {
+    const view = el.type as (props: Node['props']) => unknown;
+    return [el, ...walk(view(el.props))];
+  }
   return [el, ...walk(el.props.children)];
 }
 function render() {
