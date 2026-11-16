@@ -5,6 +5,7 @@ actor Comerciante as U
 participant "React SPA" as W
 participant "NGINX" as G
 participant "Transactions API" as API
+participant "Keycloak\nGroups / autorizacao" as KC
 database "PostgreSQL\nTransactions" as DBT
 participant "Transactions\nOutbox worker" as OUT
 queue "RabbitMQ\nfila duravel" as MQ
@@ -15,12 +16,29 @@ note over CON: Consumer indisponivel
 U -> W: Registra credito ou debito
 W -> G: POST /api/v1/transactions/*\nHTTPS :443 + Bearer
 G -> API: Proxy HTTP :8080
-API -> API: Valida JWT e merchant_id
-API -> DBT: Grava chave idempotente + Transaction\nOutbox + auditoria no mesmo commit
-DBT --> API: COMMIT confirmado
-API --> G: HTTP 201 Created
-G --> W: Registro confirmado
-W --> U: Exibe confirmacao
+API -> API: Valida JWT localmente (assinatura, iss, aud, exp)
+alt JWT ausente ou invalido
+  API --> G: HTTP 401
+  G --> W: HTTP 401
+else JWT valido
+  API -> KC: Consulta interna autenticada de vinculo atual\nsub + merchant_id + criar transacao
+  alt Sem vinculo / permissao
+    KC --> API: Nao autorizado
+    API --> G: HTTP 403
+    G --> W: HTTP 403
+  else Keycloak indisponivel / resposta incerta
+    KC --> API: Falha / timeout
+    API --> G: HTTP 503 (fail closed)
+    G --> W: HTTP 503
+  else Autorizacao confirmada
+    KC --> API: ADMIN/OPERATOR no merchant solicitado
+    API -> DBT: Grava chave idempotente + Transaction\nOutbox + auditoria no mesmo commit
+    DBT --> API: COMMIT confirmado
+    API --> G: HTTP 201 Created
+    G --> W: Registro confirmado
+    W --> U: Exibe confirmacao
+  end
+end
 
 ... Etapa assincrona durante a falha ...
 OUT -> DBT: Busca e reivindica pendencias
@@ -53,7 +71,7 @@ else Evento repetido
 end
 CON -> MQ: ACK somente depois de resultado persistido seguro
 note over API,OUT
-Falha de Consolidation nao impede registro.
+Falha de Consolidation nao impede registro\nquando Keycloak confirmou autorizacao.\nFalha na verificacao de vinculo impede registro.
 Banco Transactions, API e proxy devem
 continuar disponiveis no ensaio.
 end note

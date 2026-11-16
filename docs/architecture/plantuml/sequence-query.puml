@@ -5,34 +5,47 @@ actor Comerciante as U
 participant "React SPA" as W
 participant "NGINX" as G
 participant "Consolidation API" as C
+participant "Keycloak\nGroups / autorizacao" as KC
 database "PostgreSQL\nConsolidation" as DB
 
 U -> W: Seleciona comerciante e data
 W -> G: GET /api/v1/consolidation/*\nBearer JWT; HTTPS :443 publico
 G -> C: Proxy com Authorization\nHTTP :8080 privado
-C -> C: Valida assinatura JWT, issuer, aud, exp\ne autorizacao por merchant_id
-alt Requisicao nao autenticada ou nao autorizada
-  C --> G: HTTP 401 ou 403
-  G --> W: HTTP 401 ou 403
-else Consulta autorizada
-  C -> C: Valida data e parametros
-  alt Parametros invalidos
-    C --> G: Resposta de validacao; contrato pendente
-    G --> W: Exibe erro
-  else Parametros validos
-    C -> DB: Consulta totais do dia e soma net_amount\nate a data, no banco proprio
-    alt Projecao encontrada
-      DB --> C: Totais diarios e soma historica
-      C --> G: Creditos, debitos, liquido e acumulado
-      G --> W: Apresenta saldo
-    else Dia sem movimentacao
-      DB --> C: Sem movimento na data; soma anteriores
-      C --> G: Credito 0, debito 0, liquido 0; acumulado anterior
-      G --> W: Mostra movimento zero e saldo mantido
-    else Dados atrasados ou falha na projecao
-      DB --> C: Projecao potencialmente desatualizada
-      C --> G: Tratamento conforme contrato a definir
-      G --> W: Exibe estado adequado
+C -> C: Valida assinatura JWT, issuer, aud, exp/nbf
+alt JWT ausente ou invalido
+  C --> G: HTTP 401
+  G --> W: HTTP 401
+else JWT valido
+  C -> KC: Consulta autenticada de vinculo atual\nsub + merchant_id + consultar consolidado\nADMIN/OPERATOR; sem cache positivo
+  alt Sem vinculo ou permissao
+    KC --> C: Nao autorizado
+    C --> G: HTTP 403
+    G --> W: HTTP 403
+  else Keycloak indisponivel / resposta incerta
+    KC --> C: Falha / timeout
+    C --> G: HTTP 503 (fail closed)
+    G --> W: HTTP 503
+  else Consulta autorizada
+    KC --> C: Autorizado
+    C -> C: Valida data e parametros
+    alt Parametros invalidos
+      C --> G: Resposta de validacao; contrato pendente
+      G --> W: Exibe erro
+    else Parametros validos
+      C -> DB: Consulta totais do dia e soma net_amount\nate a data, no banco proprio
+      alt Projecao encontrada
+        DB --> C: Totais diarios e soma historica
+        C --> G: Creditos, debitos, liquido e acumulado
+        G --> W: Apresenta saldo
+      else Dia sem movimentacao
+        DB --> C: Sem movimento na data; soma anteriores
+        C --> G: Credito 0, debito 0, liquido 0; acumulado anterior
+        G --> W: Mostra movimento zero e saldo mantido
+      else Dados atrasados ou falha na projecao
+        DB --> C: Projecao potencialmente desatualizada
+        C --> G: Tratamento conforme contrato a definir
+        G --> W: Exibe estado adequado
+      end
     end
   end
 end

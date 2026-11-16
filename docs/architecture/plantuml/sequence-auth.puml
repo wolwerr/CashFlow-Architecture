@@ -24,17 +24,24 @@ opt Chaves ausentes ou atualizacao de cache
   KC --> API: Chaves publicas
 end
 API -> API: Valida assinatura, iss, aud, exp/nbf\nlocalmente com JWKS em cache
-API -> KC: Consulta interna autenticada\nvinculo atual sub + merchant_id + acao\nADMIN/OPERATOR (Groups)\nsem cache positivo no MVP\nfail closed se IAM indisponivel
-KC --> API: Vinculo e papel atuais
-alt JWT valido e acesso autorizado
-  API --> G: Resposta da operacao
-  G --> W: Resposta
-else JWT ausente ou invalido
+alt JWT ausente ou invalido
   API --> G: HTTP 401
   G --> W: HTTP 401
-else JWT valido mas acesso negado
-  API --> G: HTTP 403
-  G --> W: HTTP 403
+else JWT valido
+  API -> KC: Consulta interna autenticada: sub, merchant_id, acao\nGroups ADMIN/OPERATOR; sem cache positivo
+  alt Vinculo atual e permissao confirmados
+    KC --> API: Autorizado
+    API --> G: Resposta da operacao
+    G --> W: Resposta
+  else Sem vinculo ou permissao
+    KC --> API: Nao autorizado
+    API --> G: HTTP 403
+    G --> W: HTTP 403
+  else Keycloak indisponivel / resposta incerta
+    KC --> API: Falha / timeout
+    API --> G: HTTP 503 (fail closed)
+    G --> W: HTTP 503
+  end
 end
 W --> U: Exibe resultado
 note over W,KC

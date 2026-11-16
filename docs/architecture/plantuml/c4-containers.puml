@@ -10,9 +10,8 @@ Person(admin, "Administrador", "Usuários e permissões")
 System_Boundary(cashflow, "CashFlow") {
   Container(web, "Frontend", "React / TypeScript", "SPA executada no navegador")
   Container(nginx, "NGINX", "HTTP interno :8080", "Arquivos estáticos e proxy /api/v1/*")
-  Container(iam, "Keycloak", "OIDC / HTTPS :443", "Login, tokens e chaves JWKS")
-  ContainerDb(db_iam, "Banco IAM", "PostgreSQL / TCP :5432", "Identidades e configuração")
-  ContainerDb(db_authorization, "Banco Autorização CashFlow", "PostgreSQL / TCP :5432", "Merchant, Membership e ADMIN/OPERATOR")
+  Container(iam, "Keycloak", "OIDC + Groups / HTTPS :443", "Identidades, tokens, JWKS e vinculos ADMIN/OPERATOR por comerciante")
+  ContainerDb(db_iam, "Banco Keycloak", "PostgreSQL / TCP :5432", "Identidades, grupos, papeis e configuracao")
 
   Container(transactions, "Transactions", ".NET 10 / HTTP :8080", "API de lançamentos e Outbox worker")
   Container(consolidation, "Consolidation", ".NET 10 / HTTP :8080", "API de saldo e consumidor")
@@ -48,14 +47,14 @@ Rel(nginx, transactions, "Proxy + Bearer JWT", "HTTP :8080")
 Rel(nginx, consolidation, "Proxy + Bearer JWT", "HTTP :8080")
 
 ' A validação JWT é feita localmente em CADA API.
-' As conexões JWKS/metadata são sob demanda e usam cache.
-Rel(transactions, iam, "Obtém JWKS; valida JWT localmente", "HTTPS :443")
-Rel(consolidation, iam, "Obtém JWKS; valida JWT localmente", "HTTPS :443")
+' As conexoes JWKS/metadata sao sob demanda e usam cache.
+' A autorizacao financeira consulta o vinculo atual no Keycloak por operacao;
+' sem cache positivo de permissoes inicialmente; falha de IAM = fail closed.
+Rel(transactions, iam, "JWKS sob demanda + verifica vinculo atual por merchant_id e acao", "HTTPS / API interna autenticada")
+Rel(consolidation, iam, "JWKS sob demanda + verifica vinculo atual por merchant_id e acao", "HTTPS / API interna autenticada")
 
-Rel(iam, db_iam, "Persiste identidades", "TCP :5432")
+Rel(iam, db_iam, "Persiste identidades, grupos e papeis", "TCP :5432")
 Rel(transactions, db_transactions, "Grava lançamento, idempotência, auditoria + Outbox", "TCP :5432")
-Rel(transactions, db_authorization, "Valida vínculo por interface de autorização a definir", "protocolo a especificar")
-Rel(consolidation, db_authorization, "Valida vínculo por interface de autorização a definir", "protocolo a especificar")
 Rel(consolidation, db_consolidation, "Atualiza totais diários; calcula acumulado", "TCP :5432")
 Rel(transactions, rabbitmq, "Publica Outbox", "AMQP :5672")
 Rel(consolidation, rabbitmq, "Consome; ACK após commit", "AMQP :5672")

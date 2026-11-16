@@ -8,53 +8,37 @@ skinparam entity {
  BorderColor #39779B
  FontColor #1F4259
 }
-package "Provedor de identidade: Keycloak\nBanco gerenciado pelo Keycloak" #FDF6EB {
-  entity "Usuario Keycloak (referencia)" as U {
-    * subject_id : STRING <<OIDC sub>>
+package "Keycloak | modelo IAM conceitual (nao tabelas internas)" #FDF6EB {
+  entity "Usuario OIDC" as U {
+    * subject_id : STRING <<sub>>
     --
     login_identifier : STRING
     status : STRING
   }
+  entity "Grupo comerciante" as KG {
+    * merchant_id : UUID <<ID estavel / caminho de grupo>>
+    --
+    group_path : /merchants/{merchant_uuid}
+  }
+  entity "Vinculo usuario/grupo" as KM {
+    * subject_id : STRING <<sub>>
+    * merchant_id : UUID
+    --
+    role : ADMIN | OPERATOR
+    status : vigente | revogado
+  }
+  U ||--o{ KM : participa
+  KG ||--o{ KM : define contexto
 }
-package "Contexto: Autorizacao CashFlow\nBanco logico proprio (MVP)" #FDF6EB {
-  entity "Merchant" as MT {
-    * id : UUID <<PK>>
-    --
-    display_name : STRING
-    status : STRING
-  }
-  entity "Membership" as MB {
-    * id : UUID <<PK>>
-    --
-    subject_id : STRING <<OIDC sub>>
-    merchant_id : UUID
-    status : STRING
-  }
-  entity "Role" as R {
-    * id : UUID <<PK>>
-    --
-    code : STRING
-  }
-  entity "MembershipRole" as MR {
-    * membership_id : UUID <<FK>>
-    * role_id : UUID <<FK>>
-  }
-  entity "Permission" as PE {
-    * id : UUID <<PK>>
-    --
-    code : STRING
-  }
-  entity "RolePermission" as RP {
-    * role_id : UUID <<FK>>
-    * permission_id : UUID <<FK>>
-  }
-  MT ||--o{ MB : permite
-  MB ||--o{ MR : recebe
-  R ||--o{ MR : atribuida
-  R ||--o{ RP : concede
-  PE ||--o{ RP : corresponde
-}
-U ..> MB : subject_id (sem FK)
+note bottom of KM
+  Modelo logico conceitual para autorizacao.
+  Keycloak Groups e fonte de verdade de vinculos
+  e papeis por merchant_id; estrutura interna
+  do banco IAM nao e contrato do CashFlow.
+  Consultar vinculo atual por operacao;
+  inicialmente sem cache positivo, fail closed.
+  Nao ha banco proprio de Authorization.
+end note
 package "Contexto: Lançamentos\nBanco de lançamentos" #F4F8FC {
   entity "Transaction" as T {
     * id : UUID <<PK>>
@@ -123,16 +107,10 @@ package "Contexto: Consolidado Diário\nBanco do consolidado" #F0F8F3 {
 }
 O ..> P : evento publicado
 P ..> D : atualiza atomica
-note bottom of MT
-  Keycloak autentica e gerencia usuarios.
-  CashFlow gerencia merchants e vinculos.
-  Banco logico proprio de autorizacao.
-  ADMIN e OPERATOR por comerciante.
-  Sem FK fisica entre os dominios.
-end note
+
 note right of T
-  O merchant_id vem do contexto autorizado,
-  nunca somente de entrada nao confiavel.
+  O merchant_id e validado contra o vinculo atual\n  no Keycloak antes da operacao;
+  nunca confiar somente na entrada do cliente.
   Actor_id e uma referencia ao sub do OIDC.
   Nao assumir que todo sub e UUID.
 end note

@@ -5,6 +5,7 @@ actor Comerciante as U
 participant "React SPA" as W
 participant "NGINX" as G
 participant "Transactions API" as API
+participant "Keycloak\nGroups / autorizacao" as KC
 database "PostgreSQL\nTransactions" as DBT
 participant "Transactions\nOutbox worker" as OUT
 queue "RabbitMQ\nexchange + fila duravel" as MQ
@@ -14,14 +15,32 @@ database "PostgreSQL\nConsolidation" as DBC
 U -> W: Informa credito/debito e data de competencia
 W -> G: POST /api/v1/transactions/*\nIdempotency-Key obrigatorio\nBearer JWT; HTTPS :443 publico
 G -> API: Proxy + Authorization\nHTTP :8080 privado
-API -> API: Valida JWT, ADMIN/OPERATOR, merchant_id\nBRL e competencia em Sao_Paulo
-API -> DBT: BEGIN; Idempotency-Key + request hash\nTransaction + Outbox + AuditEvent confirmada\nmesmo commit; created_at UTC
-DBT --> API: COMMIT confirmado
-API --> G: HTTP 201 Created\nregistro persistido, saldo eventual
-G --> W: HTTP 201 Created
-W --> U: Registro concluido, saldo pode atrasar
+API -> API: Valida assinatura JWT, iss, aud, exp/nbf
+alt JWT ausente ou invalido
+  API --> G: HTTP 401
+  G --> W: HTTP 401
+else JWT valido
+  API -> KC: Consulta autenticada de vinculo atual\nsub + merchant_id + criar transacao\nADMIN/OPERATOR; sem cache positivo
+  alt Sem vinculo ou permissao
+    KC --> API: Nao autorizado
+    API --> G: HTTP 403
+    G --> W: HTTP 403
+  else Keycloak indisponivel / resposta incerta
+    KC --> API: Falha / timeout
+    API --> G: HTTP 503 (fail closed)
+    G --> W: HTTP 503
+  else Vinculo e permissao confirmados
+    KC --> API: Autorizado
+    API -> API: Valida BRL, data de competencia\ne Idempotency-Key
+    API -> DBT: BEGIN; Idempotency-Key + request hash\nTransaction + Outbox + AuditEvent confirmada\nmesmo commit; created_at UTC
+    DBT --> API: COMMIT confirmado
+    API --> G: HTTP 201 Created\nregistro persistido, saldo eventual
+    G --> W: HTTP 201 Created
+    W --> U: Registro concluido, saldo pode atrasar
+  end
+end
 
-... Etapa assincrona, sem bloquear resposta HTTP ...
+... Somente apos commit confirmado: etapa assincrona sem bloquear HTTP ...
 OUT -> DBT: Busca e reivindica Outbox pendente\ncom controle de concorrencia
 DBT --> OUT: Eventos pendentes
 OUT -> MQ: Publica evento persistente\nAMQP TCP :5672
