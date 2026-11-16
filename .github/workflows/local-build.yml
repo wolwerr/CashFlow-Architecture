@@ -2,9 +2,14 @@ name: Build, tests and SonarQube Cloud
 
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: cashflow-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
