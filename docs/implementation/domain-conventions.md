@@ -1,17 +1,16 @@
 # Convenções Clean Architecture: CashFlow
 
-- **Domain/Entities:** entidades e invariantes, sem frameworks.
+- **Domain/Models:** modelos de negócio e suas invariantes, sem frameworks ou dependências de persistência. Inclui `Transaction` e `BusinessCalendar`.
 - **Domain/Enums:** enumerações do domínio.
-- **Domain/Exceptions:** exceções específicas de domínio derivadas de `DomainException`.
-- **Domain/Rules:** regras de domínio puras e auxiliares de calendário, sem infraestrutura.
-- **Domain/ValueObjects:** reservado para value objects reais, quando houver, sem placeholders.
-- **Application/UseCases:** casos de uso, organizados por intenção/funcionalidade. **Não criar `Services` para regras de negócio.**
-- **Application:** contratos/portas das integrações, quando forem definidos.
-- **Infrastructure:** implementações de portas (EF Core, mensageria e outras integrações).
+- **Domain/Exceptions:** exceções específicas derivadas de `DomainException`.
+- **Sem Domain/Entities e sem ValueObjects:** o modelo financeiro fica em `Models`; não criar estas pastas no Domain.
+- **Application/UseCases:** casos de uso organizados por intenção. Não criar camada de negócio chamada `Services`.
+- **Infrastructure/Entities:** entidades do EF Core e modelos físicos de persistência quando implementados. Elas serão mapeadas para os modelos de domínio, sem anotações do ORM no Domain.
+- **Infrastructure:** persistência, implementações de portas e integrações.
 - **Api:** transporte HTTP, autenticação e composição.
 
-A pasta `src/Services` no nível superior nomeia os **microsserviços implantáveis** Transactions e Consolidation, não uma camada de `Services` na Clean Architecture. A nomenclatura poderá ser revista separadamente sem alterar a regra de dependências.
+A pasta superior `src/Services` identifica microsserviços independentes (Transactions e Consolidation), não uma camada de business Services.
 
-Exceções do domínio não carregam HTTP status. O mapeamento para `ProblemDetails` e códigos HTTP pertence à API quando os endpoints forem implementados.
+As exceções do domínio não conhecem HTTP. `ProblemDetails` e status HTTP pertencem à API.
 
-Nenhuma dependência externa foi adicionada ao Domain ou Application. O quality gate de 80% permanece definido em `docs/implementation/quality-gates.md`.
+Os testes arquiteturais e o gate de 80% do Domain continuam válidos. As validações precisam ser reexecutadas após esta reorganização.
