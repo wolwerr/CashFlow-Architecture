@@ -7,6 +7,7 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 | Documento | O que apresenta |
 | --- | --- |
 | **[Decisões consolidadas do MVP](mvp-decisions.md)** | 24 decisões aprovadas para regras financeiras, escopo, IAM, contratos, qualidade e operação; distinção entre decisão e comprovação. |
+| **[Checklist de implementação e testes do MVP](mvp-implementation-checklist.md)** | Ações pendentes de OpenAPI, modelo físico, desenvolvimento, qualidade, operações e evidências antes de PROD. |
 | **[Validação 01: Requisitos e rastreabilidade](requirements-validation.md)** | Matriz RF/RNF → ADRs/componentes, situação documental, lacunas de negócio e testes pendentes. |
 | **[Validação 02: Diagramas de sequência](sequence-validation.md)** | Revisão de fluxos OIDC/JWT, Outbox, RabbitMQ, idempotência, falha e consulta diária; pendências e testes. |
 | **[Validação 03: Modelo de dados](data-model-validation.md)** | Revisão das entidades, isolamento dos bancos, identificador OIDC, unicidade, atomicidade e concorrência. |
