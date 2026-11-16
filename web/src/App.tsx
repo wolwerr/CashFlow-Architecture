@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant } from './api/cashflow';
-import type { Balance, TransactionPage, TransactionRecord } from './api/cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin } from './api/cashflow';
+import type { Balance, TransactionPage, TransactionRecord, Merchant } from './api/cashflow';
 import { beginLogin, finishLogin, getSubject, logout, renewSession } from './auth/oidc';
 import type { TokenSet } from './auth/oidc';
 import { businessDate } from './time';
@@ -26,6 +26,10 @@ export default function App() {
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [newMerchantName, setNewMerchantName] = useState('');
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const pendingKey = useRef<string | null>(null);
   const authStarted = useRef(false);
   const currentToken = activeAccessToken(session);
@@ -38,7 +42,7 @@ export default function App() {
       setSession(tokens);
       setIdentity(getSubject(tokens.accessToken));
       window.history.replaceState({}, '', '/');
-      setNotice({ text: 'Login realizado. Informe o ID de um comerciante ao qual você tenha acesso.', isError: false });
+      setNotice({ text: 'Login realizado. Selecione ou cadastre um comerciante.', isError: false });
     }).catch((error: unknown) => {
       setNotice({ text: (error as Error).message, isError: true });
       window.history.replaceState({}, '', '/');
@@ -63,6 +67,49 @@ export default function App() {
     }, delay);
     return () => { active = false; window.clearTimeout(timer); };
   }, [session]);
+
+  useEffect(() => {
+    if (!currentToken) { setMerchants([]); return; }
+    let active = true;
+    listMerchants(currentToken).then(items => {
+      if (active) {
+        setMerchants(items);
+        setMerchant(current => current || items[0]?.id || '');
+      }
+    }).catch(() => {
+      if (active) setNotice({ text: 'Não foi possível listar comerciantes. Verifique o serviço administrativo do Keycloak.', isError: true });
+    });
+    return () => { active = false; };
+  }, [currentToken]);
+
+  async function registerMerchant(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!currentToken || !newMerchantName.trim()) return;
+    setBusy(true);
+    try {
+      const created = await createMerchant(currentToken, newMerchantName.trim());
+      setMerchants(previous => [...previous, created]);
+      changeMerchant(created.id);
+      setNewMerchantName('');
+      setNotice({ text: 'Comerciante cadastrado. Você é o ADMIN inicial.', isError: false });
+    } catch (error) {
+      setNotice({ text: (error as Error).message, isError: true });
+    } finally { setBusy(false); }
+  }
+
+  async function registerAdmin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!currentToken || !validMerchant(merchant) || !adminUsername.trim()) return;
+    setBusy(true);
+    try {
+      await addMerchantAdmin(currentToken, merchant, adminUsername.trim(), adminPassword || undefined);
+      setAdminUsername('');
+      setAdminPassword('');
+      setNotice({ text: 'Administrador vinculado ao comerciante.', isError: false });
+    } catch (error) {
+      setNotice({ text: (error as Error).message, isError: true });
+    } finally { setBusy(false); }
+  }
 
   const clearFinancialData = useCallback(() => {
     setBalance(null);
@@ -156,11 +203,46 @@ export default function App() {
       <p className="muted">Os tokens são mantidos somente na memória do navegador. Se recarregar, entre novamente.</p>
     </section> : <>
       <section className="panel">
+        <h2>Meus comerciantes</h2>
+        <div className="fields merchant-fields">
+          <label>Selecione um comerciante
+            <select aria-label="Selecionar comerciante" value={merchants.some(item => item.id === merchant) ? merchant : ''}
+              onChange={event => changeMerchant(event.target.value)}>
+              <option value="">Selecione...</option>
+              {merchants.map(item => <option key={item.id} value={item.id}>
+                {item.name} ({item.role})
+              </option>)}
+            </select>
+          </label>
+        </div>
+        <form className="merchant-action" onSubmit={registerMerchant}>
+          <label>Nome do novo comerciante
+            <input aria-label="Nome do comerciante" maxLength={100} placeholder="Ex.: Loja Campinas"
+              value={newMerchantName} onChange={event => setNewMerchantName(event.target.value)} />
+          </label>
+          <button type="submit" disabled={busy || !newMerchantName.trim()}>Cadastrar comerciante</button>
+        </form>
+        <p className="muted">A criação inicial é restrita ao administrador de bootstrap do ambiente local.</p>
+        {merchants.find(item => item.id === merchant)?.role === 'ADMIN' && <form className="merchant-action" onSubmit={registerAdmin}>
+          <h2>Adicionar administrador</h2>
+          <label>Usuário no Keycloak
+            <input aria-label="Usuário administrador" maxLength={100} placeholder="Nome de usuário"
+              value={adminUsername} onChange={event => setAdminUsername(event.target.value)} />
+          </label>
+          <label>Senha temporária (somente para criar novo usuário)
+            <input aria-label="Senha temporária" type="password" autoComplete="new-password"
+              value={adminPassword} onChange={event => setAdminPassword(event.target.value)} />
+          </label>
+          <button type="submit" disabled={busy || !adminUsername.trim() ||
+            (adminPassword.length > 0 && adminPassword.length < 12)}>Adicionar ADMIN</button>
+        </form>}
+      </section>
+      <section className="panel">
         <h2>Comerciante e competência</h2>
         <div className="fields">
           <label>ID do comerciante
-            <input aria-label="ID do comerciante" placeholder="UUID do comerciante autorizado"
-              value={merchant} onChange={event => changeMerchant(event.target.value)} />
+            <input aria-label="ID do comerciante" placeholder="Selecione um comerciante acima"
+              value={merchant} readOnly />
           </label>
           <label>Data de referência
             <input aria-label="Data de referência" type="date" value={date}
