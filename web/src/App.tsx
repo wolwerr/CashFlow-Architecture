@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant } from './api/cashflow';
 import type { Balance, TransactionPage, TransactionRecord } from './api/cashflow';
-import { beginLogin, finishLogin, getSubject, logout } from './auth/oidc';
+import { beginLogin, finishLogin, getSubject, logout, renewSession } from './auth/oidc';
 import type { TokenSet } from './auth/oidc';
 import { businessDate } from './time';
 
@@ -42,6 +42,25 @@ export default function App() {
       window.history.replaceState({}, '', '/');
     }).finally(() => setAuthPending(false));
   }, []);
+
+  useEffect(() => {
+    if (!session?.refreshToken) return;
+    let active = true;
+    const delay = Math.max(0, session.expiresAt - Date.now() - 30_000);
+    const timer = window.setTimeout(() => {
+      renewSession(session).then(tokens => {
+        if (active) setSession(tokens);
+      }).catch(() => {
+        if (active) {
+          setSession(null);
+          setBalance(null);
+          setHistory(null);
+          setNotice({ text: 'Sessão expirada. Entre novamente.', isError: true });
+        }
+      });
+    }, delay);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [session]);
 
   const clearFinancialData = useCallback(() => {
     setBalance(null);
