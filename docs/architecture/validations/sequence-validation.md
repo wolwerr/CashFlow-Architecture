@@ -7,7 +7,7 @@
 
 ## Objetivo e metodologia
 
-A validação compara a ordem das interações nos quatro arquivos PlantUML existentes com as decisões arquiteturais já registradas, a [Building Block View](../building-block-view.md) e os [requisitos](../requirements-validation.md). A conclusão se aplica ao **desenho documentado**, não à correção de um sistema executado. As fontes foram editadas em 2026-11-15; os PNGs deverão ser **regenerados e inspecionados visualmente**.
+A validação compara a ordem das interações nos quatro arquivos PlantUML existentes com as decisões arquiteturais já registradas, a [Building Block View](../building-block-view.md) e os [requisitos](requirements-validation.md). A conclusão se aplica ao **desenho documentado**, não à correção de um sistema executado. As fontes foram editadas em 2026-11-15; os PNGs deverão ser **regenerados e inspecionados visualmente**.
 
 ## Resultado dos quatro fluxos
 
