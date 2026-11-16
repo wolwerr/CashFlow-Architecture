@@ -40,7 +40,7 @@ else JWT valido
   end
 end
 
-... Etapa assincrona, sem bloquear resposta HTTP ...
+... Somente apos commit confirmado: etapa assincrona sem bloquear HTTP ...
 OUT -> DBT: Busca e reivindica Outbox pendente\ncom controle de concorrencia
 DBT --> OUT: Eventos pendentes
 OUT -> MQ: Publica evento persistente\nAMQP TCP :5672
