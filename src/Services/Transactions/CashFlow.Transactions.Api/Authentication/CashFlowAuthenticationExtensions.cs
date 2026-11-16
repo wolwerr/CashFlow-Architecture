@@ -29,6 +29,7 @@ public static class CashFlowAuthenticationExtensions
                     ValidateAudience = true,
                     ValidAudience = settings.Audience,
                     ValidateIssuerSigningKey = true,
+                    ValidAlgorithms = new[] { SecurityAlgorithms.RsaSha256 },
                     RequireSignedTokens = true,
                     ValidateLifetime = true,
                     RequireExpirationTime = true,
