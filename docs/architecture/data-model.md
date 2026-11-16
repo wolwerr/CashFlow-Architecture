@@ -95,7 +95,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 ## 6. Validação do modelo lógico
 
-A [Validação 03](data-model-validation.md) confere a correspondência do modelo com as ADR-003/005 e os requisitos. Permanecem pendentes migrations, índices, performance do acumulado derivado, interface/revogação de autorização e contratos de evento. As escolhas do MVP estão em [Decisões consolidadas](mvp-decisions.md). A revisão do diagrama **não é evidência de migrations executadas ou integridade verificada em banco**.
+A [Validação 03](validations/data-model-validation.md) confere a correspondência do modelo com as ADR-003/005 e os requisitos. Permanecem pendentes migrations, índices, performance do acumulado derivado, interface/revogação de autorização e contratos de evento. As escolhas do MVP estão em [Decisões consolidadas](mvp-decisions.md). A revisão do diagrama **não é evidência de migrations executadas ou integridade verificada em banco**.
 
 ## 7. Rastreabilidade
 
