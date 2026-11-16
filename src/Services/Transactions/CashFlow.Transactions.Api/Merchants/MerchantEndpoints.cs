@@ -46,16 +46,17 @@ public static class MerchantEndpoints
     {
         if (Actor(context) == Guid.Empty) return Results.Unauthorized();
         if (request is null || string.IsNullOrWhiteSpace(request.Name) ||
-            request.Name.Trim().Length > 100 ||
-            request.Username is null ||
-            !Regex.IsMatch(request.Username, "^[a-zA-Z][a-zA-Z0-9._-]{2,63}$") ||
-            request.Password is null || request.Password.Length is < 12 or > 128)
-            return Results.BadRequest(new { title = "Merchant name, unique username and password (12-128 characters) are required." });
+            request.Name.Trim().Length > 100)
+            return Results.BadRequest(new { title = "Merchant name must have 1 to 100 characters." });
 
         // First merchant bootstrap is restricted to an explicitly configured local account.
         // Never grant merchant creation to an arbitrary authenticated user.
         if (!IsBootstrap(context, options.Value, environment))
             return Results.Forbid();
+        if (request.Username is null ||
+            !Regex.IsMatch(request.Username, "^[a-zA-Z][a-zA-Z0-9._-]{2,63}$") ||
+            request.Password is null || request.Password.Length is < 12 or > 128)
+            return Results.BadRequest(new { title = "Unique merchant username and password (12-128 characters) are required." });
 
         try
         {
