@@ -1,34 +1,108 @@
-name: Local build and quality gates (no deployment)
+name: Build, tests and SonarQube Cloud
+
 on:
   push:
     branches: [main, "feat/**"]
   pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
-  dotnet:
+  quality:
+    name: Build and SonarQube
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+      # GitHub does not pass repository secrets to workflows triggered from forks.
+      RUN_SONAR: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Restore
-        run: dotnet restore CashFlow.slnx
-      - name: Compile
-        run: dotnet build CashFlow.slnx -c Release --no-restore
-      - name: Enforce architecture
-        run: dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
-      - name: Unit tests with 80 percent line coverage threshold (Transactions Domain)
-        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
-      - name: Unit tests with 80 percent line coverage threshold (Transactions Application)
-        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-audit --no-fund
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install frontend dependencies
         working-directory: web
-      - run: npm run build
+        run: npm install --no-audit --no-fund
+
+      - name: Validate Sonar secrets
+        if: env.RUN_SONAR == 'true'
+        shell: bash
+        run: |
+          for name in SONAR_TOKEN SONAR_PROJECT_KEY SONAR_ORGANIZATION; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Configure the $name GitHub Actions repository secret."
+              exit 1
+            fi
+          done
+
+      - name: Install SonarScanner for .NET
+        if: env.RUN_SONAR == 'true'
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin Sonar analysis (C# and TypeScript)
+        if: env.RUN_SONAR == 'true'
+        shell: bash
+        run: |
+          dotnet sonarscanner begin \
+            /k:"$SONAR_PROJECT_KEY" \
+            /o:"$SONAR_ORGANIZATION" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.scanner.scanAll=true \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.javascript.lcov.reportPaths="web/coverage/lcov.info" \
+            /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/coverage/**,**/bin/**,**/obj/**" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.qualitygate.timeout=300
+
+      - name: Restore backend (.NET 10)
+        run: dotnet restore CashFlow.slnx
+
+      - name: Build backend (.NET 10)
+        run: dotnet build CashFlow.slnx -c Release --no-restore
+
+      - name: Build frontend (TypeScript + Vite)
         working-directory: web
+        run: npm run build
+
+      - name: Test architecture
+        run: dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
+
+      - name: Test Transactions Domain (min 80% lines)
+        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
+
+      - name: Test Transactions Application (min 80% lines)
+        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
+
+      - name: Generate backend OpenCover for Sonar
+        if: env.RUN_SONAR == 'true'
+        run: |
+          dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj \
+            -c Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=TestResults/sonar/coverage.opencover.xml
+
+      - name: Test frontend and generate LCOV
+        working-directory: web
+        run: npm run test:coverage
+
+      - name: Publish Sonar analysis and enforce Quality Gate
+        if: env.RUN_SONAR == 'true'
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
