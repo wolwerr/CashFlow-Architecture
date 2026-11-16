@@ -16,6 +16,15 @@
       "serviceAccountsEnabled": false
     },
     {
+      "clientId": "cashflow-consolidation-api",
+      "name": "CashFlow Consolidation API audience",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+    {
       "clientId": "cashflow-spa",
       "name": "CashFlow React SPA (PKCE)",
       "enabled": true,
@@ -42,6 +51,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "cashflow-transactions-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "consolidation-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "cashflow-consolidation-api",
             "access.token.claim": "true",
             "id.token.claim": "false"
           }
