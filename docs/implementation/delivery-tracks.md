@@ -35,6 +35,8 @@
 
 **Progresso complementar Trilha 04:** verificador estrutural de backup/restauração local PostgreSQL, sem sobrescrever bancos da aplicação, descrito em [Backup e restauração local](local-postgres-backup-verification.md). Execução real, integridade financeira, RPO/RTO e observabilidade continuam pendentes.
 
+**Progresso complementar Trilha 04:** logs HTTP estruturados e medidor opt-in da latência de projeção, documentados em [SLO e observabilidade local](local-slo-observability.md). Ainda é necessária execução real do SLO, revisão de auditoria, métricas de broker e homologação E2E.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
