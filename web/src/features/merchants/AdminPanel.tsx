@@ -1,5 +1,6 @@
 import type { CashFlowController } from '../app/useCashFlowController';
 import type { Merchant } from '../../api/cashflow';
+import { validMerchant } from '../../api/cashflow';
 
 const isMerchantAdmin = (items: Merchant[], id: string) =>
   items.some(item => item.id === id && item.role === 'ADMIN');
