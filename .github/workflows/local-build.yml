@@ -87,6 +87,7 @@ jobs:
       - name: Backend | Consolidation PostgreSQL integration tests
         env:
           CASHFLOW_TEST_CONSOLIDATION: Host=localhost;Port=5432;Database=cashflow_consolidation_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
         run: dotnet test tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj -c Release --no-build
 
       - name: Backend | Generate OpenCover for Sonar
