@@ -29,7 +29,7 @@ vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
   return {
     ...original, createTransaction: vi.fn(), dailyBalance: vi.fn(),
-    transactionHistory: vi.fn(), listMerchants: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn()
+    transactionHistory: vi.fn(), listMerchants: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
   };
 });
 import App from './App';
@@ -64,6 +64,7 @@ function setupSignedIn() {
   mock.state[0] = { accessToken: 'access-token', expiresAt: Date.now() + 120_000 };
   mock.state[3] = '68a5baac-d97f-45b4-9119-b4c5b9de7c9b';
   mock.state[4] = '2026-11-16';
+  mock.state[19] = true;
 }
 function seedApi() {
   vi.mocked(dailyBalance).mockResolvedValue({
@@ -217,13 +218,15 @@ describe('CashFlow dashboard and interactions', () => {
     setupSignedIn();
     const input = find('input', 'Nome do comerciante');
     (input.props.onChange as (event: unknown) => void)({ target: { value: 'Loja Campinas' } });
+    mock.state[17] = 'loja.campinas';
+    mock.state[18] = 'senha-local-segura';
     vi.mocked(createMerchant).mockResolvedValue({
       id: '68a5baac-d97f-45b4-9119-b4c5b9de7c9b',
       name: 'Loja Campinas', role: 'ADMIN'
     });
     const form = render().filter(n => n.type === 'form')[0];
     await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
-    expect(createMerchant).toHaveBeenCalledWith('access-token', 'Loja Campinas');
+    expect(createMerchant).toHaveBeenCalledWith('access-token', 'Loja Campinas', 'loja.campinas', 'senha-local-segura');
     expect(mock.state[3]).toBe('68a5baac-d97f-45b4-9119-b4c5b9de7c9b');
   });
   it('adds an existing administrator only after selecting a merchant with ADMIN role', async () => {
@@ -237,6 +240,29 @@ describe('CashFlow dashboard and interactions', () => {
     await (forms[1].props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(addMerchantAdmin).toHaveBeenCalledWith('access-token',
       '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', 'new.admin', undefined);
+  });
+  it('merchant session shows only financial sections, without provisioning UI', () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    mock.state[12] = [{
+      id: mock.state[3], name: 'Loja Campinas', role: 'OPERATOR'
+    }];
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Gestão de comerciantes')).toBe(false);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Comerciante e competência')).toBe(false);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Saldo diário')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Histórico de lançamentos')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(false);
+  });
+  it('operator session cannot submit merchant creation even through a forged callback', async () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'form' &&
+      (n.props.children as unknown[]).some?.(child => String(child).includes('merchant')))).toBe(false);
+    expect(createMerchant).not.toHaveBeenCalled();
   });
   it('delegates logout and blocks queries after expiry', async () => {
     setupSignedIn();
