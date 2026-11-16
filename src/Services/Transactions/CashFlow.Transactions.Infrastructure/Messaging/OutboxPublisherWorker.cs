@@ -39,9 +39,23 @@ public sealed class OutboxPublisherWorker(
                 await using var channel = await connection.CreateChannelAsync(confirmations, stoppingToken);
                 await channel.ExchangeDeclareAsync(settings.Exchange, ExchangeType.Direct,
                     durable: true, autoDelete: false, cancellationToken: stoppingToken);
-                // Declare/bind destination BEFORE publishing, to avoid unroutable messages.
+                // Same quorum arguments as Consolidation: durable, bounded retries and DLQ.
+                await channel.ExchangeDeclareAsync("cashflow.deadletter", ExchangeType.Direct,
+                    durable: true, autoDelete: false, cancellationToken: stoppingToken);
+                await channel.QueueDeclareAsync("cashflow.consolidation.dlq", durable: true,
+                    exclusive: false, autoDelete: false,
+                    arguments: new Dictionary<string, object?> { ["x-queue-type"] = "quorum" },
+                    cancellationToken: stoppingToken);
+                await channel.QueueBindAsync("cashflow.consolidation.dlq", "cashflow.deadletter",
+                    settings.Queue, cancellationToken: stoppingToken);
                 await channel.QueueDeclareAsync(settings.Queue, durable: true, exclusive: false,
-                    autoDelete: false, arguments: null, cancellationToken: stoppingToken);
+                    autoDelete: false, arguments: new Dictionary<string, object?>
+                    {
+                        ["x-queue-type"] = "quorum",
+                        ["x-dead-letter-exchange"] = "cashflow.deadletter",
+                        ["x-dead-letter-routing-key"] = settings.Queue,
+                        ["x-delivery-limit"] = 5
+                    }, cancellationToken: stoppingToken);
                 await channel.QueueBindAsync(settings.Queue, settings.Exchange,
                     "transaction.recorded", cancellationToken: stoppingToken);
 
