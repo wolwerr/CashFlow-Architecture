@@ -193,7 +193,27 @@ describe('CashFlow dashboard and interactions', () => {
     mock.state[1] = 'cashflow.admin';
     const nodes = render();
     expect(nodes.some(n => n.type === 'span' && n.props.children === 'Administrador')).toBe(true);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && Array.isArray(n.props.children) && n.props.children.join('') === 'Olá, cashflow.admin')).toBe(true);
+  });
+  it('greets the merchant with the authenticated Keycloak username', () => {
+    setupSignedIn();
+    mock.state[1] = 'loja.campinas';
+    mock.state[19] = false;
+    mock.state[20] = 'merchant';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' &&
+      Array.isArray(n.props.children) && n.props.children.join('') === 'Olá, loja.campinas')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
+  });
+
+  it('does not reveal an empty username as a fake administrator identity', () => {
+    setupSignedIn();
+    mock.state[1] = '';
+    mock.state[20] = 'loading';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' &&
+      Array.isArray(n.props.children) && n.props.children.join('') === 'Olá, usuário')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Verificando perfil')).toBe(true);
   });
   it('shows protected form and merchant selection with a session in memory', () => {
     setupSignedIn();
