@@ -8,14 +8,14 @@ Adicionar análise estática de C#/.NET 10 em GitHub Actions para bugs, vulnerab
 
 1. Projeto SonarQube Cloud: em **Administration > Analysis Method**, desabilitar **Automatic Analysis** para evitar conflito com CI-based analysis; manter análise via GitHub Actions.
 2. No projeto SonarQube Cloud, copiar os valores exatos de **Project Key** e **Organization Key**; **não adivinhar a partir do nome exibido**.
-3. GitHub: em **Settings > Secrets and variables > Actions**, criar repository variables:
+3. GitHub: em **Settings > Secrets and variables > Actions**, criar os três **Repository secrets**:
    - `SONAR_PROJECT_KEY`: Project Key exata do SonarQube Cloud.
    - `SONAR_ORGANIZATION`: Organization Key exata do SonarQube Cloud.
-4. Criar repository secret `SONAR_TOKEN`: token de análise gerado no SonarQube Cloud. **Não salvar nem transmitir o token em mensagens ou commits.**
+   - `SONAR_TOKEN`: token de análise gerado no SonarQube Cloud. **Não salvar nem transmitir o token em mensagens ou commits.**
 5. Concluir merge do PR contendo `.github/workflows/sonarqube-cloud.yml`. A análise roda para push na `main` e PRs internos do mesmo repositório. Para PRs provenientes de forks, a job é ignorada por segurança, porque segredos não são expostos pelo GitHub.
 6. Validar uma execução real e verificar se o Sonar recebeu análise **CI-based** e o relatório de **Coverage**. Depois disso, configurar o check Quality Gate como obrigatório no GitHub Ruleset/Branch Protection se desejado.
 
-**Importante:** o workflow pula a job quando Project Key ou Organization Key não foram configuradas. Se faltar somente o secret `SONAR_TOKEN`, falhará explicitamente com uma mensagem de configuração. Isso evita inserir segredos no código.
+**Importante:** o workflow verifica explicitamente a presença dos três secrets e falha se algum não estiver configurado. A job de PR originado de fork é ignorada por segurança. Isso evita inserir segredos no código.
 
 ## Execução
 
