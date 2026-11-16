@@ -8,6 +8,7 @@ using CashFlow.Transactions.Application.UseCases.CreateTransaction.Commands;
 using CashFlow.Transactions.Domain.Enums;
 using CashFlow.Transactions.Domain.Exceptions;
 using CashFlow.Transactions.Infrastructure.Gateways;
+using CashFlow.Security.Keycloak;
 using CashFlow.Transactions.Infrastructure.Exceptions;
 
 namespace CashFlow.Transactions.Api.Endpoints;
