@@ -1,15 +1,15 @@
 # Deployment View | CashFlow
 
-> **Status:** arquitetura-alvo documentada, recursos ainda não necessariamente implantados  
+> **Status:** **LOCAL é o único ambiente de execução inicial**. DEV/HOM/PROD/SHARED Azure são **arquitetura futura**, sem provisionamento previsto nesta fase.  
 > **Decisão de referência:** [ADR-009: Azure AKS e isolamento entre ambientes](adr/ADR-009-deployment-cloud.md)  
 > **Custo-base:** [Orçamento Azure dos quatro ambientes](four-environment-total-cost-plan.md)  
 > **Diagramas lógicos:** [Building Block View, C4 Níveis 1, 2 e 3](building-block-view.md)
 
 ## Objetivo
 
-Esta visão mostra **onde os contêineres e recursos lógicos do CashFlow serão executados** e como se distribuem entre **LOCAL, DEV, HOM, PROD e SHARED**. Complementa os diagramas C4, que explicam responsabilidades, e o orçamento Azure, que explica custos dos recursos provisionados.
+Esta visão distingue **a execução LOCAL desta primeira etapa** do **desenho futuro de implantação em Azure** e como se distribuem entre **LOCAL, DEV, HOM, PROD e SHARED**. Complementa os diagramas C4, que explicam responsabilidades, e o orçamento Azure, que explica custos dos recursos provisionados.
 
-A **Azure East US é a plataforma selecionada e a base da calculadora**. O desenho emprega capacidades arquiteturais reutilizáveis (Kubernetes, PostgreSQL, AMQP/RabbitMQ, Keycloak, OTLP, armazenamento de objetos, registro de imagens, DNS e gestão de segredos). **Portabilidade não significa migração automática nem equivalência integral de preços, rede, segurança, disponibilidade ou operação**.
+A **Azure East US permanece a plataforma de referência para implantação futura** e a base da calculadora; **nenhum recurso Azure será provisionado agora**. O desenho emprega capacidades arquiteturais reutilizáveis (Kubernetes, PostgreSQL, AMQP/RabbitMQ, Keycloak, OTLP, armazenamento de objetos, registro de imagens, DNS e gestão de segredos). **Portabilidade não significa migração automática nem equivalência integral de preços, rede, segurança, disponibilidade ou operação**.
 
 ## Diagrama geral de deployment
 
@@ -23,9 +23,9 @@ A imagem renderizada está disponível em `docs/architecture/images/deployment-v
 
 ## Complemento aprovado do MVP, 15/11/2026
 
-Cada ambiente terá quatro bancos lógicos em PostgreSQL: **Transactions, Consolidation, Autorização CashFlow e Keycloak**. O desenho de implantação não adiciona um terceiro microsserviço financeiro; a interface de acesso ao contexto de autorização e suas credenciais ainda serão projetadas. O uso do mesmo Flexible Server físico por ambiente é uma **referência de custo**, não prova de capacidade nem isolamento de infraestrutura. A liberação de PROD fica condicionada a **backups automáticos e testes documentados de restauração**, além de **aprovação manual efetiva via GitHub Environments**. A nova fonte PlantUML precisa ser renderizada e substituir a imagem correspondente. [Decisões consolidadas do MVP](mvp-decisions.md).
+Cada ambiente terá quatro bancos lógicos em PostgreSQL: **Transactions, Consolidation, Autorização CashFlow e Keycloak**. O desenho de implantação não adiciona um terceiro microsserviço financeiro; a interface de acesso ao contexto de autorização e suas credenciais ainda serão projetadas. O uso do mesmo Flexible Server físico por ambiente é uma **referência de custo**, não prova de capacidade nem isolamento de infraestrutura. A liberação de PROD fica condicionada a **backups automáticos e testes documentados de restauração**, além de **aprovação manual efetiva via GitHub Environments**. As imagens foram atualizadas pelo responsável pelo projeto nesta fase; qualquer nova alteração de PlantUML exigirá renderização correspondente. [Decisões consolidadas do MVP](mvp-decisions.md).
 
-## Distribuição dos ambientes
+## Sequência de implantação\n\n**Agora:** implementar e testar todo o MVP **somente com Docker Compose local**, incluindo quatro bancos lógicos PostgreSQL, RabbitMQ, Keycloak, React/NGINX e APIs .NET. Os critérios funcionais, resiliência, autorização e carga podem ser exercitados localmente, com resultados vinculados ao hardware do teste.\n\n**Futuro:** avaliar quando provisionar DEV/HOM/PROD/SHARED em Azure e executar então testes próprios de AKS, redes, HA, custos, recuperação, aprovação de PROD e desempenho em nuvem. O diagrama inclui os ambientes futuros para preservar a arquitetura-alvo, **não uma implantação realizada**.\n\n## Distribuição dos ambientes
 
 | Grupo | Topologia e função | Isolamento / custo de referência |
 | --- | --- | --- |
