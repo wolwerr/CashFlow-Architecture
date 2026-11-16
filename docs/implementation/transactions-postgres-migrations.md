@@ -7,6 +7,7 @@
 - Projeto `tests/CashFlow.Transactions.IntegrationTests` separado dos testes unitários, que testa um **PostgreSQL 17 real**.
 - Job Backend do CI disponibiliza um container PostgreSQL efêmero com credenciais **exclusivas do teste**, aplica migrations, repete `MigrateAsync`, valida inserts, isolamento por `merchant_id` na consulta, unicidade de chave de idempotência, check `amount > 0` e rollback.
 - O CI mantém gates de >=80% para Domain/Application/Infrastructure, React e análise Sonar; migrations e snapshots, como código de schema gerado/manualmente mantido, possuem `ExcludeFromCodeCoverage` para não contaminar a cobertura das regras de negócio. A integração de migrações é validada por testes reais, não por essa exclusão.
+- Arquivos em `Persistence/Migrations/` são excluídos **apenas da detecção de duplicações** do Sonar (`sonar.cpd.exclusions`) porque o snapshot e a migration reproduzem mapeamentos por definição. Eles continuam na análise de issues de segurança; o limite de duplicação de 3% segue aplicado ao restante do código.
 
 ## Execução local (somente Docker)
 
