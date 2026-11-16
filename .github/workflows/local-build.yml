@@ -19,6 +19,8 @@ jobs:
         run: dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
       - name: Unit tests with 80 percent line coverage threshold (Transactions Domain)
         run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
+      - name: Unit tests with 80 percent line coverage threshold (Transactions Application)
+        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
   frontend:
     runs-on: ubuntu-latest
     steps:
