@@ -1,0 +1,60 @@
+name: cashflow-local
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: cashflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cashflow_local_only}
+      POSTGRES_DB: postgres
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/local/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cashflow -d postgres"]
+      interval: 5s
+      retries: 20
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: cashflow
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-cashflow_local_only}
+    ports: ["127.0.0.1:15672:15672"]
+    volumes: [rabbitdata:/var/lib/rabbitmq]
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    command: start-dev --http-port=8080
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/cashflow_keycloak
+      KC_DB_USERNAME: cashflow
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-cashflow_local_only}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_local_only}
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["127.0.0.1:8081:8080"]
+  transactions:
+    build: {context: ., dockerfile: src/Services/Transactions/Dockerfile}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Transactions: Host=postgres;Database=cashflow_transactions;Username=cashflow;Password=${POSTGRES_PASSWORD:-cashflow_local_only}
+    depends_on:
+      postgres: {condition: service_healthy}
+  consolidation:
+    build: {context: ., dockerfile: src/Services/Consolidation/Dockerfile}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Consolidation: Host=postgres;Database=cashflow_consolidation;Username=cashflow;Password=${POSTGRES_PASSWORD:-cashflow_local_only}
+    depends_on:
+      postgres: {condition: service_healthy}
+  web:
+    build: {context: ., dockerfile: web/Dockerfile}
+    environment:
+      TRANSACTIONS_UPSTREAM: transactions:8080
+      CONSOLIDATION_UPSTREAM: consolidation:8080
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on: [transactions, consolidation]
+volumes:
+  pgdata:
+  rabbitdata:
