@@ -5,7 +5,7 @@
 
 ## Antes de iniciar a codificação
 
-- [ ] Produzir **OpenAPI v1** para /api/v1/transactions e /api/v1/consolidation: criação (201 após commit), histórico paginado, consulta diária, schemas e erros 400/401/403/409.
+- [x] Criar **primeira versão proposta do OpenAPI v1** para /api/v1/transactions e /api/v1/consolidation: [contrato inicial](contracts/cashflow-openapi.yaml). Ainda faltam aprovação dos detalhes, validação de schema e integração com APIs reais.
 - [ ] Definir **contrato Idempotency-Key** obrigatório por criação: escopo por comerciante/rota, hash do request, gravação atômica, reuso de resultado, conflito de payload e prazo de retenção.
 - [ ] Especificar **autorização CashFlow**: interface e dono do banco lógico independente, tabela Merchant/Membership, matriz ADMIN/OPERATOR, TTL curto, invalidação/revogação e fail-closed.
 - [ ] Definir **envelope JSON versionado** dos eventos e JSON Schema: event_id, event_type, schema_version, correlation_id, transaction_id, merchant_id e campos financeiros.
