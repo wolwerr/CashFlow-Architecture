@@ -1,0 +1,66 @@
+export type TransactionRecord = {
+  id: string; merchant_id: string; type: 'CREDIT' | 'DEBIT';
+  amount: string; currency: 'BRL'; reference_date: string; created_at: string;
+};
+export type Balance = {
+  merchant_id: string; reference_date: string; currency: 'BRL';
+  credit_total: string; debit_total: string; net_amount: string; closing_balance: string;
+};
+export type TransactionPage = { items: TransactionRecord[]; page: number; page_size: number; has_more: boolean };
+export type CreateInput = {
+  merchant_id: string; type: 'CREDIT' | 'DEBIT'; amount: string; reference_date: string;
+};
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
+export function validMerchant(merchant: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(merchant);
+}
+export function validBrl(value: string): boolean {
+  return /^(?:0|[1-9]\d*)\.\d{2}$/.test(value) && Number(value) > 0 &&
+    Number.isFinite(Number(value)) && Number(value) <= 99999999999999999.99;
+}
+
+async function call<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(path, {
+    ...options,
+    headers: { Authorization: 'Bearer ' + token, ...options.headers },
+    cache: 'no-store'
+  });
+  if (!response.ok) {
+    const problem = await response.json().catch(() => ({})) as { title?: string };
+    const messages: Record<number, string> = {
+      400: 'Dados inválidos.', 401: 'Sessão inválida ou expirada.',
+      403: 'Você não tem permissão neste comerciante.',
+      409: 'Este identificador já foi usado com outro lançamento.',
+      422: 'O lançamento não atende às regras financeiras.',
+      503: 'Serviço indisponível. Tente novamente.'
+    };
+    throw new ApiError(response.status, problem.title || messages[response.status] || 'Falha na comunicação com o serviço.');
+  }
+  return response.json() as Promise<T>;
+}
+
+export function createTransaction(token: string, input: CreateInput, idempotencyKey: string): Promise<TransactionRecord> {
+  return call('/api/v1/transactions', token, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+      'X-Correlation-ID': crypto.randomUUID()
+    },
+    body: JSON.stringify(input)
+  });
+}
+
+export function dailyBalance(token: string, merchant: string, date: string): Promise<Balance> {
+  return call('/api/v1/consolidation/daily?' +
+    new URLSearchParams({ merchant_id: merchant, date }), token);
+}
+
+export function transactionHistory(token: string, merchant: string, page = 1): Promise<TransactionPage> {
+  return call('/api/v1/transactions?' +
+    new URLSearchParams({ merchant_id: merchant, page: String(page), page_size: '20' }), token);
+}
