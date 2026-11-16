@@ -79,6 +79,17 @@
       "serviceAccountsEnabled": true,
       "protocol": "openid-connect",
       "description": "Confidential service client: configure realm-management view-users only, then set KEYCLOAK_AUTHZ_CLIENT_SECRET locally. Never expose the secret to SPA."
+    },
+    {
+      "clientId": "cashflow-management-service",
+      "name": "CashFlow Merchant Management (server-to-server only)",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "description": "Separate confidential admin client. Grant realm-management manage-realm, manage-users, view-users, query-users to its service account. Set KEYCLOAK_MGMT_CLIENT_SECRET only in local .env."
     }
   ]
 }
