@@ -1,3 +1,4 @@
+using CashFlow.Security.Observability;
 using CashFlow.Security.Authentication;
 using CashFlow.Security.Keycloak;
 using CashFlow.Consolidation.Api.Endpoints;
@@ -49,26 +50,7 @@ if (app.Environment.IsDevelopment() &&
     var db = scope.ServiceProvider.GetRequiredService<ConsolidationDbContext>();
     await db.Database.MigrateAsync();
 }
-// Log only route metadata and timing. Never log query strings, tokens or request bodies.
-app.Use(async (context, next) =>
-{
-    var started = System.Diagnostics.Stopwatch.GetTimestamp();
-    try
-    {
-        await next(context);
-    }
-    finally
-    {
-        var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-        app.Logger.LogInformation(
-            "HTTP {Method} {Route} returned {StatusCode} in {ElapsedMs}ms trace={TraceId}",
-            context.Request.Method,
-            context.GetEndpoint()?.DisplayName ?? "unmatched",
-            context.Response.StatusCode,
-            elapsed,
-            context.TraceIdentifier);
-    }
-});
+app.UseCashFlowRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health").AllowAnonymous();
