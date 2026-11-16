@@ -68,10 +68,14 @@ export function listMerchants(token: string): Promise<Merchant[]> {
   return call('/api/v1/merchants/', token);
 }
 
-export function createMerchant(token: string, name: string): Promise<Merchant> {
+export function merchantPermissions(token: string): Promise<{can_manage_merchants: boolean}> {
+  return call('/api/v1/merchants/permissions', token);
+}
+
+export function createMerchant(token: string, name: string, username: string, password: string): Promise<Merchant> {
   return call('/api/v1/merchants/', token, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name, username, password })
   });
 }
 
