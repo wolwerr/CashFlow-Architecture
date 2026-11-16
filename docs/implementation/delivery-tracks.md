@@ -37,6 +37,8 @@
 
 **Progresso complementar Trilha 04:** logs HTTP estruturados e medidor opt-in da latência de projeção, documentados em [SLO e observabilidade local](local-slo-observability.md). Ainda é necessária execução real do SLO, revisão de auditoria, métricas de broker e homologação E2E.
 
+**Progresso complementar Trilha 04:** inventário não destrutivo de auditoria e roteiro integrado de homologação local, descritos em [Auditoria e E2E](local-audit-e2e-validation.md). Os testes reais, comprovação de retenção, segurança e performance ainda precisam de execução com evidências.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
