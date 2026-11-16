@@ -10,6 +10,8 @@ const formatMoney = (value: string) => new Intl.NumberFormat('pt-BR', {
   style: 'currency', currency: 'BRL'
 }).format(Number(value));
 const displayDate = (date: string) => date.split('-').reverse().join('/');
+const activeAccessToken = (session: TokenSet | null): string | null =>
+  session && Date.now() < session.expiresAt - 5000 ? session.accessToken : null;
 
 export default function App() {
   const [session, setSession] = useState<TokenSet | null>(null);
@@ -26,7 +28,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const pendingKey = useRef<string | null>(null);
   const authStarted = useRef(false);
-  const currentToken = session && Date.now() < session.expiresAt - 5000 ? session.accessToken : null;
+  const currentToken = activeAccessToken(session);
 
   useEffect(() => {
     if (location.pathname !== '/auth/callback' || authStarted.current) return;
