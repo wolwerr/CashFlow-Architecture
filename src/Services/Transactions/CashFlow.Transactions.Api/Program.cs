@@ -1,3 +1,4 @@
+using CashFlow.Security.Observability;
 using CashFlow.Security.Authentication;
 using CashFlow.Security.Keycloak;
 using CashFlow.Transactions.Api.Endpoints;
@@ -48,6 +49,7 @@ if (app.Environment.IsDevelopment() &&
     var db = scope.ServiceProvider.GetRequiredService<TransactionsDbContext>();
     await db.Database.MigrateAsync();
 }
+app.UseCashFlowRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health").AllowAnonymous();

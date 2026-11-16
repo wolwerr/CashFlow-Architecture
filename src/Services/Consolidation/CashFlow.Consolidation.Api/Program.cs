@@ -1,3 +1,4 @@
+using CashFlow.Security.Observability;
 using CashFlow.Security.Authentication;
 using CashFlow.Security.Keycloak;
 using CashFlow.Consolidation.Api.Endpoints;
@@ -49,6 +50,7 @@ if (app.Environment.IsDevelopment() &&
     var db = scope.ServiceProvider.GetRequiredService<ConsolidationDbContext>();
     await db.Database.MigrateAsync();
 }
+app.UseCashFlowRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health").AllowAnonymous();
