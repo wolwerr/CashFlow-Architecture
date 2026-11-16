@@ -9,6 +9,7 @@ using CashFlow.Transactions.Domain.Enums;
 using CashFlow.Transactions.Domain.Models;
 using CashFlow.Transactions.Infrastructure.DTOs;
 using CashFlow.Transactions.Infrastructure.Entities;
+using CashFlow.Transactions.Infrastructure.Exceptions;
 using CashFlow.Transactions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -129,6 +130,11 @@ public sealed class TransactionRegistrationGateway(TransactionsDbContext db)
             return new CreateTransactionResult(
                 stored.Id, stored.MerchantId, stored.Type, stored.Amount,
                 stored.ReferenceDate, stored.CreatedAtUtc);
+        }
+        catch (DbUpdateException ex)
+        {
+            throw new TransactionPersistenceException(
+                "The financial registration could not be persisted.", ex);
         }
     }
 
