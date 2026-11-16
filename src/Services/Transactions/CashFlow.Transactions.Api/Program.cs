@@ -1,4 +1,5 @@
 using CashFlow.Security.Observability;
+using CashFlow.Transactions.Api.Merchants;
 using CashFlow.Security.Authentication;
 using CashFlow.Security.Keycloak;
 using CashFlow.Transactions.Api.Endpoints;
@@ -24,6 +25,14 @@ builder.Services.AddHttpClient<ICreateTransactionAuthorizationGateway, KeycloakM
         client.BaseAddress = new Uri(authz.BaseUrl.TrimEnd('/') + "/");
         client.Timeout = TimeSpan.FromSeconds(3);
     });
+var managementSettings = builder.Configuration.GetSection(KeycloakManagementSettings.SectionName)
+    .Get<KeycloakManagementSettings>() ?? new KeycloakManagementSettings();
+builder.Services.AddSingleton(Microsoft.Extensions.Options.Options.Create(managementSettings));
+builder.Services.AddHttpClient<KeycloakMerchantManagement>(client =>
+{
+    client.BaseAddress = new Uri(authz.BaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(8);
+});
 var connection = builder.Configuration.GetConnectionString("Transactions");
 if (string.IsNullOrWhiteSpace(connection))
     throw new InvalidOperationException("ConnectionStrings:Transactions is required.");
@@ -57,6 +66,7 @@ app.MapGet("/internal/authentication/check", () => Results.NoContent())
     .RequireAuthorization();
 app.MapCreateTransaction();
 app.MapTransactionHistory();
+app.MapMerchantManagement();
 app.Run();
 
 public partial class Program { }

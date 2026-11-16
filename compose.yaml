@@ -48,6 +48,10 @@ services:
       KeycloakAuthorization__Realm: cashflow
       KeycloakAuthorization__ClientId: cashflow-authorization-service
       KeycloakAuthorization__ClientSecret: ${KEYCLOAK_AUTHZ_CLIENT_SECRET:-}
+      KeycloakManagement__Realm: cashflow
+      KeycloakManagement__ClientId: cashflow-management-service
+      KeycloakManagement__ClientSecret: ${KEYCLOAK_MGMT_CLIENT_SECRET:-}
+      KeycloakManagement__BootstrapUsername: ${CASHFLOW_BOOTSTRAP_USERNAME:-cashflow.admin}
       Transactions__ApplyMigrationsOnStartup: "true"
       Transactions__EnableOutboxPublisher: "true"
       RabbitMq__Host: rabbitmq

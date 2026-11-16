@@ -29,11 +29,11 @@ vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
   return {
     ...original, createTransaction: vi.fn(), dailyBalance: vi.fn(),
-    transactionHistory: vi.fn()
+    transactionHistory: vi.fn(), listMerchants: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn()
   };
 });
 import App from './App';
-import { createTransaction, dailyBalance, transactionHistory } from './api/cashflow';
+import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin } from './api/cashflow';
 import { beginLogin, logout } from './auth/oidc';
 import type { ReactElement } from 'react';
 
@@ -170,7 +170,7 @@ describe('CashFlow dashboard and interactions', () => {
       type: 'CREDIT', amount: '10.25', currency: 'BRL',
       reference_date: '2026-11-16', created_at: '2026-11-16T15:00:00Z'
     });
-    const form = render().find(n => n.type === 'form')!;
+    const form = render().filter(n => n.type === 'form').at(-1)!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(createTransaction).toHaveBeenCalledWith('access-token', {
       merchant_id: mock.state[3], type: 'CREDIT', amount: '10.25',
@@ -183,7 +183,7 @@ describe('CashFlow dashboard and interactions', () => {
     setupSignedIn();
     mock.state[6] = '10.25';
     vi.mocked(createTransaction).mockRejectedValue(new Error('Connection lost'));
-    const form = render().find(n => n.type === 'form')!;
+    const form = render().filter(n => n.type === 'form').at(-1)!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(mock.references.some(ref => ref.current === 'unique-key')).toBe(true);
     const input = find('input', 'Valor (BRL)');
@@ -193,10 +193,35 @@ describe('CashFlow dashboard and interactions', () => {
   it('does not submit invalid amounts', async () => {
     setupSignedIn();
     mock.state[6] = '10,25';
-    const form = render().find(n => n.type === 'form')!;
+    const form = render().filter(n => n.type === 'form').at(-1)!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(createTransaction).not.toHaveBeenCalled();
     expect(mock.state[10]).toMatchObject({ isError: true });
+  });
+  it('creates a merchant and selects it without manually entering a UUID', async () => {
+    setupSignedIn();
+    const input = find('input', 'Nome do comerciante');
+    (input.props.onChange as (event: unknown) => void)({ target: { value: 'Loja Campinas' } });
+    vi.mocked(createMerchant).mockResolvedValue({
+      id: '68a5baac-d97f-45b4-9119-b4c5b9de7c9b',
+      name: 'Loja Campinas', role: 'ADMIN'
+    });
+    const form = render().filter(n => n.type === 'form')[0];
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createMerchant).toHaveBeenCalledWith('access-token', 'Loja Campinas');
+    expect(mock.state[3]).toBe('68a5baac-d97f-45b4-9119-b4c5b9de7c9b');
+  });
+  it('adds an existing administrator only after selecting a merchant with ADMIN role', async () => {
+    setupSignedIn();
+    mock.state[12] = [{
+      id: '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', name: 'Loja Campinas', role: 'ADMIN'
+    }];
+    const admin = find('input', 'Usuário administrador');
+    (admin.props.onChange as (event: unknown) => void)({ target: { value: 'new.admin' } });
+    const forms = render().filter(n => n.type === 'form');
+    await (forms[1].props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(addMerchantAdmin).toHaveBeenCalledWith('access-token',
+      '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', 'new.admin', undefined);
   });
   it('delegates logout and blocks queries after expiry', async () => {
     setupSignedIn();

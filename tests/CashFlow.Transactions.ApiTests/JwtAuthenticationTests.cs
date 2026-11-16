@@ -306,6 +306,42 @@ public sealed class JwtAuthenticationTests : IDisposable
     }
 
     [Fact]
+    public async Task MerchantDirectoryWithoutJwtIsUnauthorized()
+    {
+        using var client = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.GetAsync("/api/v1/merchants/")).StatusCode);
+    }
+
+    [Fact]
+    public async Task MerchantBootstrapRejectsUnapprovedAuthenticatedUser()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var response = await client.PostAsJsonAsync("/api/v1/merchants/", new { name = "Loja Campinas" });
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MerchantBootstrapRejectsInvalidNameBeforeProvisioning()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var response = await client.PostAsJsonAsync("/api/v1/merchants/", new { name = " " });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminRegistrationRejectsMissingUsername()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/merchants/{Guid.NewGuid():D}/admins", new { username = "" });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task HistoryWithoutJwtIsUnauthorized()
     {
         using var client = _factory.CreateClient();
