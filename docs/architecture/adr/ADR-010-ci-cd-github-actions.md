@@ -103,3 +103,7 @@ O gate de produção via **GitHub Environments com aprovação manual** é obrig
 - [GitHub Actions](https://docs.github.com/en/actions)
 - [GitHub Actions com OIDC no Azure](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure)
 - [Microsoft Entra: federação de identidades](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation)
+
+## Sequenciamento de entrega: LOCAL primeiro
+
+**Fase atual aprovada:** desenvolvimento, integração e testes **somente em Docker Compose no computador local**, sem deploy para Azure. Os workflows GitHub Actions de build/teste podem ser preparados para qualidade do repositório, mas a promoção entre DEV/HOM/PROD e o gate de aprovação manual em GitHub Environments são **fase futura**. Antes de qualquer release de PROD, manter as exigências já decididas: aprovação humana efetiva, backups e teste documentado de restauração. Essa postergação não altera a escolha de GitHub Actions como plataforma CI/CD.
