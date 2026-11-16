@@ -113,6 +113,7 @@ public sealed class KeycloakMerchantManagementTests
     [Fact]
     public async Task CreatesMerchantHierarchyAssignsOwnerAndStoresDisplayName()
     {
+        string? createdMerchantId = null;
         var groups = new Dictionary<string, List<object>>
         {
             ["groups"] = [], ["groups/root-id/children"] = [],
@@ -137,6 +138,7 @@ public sealed class KeycloakMerchantManagementTests
                 // Group UUID is generated inside the application; fake its Keycloak group ID.
                 using var payload = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
                 var name = payload.RootElement.GetProperty("name").GetString()!;
+                createdMerchantId = name;
                 groups["groups/root-id/children"].Add(new {
                     id = "merchant-group-id", name, path = "/merchants/" + name
                 });
@@ -148,17 +150,22 @@ public sealed class KeycloakMerchantManagementTests
                 var name = payload.RootElement.GetProperty("name").GetString()!;
                 groups["groups/merchant-group-id/children"].Add(new {
                     id = name == "ADMIN" ? "admin-id" : "operator-id",
-                    name, path = $"/merchants/{MerchantId:D}/{name}"
+                    name, path = $"/merchants/{createdMerchantId}/{name}"
                 });
-                // For random ID in this test, the child path must be extracted from parent.
                 return new HttpResponseMessage(HttpStatusCode.Created);
             }
             if (request.Method == HttpMethod.Put) return new HttpResponseMessage(HttpStatusCode.NoContent);
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         }));
-        // The full flow uses a random UUID. Separate tests cover the leaf group logic,
-        // while API security tests protect endpoints before provisioning.
-        Assert.NotNull(Create(fake));
+        var result = await Create(fake).CreateAsync("Loja Campinas", UserId, CancellationToken.None);
+        Assert.NotEqual(Guid.Empty, result.Id);
+        Assert.Equal(result.Id.ToString("D"), createdMerchantId);
+        Assert.Equal("Loja Campinas", result.Name);
+        Assert.Equal("ADMIN", result.Role);
+        Assert.Contains(fake.Calls, call => call.Method == "PUT" &&
+            call.Path.EndsWith($"/users/{UserId:D}/groups/admin-id", StringComparison.Ordinal));
+        Assert.Contains(fake.Calls, call => call.Method == "PUT" &&
+            call.Path.EndsWith("/groups/merchant-group-id", StringComparison.Ordinal));
     }
 
     [Fact]
