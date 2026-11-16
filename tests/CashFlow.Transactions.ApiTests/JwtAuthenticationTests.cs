@@ -305,6 +305,57 @@ public sealed class JwtAuthenticationTests : IDisposable
         Assert.Equal(0, _registration.Calls);
     }
 
+    [Fact]
+    public async Task HistoryWithoutJwtIsUnauthorized()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/transactions?merchant_id=" + Guid.NewGuid());
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HistoryWithMissingMerchantIsBadRequestBeforeDatabaseQuery()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await client.GetAsync("/api/v1/transactions")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(100001)]
+    public async Task HistoryRejectsInvalidPages(int page)
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var response = await client.GetAsync($"/api/v1/transactions?merchant_id={Guid.NewGuid()}&page={page}");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HistoryDeniedForMerchantWithoutMembership()
+    {
+        _authorization.Allowed = false;
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var merchant = Guid.NewGuid();
+        var response = await client.GetAsync($"/api/v1/transactions?merchant_id={merchant:D}");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(merchant, _authorization.LastMerchant);
+    }
+
+    [Fact]
+    public async Task HistoryDeniesOnKeycloakOutage()
+    {
+        _authorization.Outage = true;
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var response = await client.GetAsync($"/api/v1/transactions?merchant_id={Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    }
+
     private static async Task<HttpResponseMessage> Submit(HttpClient client, string amount,
         bool includeIdempotency = true)
     {
