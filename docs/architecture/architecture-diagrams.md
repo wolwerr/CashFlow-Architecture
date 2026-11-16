@@ -2,7 +2,7 @@
 
 > **Issue #6 · Milestone M2** | Arquitetura proposta para revisão
 
-A documentação foi dividida por objetivo para facilitar a leitura sem duplicar informações.
+A documentação foi dividida por objetivo para facilitar a leitura sem duplicar informações. **Fase atual: implementação e testes somente LOCAL com Docker Compose.** Azure AKS/DEV/HOM/PROD e seus custos são planejamento futuro. As [validações documentais](validations/README.md) já realizadas não substituem testes do código.
 
 | Documento | O que apresenta |
 | --- | --- |
