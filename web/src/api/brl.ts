@@ -2,7 +2,7 @@
 export function normalizeBrl(raw: string): string | null {
   const value = raw.trim();
   const plain = /^(?:0|[1-9]\d{0,16})(?:[,.]\d{1,2})?$/;
-  const grouped = /^[1-9]\d{0,2}(?:\.\d{3})+(?:,\d{1,2})?$/;
+  const grouped = /^[1-9]\d{0,2}(?:\.\d{3})+,\d{1,2}$/;
   if (!plain.test(value) && !grouped.test(value)) return null;
 
   const invariant = grouped.test(value)
