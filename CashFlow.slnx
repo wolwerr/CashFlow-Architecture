@@ -9,6 +9,7 @@
     <Project Path="src/Services/Consolidation/CashFlow.Consolidation.Infrastructure/CashFlow.Consolidation.Infrastructure.csproj" />
     <Project Path="src/Services/Consolidation/CashFlow.Consolidation.Api/CashFlow.Consolidation.Api.csproj" />
     <Project Path="tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj" />
+    <Project Path="tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj" />
     <Project Path="tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj" />
   </Folder>
 </Solution>
