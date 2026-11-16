@@ -20,6 +20,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
     def log_message(self, *args):
+        # Intentionally suppress request logging to avoid writing bearer tokens or test noise.
         pass
 
 
