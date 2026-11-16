@@ -19,53 +19,67 @@ public sealed class KeycloakMerchantAuthorizationGateway(
     private const int PageSize = 100;
     private const int MaxPages = 20;
 
-    public async Task<bool> CanCreateAsync(Guid actorId, Guid merchantId, CancellationToken ct)
+    public async Task<bool> CanCreateAsync(Guid actorId, Guid merchantId,
+        CancellationToken cancellationToken)
     {
         if (actorId == Guid.Empty || merchantId == Guid.Empty)
             return false;
 
         try
         {
-        var bearer = await GetAccessTokenAsync(ct);
-        // Admin Groups endpoint queries current memberships, never claims from an old JWT.
-        for (var page = 0; page < MaxPages; page++)
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"admin/realms/{Uri.EscapeDataString(settings.Realm)}/users/{actorId:D}/groups?first={page * PageSize}&max={PageSize}");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
-            using var response = await http.SendAsync(request, ct);
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return false;
-            if (!response.IsSuccessStatusCode)
-                throw new MerchantAuthorizationUnavailableException("Keycloak group lookup failed.");
-
-            var groups = await response.Content.ReadFromJsonAsync<List<GroupView>>(cancellationToken: ct)
-                ?? throw new MerchantAuthorizationUnavailableException("Keycloak group response missing.");
-
-            var prefix = $"/merchants/{merchantId:D}/";
-            if (groups.Any(x => x.Path is not null &&
-                (string.Equals(x.Path, prefix + "ADMIN", StringComparison.Ordinal) ||
-                 string.Equals(x.Path, prefix + "OPERATOR", StringComparison.Ordinal))))
-                return true;
-
-            if (groups.Count < PageSize)
-                return false;
-        }
-        // Never grant if a very large group list cannot be exhaustively examined.
-        throw new MerchantAuthorizationUnavailableException("Keycloak group page limit exceeded.");
+            var bearer = await GetAccessTokenAsync(cancellationToken);
+            // Never cache membership: a revoked role must be checked against Keycloak.
+            for (var page = 0; page < MaxPages; page++)
+            {
+                var groups = await ReadGroupPageAsync(
+                    actorId, bearer, page, cancellationToken);
+                if (groups is null)
+                    return false; // Keycloak reports the user does not exist.
+                if (groups.Any(group => MatchesRole(group.Path, merchantId)))
+                    return true;
+                if (groups.Count < PageSize)
+                    return false;
+            }
+            throw new MerchantAuthorizationUnavailableException(
+                "Keycloak group page limit exceeded.");
         }
         catch (HttpRequestException ex)
         {
-            throw new MerchantAuthorizationUnavailableException("Keycloak network request failed.", ex);
+            throw new MerchantAuthorizationUnavailableException(
+                "Keycloak network request failed.", ex);
         }
-        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new MerchantAuthorizationUnavailableException("Keycloak request timed out.", ex);
+            throw new MerchantAuthorizationUnavailableException(
+                "Keycloak request timed out.", ex);
         }
         catch (JsonException ex)
         {
-            throw new MerchantAuthorizationUnavailableException("Keycloak response is invalid.", ex);
+            throw new MerchantAuthorizationUnavailableException(
+                "Keycloak response is invalid.", ex);
         }
+    }
+
+    private static bool MatchesRole(string? path, Guid merchantId) =>
+        string.Equals(path, $"/merchants/{merchantId:D}/ADMIN", StringComparison.Ordinal) ||
+        string.Equals(path, $"/merchants/{merchantId:D}/OPERATOR", StringComparison.Ordinal);
+
+    private async Task<List<GroupView>?> ReadGroupPageAsync(Guid actorId,
+        string bearer, int page, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get,
+            $"admin/realms/{Uri.EscapeDataString(settings.Realm)}/users/{actorId:D}/groups?first={page * PageSize}&max={PageSize}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        using var response = await http.SendAsync(request, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+        if (!response.IsSuccessStatusCode)
+            throw new MerchantAuthorizationUnavailableException("Keycloak group lookup failed.");
+
+        return await response.Content.ReadFromJsonAsync<List<GroupView>>(
+            cancellationToken: cancellationToken)
+            ?? throw new MerchantAuthorizationUnavailableException("Keycloak group response missing.");
     }
 
     private async Task<string> GetAccessTokenAsync(CancellationToken ct)
