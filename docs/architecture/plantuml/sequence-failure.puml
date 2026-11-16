@@ -36,7 +36,7 @@ else JWT valido
     DBT --> API: COMMIT confirmado
     API --> G: HTTP 201 Created
     G --> W: Registro confirmado
-W --> U: Exibe confirmacao
+    W --> U: Exibe confirmacao
   end
 end
 
