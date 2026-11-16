@@ -8,6 +8,7 @@ using Xunit;
 namespace CashFlow.Transactions.IntegrationTests;
 
 /// <summary>Executes against a dedicated LOCAL PostgreSQL database, never production.</summary>
+[Collection("PostgreSQL integration")]
 public sealed class TransactionsPostgresMigrationTests
 {
     [Fact]
