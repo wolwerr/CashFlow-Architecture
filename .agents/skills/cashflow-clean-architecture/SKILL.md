@@ -24,11 +24,17 @@ src/Services/<Service>/
     Exceptions/     # Custom typed domain exceptions derived from DomainException
   CashFlow.<Service>.Application/
     UseCases/       # Feature/use-case orchestration, e.g. CreateTransaction/
+      <UseCase>/
+        Commands/    # Input command records for write cases
+        Queries/     # Input query records for read cases, when needed
+        Results/     # Output records, when needed
     Gateways/       # Application ports/contracts for external dependencies, added only as needed
   CashFlow.<Service>.Infrastructure/
     Entities/       # EF Core persistence entities ONLY
+    DTOs/           # Integration transport records, grouped by integration as needed
     ...             # DB mappings, repositories, broker implementations, etc. as needed
   CashFlow.<Service>.Api/
+    DTOs/           # HTTP request/response records, grouped by endpoint when needed
     ...             # ASP.NET Core transport and composition root
 ```
 
@@ -36,6 +42,10 @@ src/Services/<Service>/
 - **`Entities` means infrastructure persistence types only.** A domain `Models/Transaction.cs` is a different responsibility from an eventual `Infrastructure/Entities/TransactionEntity.cs`; define explicit mapping in Infrastructure.
 - Namespace mirrors the path, for example `CashFlow.Transactions.Domain.Models` and `CashFlow.Transactions.Domain.Exceptions`.
 - `Application/Gateways/` contains gateway contracts (interfaces) for external dependencies; concrete implementations live in Infrastructure. Do not create an `Application/Interfaces/` folder.
+- `Application/UseCases/<Action>/Commands/` stores input commands; `Queries/` stores input queries; `Results/` stores outputs. Do not place these records directly at the UseCase root. Add only the folders needed for that use case.
+- `Infrastructure/DTOs/` stores transport contracts for adapters (e.g. RabbitMQ), optionally grouped by integration. HTTP DTOs belong to `Api/DTOs/`, not Infrastructure. Keep DTOs out of Domain.
+- Prefer C# `sealed record` for Commands, Queries, Results, and transport DTOs; use `sealed class` for domain models with identity/invariants and `class` for EF Core Entities. Records are shallowly immutable, so do not expose mutable collections without defensive handling. Records must not contain business logic.
+- Do not introduce MediatR/CQRS frameworks by default. Explicit UseCase classes can receive Command/Query records directly.
 - `Application/UseCases/<Action>/` contains each use case. Do not invent business `Services`, generic managers or framework-specific handlers in Domain.
 - Exceptions represent business rule failures, not HTTP status codes; API maps these to `ProblemDetails` where appropriate.
 - Do not introduce external framework dependencies or `PackageReference` into Domain or Application. Application may reference only its own Domain project. Domain has no project references.
