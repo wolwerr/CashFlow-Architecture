@@ -24,7 +24,8 @@ opt Chaves ausentes ou atualizacao de cache
   KC --> API: Chaves publicas
 end
 API -> API: Valida assinatura, iss, aud, exp/nbf\nlocalmente com JWKS em cache
-API -> API: Confere vinculo no CashFlow\ncache curto e invalido quando revogado\nADMIN ou OPERATOR por merchant_id
+API -> KC: Consulta interna autenticada\nvinculo atual sub + merchant_id + acao\nADMIN/OPERATOR (Groups)\nsem cache positivo no MVP\nfail closed se IAM indisponivel
+KC --> API: Vinculo e papel atuais
 alt JWT valido e acesso autorizado
   API --> G: Resposta da operacao
   G --> W: Resposta
