@@ -7,24 +7,36 @@ restores it in a finally block. No credentials, customer data, or cloud calls.
 import argparse
 import datetime as dt
 import json
-import pathlib
 import subprocess
 import sys
 import time
 
 ALLOWED_SERVICES = ("rabbitmq", "consolidation", "keycloak")
-REPORT_PATH = pathlib.Path("reports/local-recovery.json")
 
 
-def compose(*arguments):
+# Docker receives only literal commands defined here; CLI inputs are never arguments.
+DOCKER_COMMANDS = {
+    "services": ("docker", "compose", "config", "--services"),
+    "rabbitmq_running": ("docker", "compose", "ps", "--status", "running", "--services", "rabbitmq"),
+    "consolidation_running": ("docker", "compose", "ps", "--status", "running", "--services", "consolidation"),
+    "keycloak_running": ("docker", "compose", "ps", "--status", "running", "--services", "keycloak"),
+    "rabbitmq_stop": ("docker", "compose", "stop", "rabbitmq"),
+    "consolidation_stop": ("docker", "compose", "stop", "consolidation"),
+    "keycloak_stop": ("docker", "compose", "stop", "keycloak"),
+    "rabbitmq_restore": ("docker", "compose", "up", "-d", "rabbitmq"),
+    "consolidation_restore": ("docker", "compose", "up", "-d", "consolidation"),
+    "keycloak_restore": ("docker", "compose", "up", "-d", "keycloak"),
+}
+
+
+def compose(action):
     return subprocess.run(
-        ["docker", "compose", *arguments],
+        DOCKER_COMMANDS[action], shell=False,
         capture_output=True, text=True, check=False, timeout=90,
     )
 
-
 def verify_local_project():
-    config = compose("config", "--services")
+    config = compose("services")
     if config.returncode != 0:
         raise RuntimeError("Docker Compose config is unavailable")
     services = set(config.stdout.splitlines())
@@ -35,7 +47,7 @@ def verify_local_project():
 
 
 def get_service_state(service):
-    result = compose("ps", "--status", "running", "--services", service)
+    result = compose(service + "_running")
     if result.returncode != 0:
         raise RuntimeError("Could not inspect Docker Compose service")
     return service in result.stdout.splitlines()
@@ -67,14 +79,14 @@ def perform_drill(service, outage_seconds, execute):
     try:
         # Mark before invoking stop: recovery must be attempted even on timeout.
         stop_attempted = True
-        stopped = compose("stop", service)
+        stopped = compose(service + "_stop")
         report["stop_succeeded"] = stopped.returncode == 0
         if not report["stop_succeeded"]:
             raise RuntimeError("Docker Compose stop failed")
         time.sleep(outage_seconds)
     finally:
         if stop_attempted:
-            restored = compose("up", "-d", service)
+            restored = compose(service + "_restore")
             report["restore_succeeded"] = restored.returncode == 0
             if report["restore_succeeded"]:
                 report["running_after_restore"] = get_service_state(service)
@@ -100,9 +112,6 @@ def main(argv=None):
     except (RuntimeError, subprocess.TimeoutExpired) as error:
         print("Recovery drill failed: " + str(error), file=sys.stderr)
         return 1
-    if args.execute:
-        REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        REPORT_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2))
     return 0 if not args.execute or result["outcome"] == "RESTORED" else 1
 
