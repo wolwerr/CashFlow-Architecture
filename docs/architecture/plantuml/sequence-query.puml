@@ -5,16 +5,28 @@ actor Comerciante as U
 participant "React SPA" as W
 participant "NGINX" as G
 participant "Consolidation API" as C
+participant "Keycloak\nGroups / autorizacao" as KC
 database "PostgreSQL\nConsolidation" as DB
 
 U -> W: Seleciona comerciante e data
 W -> G: GET /api/v1/consolidation/*\nBearer JWT; HTTPS :443 publico
 G -> C: Proxy com Authorization\nHTTP :8080 privado
-C -> C: Valida assinatura JWT, issuer, aud, exp\ne autorizacao por merchant_id
-alt Requisicao nao autenticada ou nao autorizada
-  C --> G: HTTP 401 ou 403
-  G --> W: HTTP 401 ou 403
-else Consulta autorizada
+C -> C: Valida assinatura JWT, issuer, aud, exp/nbf
+alt JWT ausente ou invalido
+  C --> G: HTTP 401
+  G --> W: HTTP 401
+else JWT valido
+  C -> KC: Consulta autenticada de vinculo atual\nsub + merchant_id + consultar consolidado\nADMIN/OPERATOR; sem cache positivo
+  alt Sem vinculo ou permissao
+    KC --> C: Nao autorizado
+    C --> G: HTTP 403
+    G --> W: HTTP 403
+  else Keycloak indisponivel / resposta incerta
+    KC --> C: Falha / timeout
+    C --> G: HTTP 503 (fail closed)
+    G --> W: HTTP 503
+  else Consulta autorizada
+    KC --> C: Autorizado
   C -> C: Valida data e parametros
   alt Parametros invalidos
     C --> G: Resposta de validacao; contrato pendente
@@ -35,6 +47,7 @@ else Consulta autorizada
       G --> W: Exibe estado adequado
     end
   end
+end
 end
 note over C,DB
 Consolidation nao consulta Transactions.
