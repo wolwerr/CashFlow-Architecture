@@ -8,10 +8,7 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 | --- | --- |
 | **[Decisões consolidadas do MVP](mvp-decisions.md)** | 24 decisões aprovadas para regras financeiras, escopo, IAM, contratos, qualidade e operação; distinção entre decisão e comprovação. |
 | **[Checklist de implementação e testes do MVP](mvp-implementation-checklist.md)** | Ações pendentes de OpenAPI, modelo físico, desenvolvimento, qualidade, operações e evidências antes de PROD. |
-| **[Validação 01: Requisitos e rastreabilidade](requirements-validation.md)** | Matriz RF/RNF → ADRs/componentes, situação documental, lacunas de negócio e testes pendentes. |
-| **[Validação 02: Diagramas de sequência](sequence-validation.md)** | Revisão de fluxos OIDC/JWT, Outbox, RabbitMQ, idempotência, falha e consulta diária; pendências e testes. |
-| **[Validação 03: Modelo de dados](data-model-validation.md)** | Revisão das entidades, isolamento dos bancos, identificador OIDC, unicidade, atomicidade e concorrência. |
-| **[Validação 04: Contratos REST e Eventos](contracts-validation.md)** | OpenAPI REST v1 e JSON Schema de evento, com propostas de endpoints, critérios de aceite e pendências de implementação. |
+| **[Validações da arquitetura](validations/README.md)** | Revisões documentais 01 a 04 agrupadas, com testes de execução separados. |
 | **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | **C4 Níveis 1, 2 e 3 em uma página**, com diagramas, responsabilidades, protocolos, portas, componentes e justificativas técnicas. |
 | **[Deployment View](deployment-view.md)** | Implantação de LOCAL, DEV, HOM, PROD e SHARED; visão Azure e capacidades equivalentes em AWS/GCP. |
 | **[Diagramas de Sequência](sequence-diagrams.md)** | Interações detalhadas para registro, falha do consolidado e consulta. |
