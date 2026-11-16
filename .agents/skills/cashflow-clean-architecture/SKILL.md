@@ -21,7 +21,7 @@ src/Services/<Service>/
   CashFlow.<Service>.Domain/
     Models/         # Business models and business invariants; no persistence attributes
     Enums/          # Business enumerations
-    Exceptions/     # Custom typed domain exceptions derived from DomainException
+    Exceptions/     # Typed business failures derived from DomainException
   CashFlow.<Service>.Application/
     UseCases/       # Feature/use-case orchestration, e.g. CreateTransaction/
       <UseCase>/
@@ -29,9 +29,11 @@ src/Services/<Service>/
         Queries/     # Input query records for read cases, when needed
         Results/     # Output records, when needed
     Gateways/       # Application ports/contracts for external dependencies, added only as needed
+    Exceptions/     # Use-case failures derived from ApplicationLayerException
   CashFlow.<Service>.Infrastructure/
     Entities/       # EF Core persistence entities ONLY
     DTOs/           # Integration transport records, grouped by integration as needed
+    Exceptions/     # Technical adapter failures derived from InfrastructureLayerException
     ...             # DB mappings, repositories, broker implementations, etc. as needed
   CashFlow.<Service>.Api/
     DTOs/           # HTTP request/response records, grouped by endpoint when needed
@@ -51,6 +53,19 @@ src/Services/<Service>/
 - Do not introduce external framework dependencies or `PackageReference` into Domain or Application. Application may reference only its own Domain project. Domain has no project references.
 - Infrastructure may depend on Domain/Application, never Api. Api composes dependencies; it must not contain core financial rules.
 - Transactions and Consolidation cannot have compile-time references to each other's internals or query each other's logical databases.
+
+## Exception ownership and error boundaries
+
+Each financial service (Transactions and Consolidation) keeps **layer-specific custom exception types** with namespaces matching folders:
+
+- `Domain/Exceptions/DomainException`: base for business invariant violations; concrete exceptions such as `InvalidTransactionAmountException`, `FutureReferenceDateException` live here. Domain exceptions must not reference HTTP, EF Core, RabbitMQ or framework-specific error types.
+- `Application/Exceptions/ApplicationLayerException`: base for use-case orchestration failures (e.g. a future merchant authorization denial or idempotency conflict). Define a concrete exception only when a real use case needs it. Do not duplicate domain validation or swallow domain exceptions into a generic Application error.
+- `Infrastructure/Exceptions/InfrastructureLayerException`: base for low-level adapter failures (e.g. future persistence or message publication failures). Preserve original technical exceptions as `InnerException`, never put credentials or sensitive database details in public messages.
+- `Api`: use centralized exception handling and `ProblemDetails` for HTTP responses; do not add business exceptions to Api or embed status codes in Domain/Application/Infrastructure exception classes.
+
+**Dependency rule:** Inner layers never import exception types from outer layers. Application must never depend on Infrastructure exceptions or concrete EF/RabbitMQ error classes. Adapt technical failures to an Application Gateway contract where necessary, preserving logging/diagnostics. Do not treat unavailable authorization as permitted access; fail closed.
+
+The abstract base exceptions are created in each service for consistency. Add concrete classes and behavior tests **when there is a real failure scenario**; do not invent speculative exceptions. Keep the solution straightforward and respect SOLID/SRP/DIP.
 
 ## SOLID design principles
 
