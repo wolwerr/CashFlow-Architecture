@@ -99,7 +99,7 @@ Keycloak mantém usuários, credenciais e configurações OIDC. O CashFlow é re
 - [ADR-003: Persistência](../adr/ADR-003-persistence.md)
 - [ADR-005: Outbox e Idempotência](../adr/ADR-005-outbox-consistency-idempotency.md)
 - [ADR-006: Identidade e acesso](../adr/ADR-006-identity-and-access.md)
-- [Validação 02: Diagramas de sequência](../sequence-validation.md)
+- [Validação 02: Diagramas de sequência](sequence-validation.md)
 
 ## Revalidação das 24 decisões aprovadas em 15/11/2026
 
