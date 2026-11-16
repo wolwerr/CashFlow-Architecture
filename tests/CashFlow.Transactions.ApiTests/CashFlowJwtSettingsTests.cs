@@ -1,4 +1,4 @@
-using CashFlow.Transactions.Api.Authentication;
+using CashFlow.Security.Authentication;
 using Xunit;
 
 namespace CashFlow.Transactions.ApiTests;
