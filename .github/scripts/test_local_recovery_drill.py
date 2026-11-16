@@ -48,8 +48,8 @@ class LocalRecoveryDrillTests(unittest.TestCase):
         ]) as compose, patch.object(drill.time, "sleep") as sleep:
             report = drill.perform_drill("rabbitmq", 2, True)
         self.assertEqual(report["outcome"], "RESTORED")
-        self.assertEqual(compose.call_args_list[2].args, ("stop", "rabbitmq"))
-        self.assertEqual(compose.call_args_list[3].args, ("up", "-d", "rabbitmq"))
+        self.assertEqual(compose.call_args_list[2].args, ("rabbitmq_stop",))
+        self.assertEqual(compose.call_args_list[3].args, ("rabbitmq_restore",))
         sleep.assert_called_once_with(2)
 
     def test_stop_failure_still_attempts_restart(self):
@@ -61,7 +61,7 @@ class LocalRecoveryDrillTests(unittest.TestCase):
         ]) as compose:
             with self.assertRaisesRegex(RuntimeError, "stop failed"):
                 drill.perform_drill("consolidation", 1, True)
-        self.assertEqual(compose.call_args_list[-2].args, ("up", "-d", "consolidation"))
+        self.assertEqual(compose.call_args_list[-2].args, ("consolidation_restore",))
 
 
 if __name__ == "__main__":
