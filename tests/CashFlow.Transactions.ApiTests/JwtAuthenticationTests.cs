@@ -25,6 +25,7 @@ public sealed class JwtAuthenticationTests : IDisposable
     private const string Audience = "cashflow-transactions-api";
     private readonly string? _priorAuthority;
     private readonly string? _priorAudience;
+    private readonly Dictionary<string, string?> _original = new();
     private readonly RSA _rsa = RSA.Create(2048);
     private readonly RsaSecurityKey _key;
     private readonly WebApplicationFactory<Program> _factory;
@@ -37,6 +38,18 @@ public sealed class JwtAuthenticationTests : IDisposable
         _priorAudience = Environment.GetEnvironmentVariable("Authentication__Audience");
         Environment.SetEnvironmentVariable("Authentication__Authority", Issuer);
         Environment.SetEnvironmentVariable("Authentication__Audience", Audience);
+        foreach (var (key, value) in new Dictionary<string, string>
+        {
+            ["KeycloakAuthorization__BaseUrl"] = "http://localhost:8081",
+            ["KeycloakAuthorization__Realm"] = "cashflow",
+            ["KeycloakAuthorization__ClientId"] = "test-authz-client",
+            ["KeycloakAuthorization__ClientSecret"] = "unit-test-not-a-secret",
+            ["ConnectionStrings__Transactions"] = "Host=localhost;Database=unused;Username=unused;Password=unused"
+        })
+        {
+            _original[key] = Environment.GetEnvironmentVariable(key);
+            Environment.SetEnvironmentVariable(key, value);
+        }
         _key = new RsaSecurityKey(_rsa) { KeyId = "test-key" };
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -149,6 +162,8 @@ public sealed class JwtAuthenticationTests : IDisposable
         _factory.Dispose();
         Environment.SetEnvironmentVariable("Authentication__Authority", _priorAuthority);
         Environment.SetEnvironmentVariable("Authentication__Audience", _priorAudience);
+        foreach (var item in _original)
+            Environment.SetEnvironmentVariable(item.Key, item.Value);
         _rsa.Dispose();
     }
 }
