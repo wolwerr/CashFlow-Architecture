@@ -32,4 +32,4 @@ O workflow falha quando os testes ou o limite de cobertura falham. Para que o me
 
 ## Evidências ainda pendentes
 
-O workflow único `.github/workflows/local-build.yml` compila backend e frontend, executa testes unitários/arquiteturais, gera OpenCover para C# e LCOV para React/TypeScript (Vitest), e publica ambos no SonarQube Cloud. O frontend ainda não tem limiar próprio de 80% na esteira; a cobertura precisa ser medida e ampliada com a evolução do código. Conferir resultados do CI após o merge e não presumir que o Sonar importou relatórios antes da execução. Azure permanece futuro.
+O workflow único `.github/workflows/local-build.yml` compila backend e frontend, executa testes unitários/arquiteturais, gera OpenCover para C# e LCOV para React/TypeScript (Vitest), e publica ambos no SonarQube Cloud. O frontend possui gate de **80% para linhas, instruções, funções e ramos** via Vitest V8 (além de gerar LCOV), e o Sonar importa esses dados. Este limite continuará exigindo testes conforme o React evoluir. Conferir resultados do CI após o merge e não presumir que o Sonar importou relatórios antes da execução. Azure permanece futuro.
