@@ -104,6 +104,7 @@ jobs:
       - name: Backend | Generate integration OpenCover for Sonar
         env:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
         run: |
           dotnet test tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj \
             -c Release --no-build \
@@ -130,6 +131,7 @@ jobs:
       - name: Backend | Generate Consolidation integration OpenCover for Sonar
         env:
           CASHFLOW_TEST_CONSOLIDATION: Host=localhost;Port=5432;Database=cashflow_consolidation_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
         run: |
           dotnet test tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj \
             -c Release --no-build \
