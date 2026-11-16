@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { beginLogin, decodeJwtPayload, expiresInSeconds, finishLogin, getSubject, makeChallenge, makeVerifier, logout } from './oidc';
+import { beginLogin, decodeJwtPayload, expiresInSeconds, finishLogin, getSubject, makeChallenge, makeVerifier, logout, renewSession } from './oidc';
 afterEach(() => vi.unstubAllGlobals());
 
 const jwt = (payload: object) => ['eyJhbGciOiJSUzI1NiJ9', btoa(JSON.stringify(payload)), 'sig'].join('.');
@@ -82,6 +82,28 @@ describe('OIDC Authorization Code and PKCE', () => {
     vi.stubGlobal('location', { origin: 'http://localhost:8080' });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
     await expect(finishLogin('http://localhost/auth/callback?code=c&state=yes')).rejects.toThrow();
+  });
+  it('renews access token with refresh token only from memory', async () => {
+    const refreshed = jwt({ sub: 'u', exp: Math.floor(Date.now()/1000) + 240 });
+    const mocked = vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({
+        access_token: refreshed, refresh_token: 'rotated-refresh', expires_in: 240
+      })
+    });
+    vi.stubGlobal('fetch', mocked);
+    const next = await renewSession({
+      accessToken: 'old', refreshToken: 'old-refresh', expiresAt: Date.now() - 1
+    });
+    expect(next.accessToken).toBe(refreshed);
+    expect(next.refreshToken).toBe('rotated-refresh');
+    const params = mocked.mock.calls[0][1].body as URLSearchParams;
+    expect(params.get('grant_type')).toBe('refresh_token');
+    expect(params.get('refresh_token')).toBe('old-refresh');
+  });
+  it('fails closed when no refresh token or renewal fails', async () => {
+    await expect(renewSession({ accessToken: 'a', expiresAt: 0 })).rejects.toThrow();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    await expect(renewSession({ accessToken: 'a', refreshToken: 'r', expiresAt: 0 })).rejects.toThrow();
   });
   it('logs out without persisting credentials', () => {
     const session = storage();
