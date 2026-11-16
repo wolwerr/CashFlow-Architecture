@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin } from './api/cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions } from './api/cashflow';
 import type { Balance, TransactionPage, TransactionRecord, Merchant } from './api/cashflow';
 import { beginLogin, finishLogin, getSubject, logout, renewSession } from './auth/oidc';
 import type { TokenSet } from './auth/oidc';
@@ -38,6 +38,9 @@ export default function App() {
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [pendingProjection, setPendingProjection] = useState<Projection | null>(null);
+  const [merchantUsername, setMerchantUsername] = useState('');
+  const [merchantPassword, setMerchantPassword] = useState('');
+  const [canManageMerchants, setCanManageMerchants] = useState(false);
   const pendingKey = useRef<string | null>(null);
   const authStarted = useRef(false);
   const currentToken = activeAccessToken(session);
@@ -77,8 +80,13 @@ export default function App() {
   }, [session]);
 
   useEffect(() => {
-    if (!currentToken) { setMerchants([]); return; }
+    if (!currentToken) { setMerchants([]); setCanManageMerchants(false); return; }
     let active = true;
+    merchantPermissions(currentToken).then(permission => {
+      if (active) setCanManageMerchants(permission.can_manage_merchants);
+    }).catch(() => {
+      if (active) setCanManageMerchants(false);
+    });
     listMerchants(currentToken).then(items => {
       if (active) {
         setMerchants(items);
@@ -109,14 +117,18 @@ export default function App() {
 
   async function registerMerchant(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!currentToken || !newMerchantName.trim()) return;
+    if (!currentToken || !canManageMerchants || !newMerchantName.trim() ||
+        !merchantUsername.trim() || merchantPassword.length < 12) return;
     setBusy(true);
     try {
-      const created = await createMerchant(currentToken, newMerchantName.trim());
+      const created = await createMerchant(currentToken, newMerchantName.trim(),
+        merchantUsername.trim(), merchantPassword);
       setMerchants(previous => [...previous, created]);
       changeMerchant(created.id);
       setNewMerchantName('');
-      setNotice({ text: 'Comerciante cadastrado. Você é o ADMIN inicial.', isError: false });
+      setMerchantUsername('');
+      setMerchantPassword('');
+      setNotice({ text: 'Comerciante e acesso do operador cadastrados. A conta da loja pode entrar no CashFlow.', isError: false });
     } catch (error) {
       setNotice({ text: (error as Error).message, isError: true });
     } finally { setBusy(false); }
@@ -218,7 +230,7 @@ export default function App() {
       <div><div className="eyebrow">GESTÃO FINANCEIRA</div><h1>CashFlow</h1></div>
       <div className="auth-controls">
         {currentToken ? <>
-          <span className="user" title={identity}>Conectado</span>
+          <span className="user" title={identity}>{canManageMerchants ? 'Administrador' : 'Comerciante'}</span>
           <button type="button" className="outline" onClick={logout}>Sair</button>
         </> : <button type="button" onClick={() => void beginLogin()} disabled={authPending}>
           {authPending ? 'Autenticando...' : 'Entrar com Keycloak'}
@@ -232,8 +244,8 @@ export default function App() {
       <p>Use o login seguro do Keycloak para consultar e registrar movimentações financeiras.</p>
       <p className="muted">Os tokens são mantidos somente na memória do navegador. Se recarregar, entre novamente.</p>
     </section> : <>
-      <section className="panel">
-        <h2>Meus comerciantes</h2>
+      {canManageMerchants && <section className="panel">
+        <h2>Gestão de comerciantes</h2>
         <div className="fields merchant-fields">
           <label>Selecione um comerciante
             <select aria-label="Selecionar comerciante" value={selectedMerchant(merchants, merchant)}
@@ -250,9 +262,22 @@ export default function App() {
             <input aria-label="Nome do comerciante" maxLength={100} placeholder="Ex.: Loja Campinas"
               value={newMerchantName} onChange={event => setNewMerchantName(event.target.value)} />
           </label>
-          <button type="submit" disabled={busy || !newMerchantName.trim()}>Cadastrar comerciante</button>
+          <label>Usuário do comerciante
+            <input aria-label="Usuário do comerciante" maxLength={64}
+              autoComplete="off" placeholder="Ex.: loja.campinas"
+              value={merchantUsername} onChange={event => setMerchantUsername(event.target.value)} />
+          </label>
+          <label>Senha de acesso do comerciante
+            <input aria-label="Senha do comerciante" type="password" minLength={12} maxLength={128}
+              autoComplete="new-password" placeholder="Mínimo de 12 caracteres"
+              value={merchantPassword} onChange={event => setMerchantPassword(event.target.value)} />
+          </label>
+          <button type="submit" disabled={busy || !newMerchantName.trim() ||
+            merchantUsername.trim().length < 3 || merchantPassword.length < 12}>
+            Cadastrar comerciante e acesso
+          </button>
         </form>
-        <p className="muted">A criação inicial é restrita ao administrador de bootstrap do ambiente local.</p>
+        <p className="muted">Apenas o administrador da plataforma pode cadastrar lojas e usuários. O login de cada loja é independente.</p>
         {isMerchantAdmin(merchants, merchant) && <form className="merchant-action" onSubmit={registerAdmin}>
           <h2>Adicionar administrador</h2>
           <label>Usuário no Keycloak
@@ -266,8 +291,8 @@ export default function App() {
           <button type="submit" disabled={busy || !adminUsername.trim() ||
             Boolean(adminPassword && adminPassword.length < 12)}>Adicionar ADMIN</button>
         </form>}
-      </section>
-      <section className="panel">
+      </section>}
+      {canManageMerchants && <section className="panel">
         <h2>Comerciante e competência</h2>
         <div className="fields">
           <label>ID do comerciante
@@ -283,7 +308,7 @@ export default function App() {
           </button>
         </div>
         <p className="muted">O acesso ao comerciante é validado nas APIs pelo vínculo atual no Keycloak.</p>
-      </section>
+      </section>}
       <div className="columns">
         <section className="panel">
           <h2>Novo lançamento</h2>
@@ -306,6 +331,15 @@ export default function App() {
         </section>
         <section className="panel">
           <h2>Saldo diário</h2>
+          {!canManageMerchants && <>
+            <p className="muted">{merchants.find(item => item.id === merchant)?.name ?? 'Nenhum comerciante autorizado'}</p>
+            <label>Data de referência
+              <input aria-label="Data de referência" type="date" value={date}
+                onChange={event => { setDate(event.target.value); clearFinancialData(); }} />
+            </label>
+            <button type="button" disabled={busy || !validMerchant(merchant)}
+              onClick={() => showBalance()}>Consultar</button>
+          </>}
           {balance ? <div className="metrics">
             <div><span>Créditos</span><strong>{formatMoney(balance.credit_total)}</strong></div>
             <div><span>Débitos</span><strong>{formatMoney(balance.debit_total)}</strong></div>
