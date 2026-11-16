@@ -10,7 +10,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using CashFlow.Transactions.Api.Authentication;
+using CashFlow.Security.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -330,7 +330,7 @@ public sealed class JwtAuthenticationTests : IDisposable
         {
             LastMerchant = merchantId;
             if (Outage)
-                throw new CashFlow.Transactions.Infrastructure.Gateways.MerchantAuthorizationUnavailableException("Simulated outage");
+                throw new CashFlow.Security.Keycloak.MerchantAuthorizationUnavailableException("Simulated outage");
             return Task.FromResult(Allowed);
         }
     }

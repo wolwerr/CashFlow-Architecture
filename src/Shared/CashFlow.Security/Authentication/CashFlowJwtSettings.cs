@@ -1,4 +1,4 @@
-namespace CashFlow.Transactions.Api.Authentication;
+namespace CashFlow.Security.Authentication;
 
 /// <summary>
 /// JWT trust configuration. Missing or unsafe settings prevent the service from starting.

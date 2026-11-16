@@ -1,7 +1,10 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
-namespace CashFlow.Transactions.Api.Authentication;
+namespace CashFlow.Security.Authentication;
 
 public static class CashFlowAuthenticationExtensions
 {

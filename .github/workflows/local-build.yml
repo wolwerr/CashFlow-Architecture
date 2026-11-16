@@ -28,6 +28,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      rabbitmq:
+        image: rabbitmq:4-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: cashflow
+          RABBITMQ_DEFAULT_PASS: local_ci_only
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 12
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -39,6 +51,11 @@ jobs:
 
       - name: Backend | Restore
         run: dotnet restore CashFlow.slnx
+
+      - name: Backend | Prepare isolated Consolidation test database
+        env:
+          PGPASSWORD: local_ci_only
+        run: psql -h localhost -p 5432 -U cashflow -d postgres -c "CREATE DATABASE cashflow_consolidation_test;"
 
       - name: Backend | Build .NET 10
         run: dotnet build CashFlow.slnx -c Release --no-restore
@@ -58,7 +75,23 @@ jobs:
       - name: Backend | PostgreSQL integration and Infrastructure coverage (min 80% lines)
         env:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
         run: dotnet test tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Infrastructure]*' /p:CoverletOutputFormat=cobertura
+
+      - name: Backend | Consolidation unit tests and Domain coverage (min 80%)
+        run: dotnet test tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Domain]*' /p:CoverletOutputFormat=cobertura
+
+      - name: Backend | Consolidation Application coverage (min 80%)
+        run: dotnet test tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Application]*' /p:CoverletOutputFormat=cobertura
+
+      - name: Backend | Consolidation PostgreSQL integration tests
+        env:
+          CASHFLOW_TEST_CONSOLIDATION: Host=localhost;Port=5432;Database=cashflow_consolidation_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
+        run: dotnet test tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj -c Release --no-build
+
+      - name: Backend | Consolidation HTTP API tests
+        run: dotnet test tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj -c Release --no-build
 
       - name: Backend | Generate OpenCover for Sonar
         run: |
@@ -71,6 +104,7 @@ jobs:
       - name: Backend | Generate integration OpenCover for Sonar
         env:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
         run: |
           dotnet test tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj \
             -c Release --no-build \
@@ -86,12 +120,42 @@ jobs:
             /p:CoverletOutputFormat=opencover \
             /p:CoverletOutput=TestResults/sonar/coverage.api.opencover.xml
 
+      - name: Backend | Generate Consolidation unit OpenCover for Sonar
+        run: |
+          dotnet test tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj \
+            -c Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=TestResults/sonar/coverage.consolidation-unit.opencover.xml
+
+      - name: Backend | Generate Consolidation integration OpenCover for Sonar
+        env:
+          CASHFLOW_TEST_CONSOLIDATION: Host=localhost;Port=5432;Database=cashflow_consolidation_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
+        run: |
+          dotnet test tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj \
+            -c Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=TestResults/sonar/coverage.consolidation-integration.opencover.xml
+
+      - name: Backend | Generate Consolidation HTTP OpenCover for Sonar
+        run: |
+          dotnet test tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj \
+            -c Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=TestResults/sonar/coverage.consolidation-api.opencover.xml
+
       - name: Backend | Assemble OpenCover reports
         run: |
           mkdir -p sonar-reports/backend
           cp tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.unit.opencover.xml sonar-reports/backend/
           cp tests/CashFlow.Transactions.IntegrationTests/TestResults/sonar/coverage.integration.opencover.xml sonar-reports/backend/
           cp tests/CashFlow.Transactions.ApiTests/TestResults/sonar/coverage.api.opencover.xml sonar-reports/backend/
+          cp tests/CashFlow.Consolidation.UnitTests/TestResults/sonar/coverage.consolidation-unit.opencover.xml sonar-reports/backend/
+          cp tests/CashFlow.Consolidation.IntegrationTests/TestResults/sonar/coverage.consolidation-integration.opencover.xml sonar-reports/backend/
+          cp tests/CashFlow.Consolidation.ApiTests/TestResults/sonar/coverage.consolidation-api.opencover.xml sonar-reports/backend/
 
       - name: Backend | Upload OpenCover
         uses: actions/upload-artifact@v4
@@ -173,6 +237,9 @@ jobs:
           test -s sonar-reports/backend/coverage.unit.opencover.xml
           test -s sonar-reports/backend/coverage.integration.opencover.xml
           test -s sonar-reports/backend/coverage.api.opencover.xml
+          test -s sonar-reports/backend/coverage.consolidation-unit.opencover.xml
+          test -s sonar-reports/backend/coverage.consolidation-integration.opencover.xml
+          test -s sonar-reports/backend/coverage.consolidation-api.opencover.xml
 
       - name: Sonar frontend | Verify coverage report
         run: test -s web/coverage/lcov.info

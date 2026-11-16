@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using CashFlow.Transactions.Infrastructure.Gateways;
+using CashFlow.Security.Keycloak;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Xunit;
