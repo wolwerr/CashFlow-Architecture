@@ -10,7 +10,7 @@
 - Execução real: flag `--execute`, com interrupção entre 1 e 120 s.
 - Antes de atuar, valida a presença dos serviços esperados no Compose e exige que o serviço selecionado já esteja rodando.
 - Faz `docker compose stop <service>` e sempre tenta `docker compose up -d <service>` no `finally`, mesmo quando o stop falha.
-- Verifica se o container voltou ao estado **running** e registra resultado em `reports/local-recovery.json` (sem credenciais).
+- Verifica se o container voltou ao estado **running** e imprime o relatório JSON na saída padrão (sem credenciais e sem gravação automática de arquivos).
 - O estado **RESTORED** significa apenas container executando, **não prova** processamento, correção financeira nem atendimento ao SLO.
 
 ## Como executar, exclusivamente no ambiente local descartável
