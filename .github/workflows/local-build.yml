@@ -60,6 +60,12 @@ jobs:
       - name: Backend | Build .NET 10
         run: dotnet build CashFlow.slnx -c Release --no-restore
 
+      - name: Backend | Verify Transactions Docker image build
+        run: docker build -f src/Services/Transactions/Dockerfile -t cashflow-transactions:ci .
+
+      - name: Backend | Verify Consolidation Docker image build
+        run: docker build -f src/Services/Consolidation/Dockerfile -t cashflow-consolidation:ci .
+
       - name: Backend | Architecture tests
         run: dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
 
