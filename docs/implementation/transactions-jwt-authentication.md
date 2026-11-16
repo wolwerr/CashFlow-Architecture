@@ -30,9 +30,9 @@ Sem token a resposta esperada é `401`. `GET /health` permanece público. O logi
 
 ## Autenticação não é autorização por comerciante
 
-A decisão consolidada exige **quarto banco lógico, independente** para `Merchant`, `Membership`, `Role`, separado de Transactions, Consolidation e Keycloak; papéis por comerciante ADMIN/OPERATOR, cache curto com invalidação e fail closed. Permanecem decisões em aberto: responsável por esse banco/contrato, matriz precisa de permissões, TTL/invalidação e revogação.
+**Decisão revisada em 16/11/2026 no [ADR-006](../architecture/adr/ADR-006-identity-and-access.md):** o Keycloak é a fonte de vínculos e papéis ADMIN/OPERATOR por comerciante via Groups. Não haverá banco lógico próprio nem módulo Authorization. A verificação por operação exige consulta atual do vínculo, inicialmente sem cache positivo, com falha fechada. O desenho da integração, provisionamento e testes de revogação ainda precisam ser implementados.
 
-**Não foi implementado nenhum Gateway permissivo**. `ICreateTransactionAuthorizationGateway` continuará sem adaptador de produção até termos o desenho e seus testes. Nenhum endpoint financeiro (POST/GET de lançamentos) foi habilitado. JWT validado nunca substitui verificação de vínculo por `merchant_id`.
+**Não foi implementado nenhum Gateway permissivo**. `ICreateTransactionAuthorizationGateway` continuará sem adaptador de produção até termos o adaptador Keycloak e seus testes. Nenhum endpoint financeiro (POST/GET de lançamentos) foi habilitado. JWT validado nunca substitui verificação de vínculo por `merchant_id`.
 
 ## Limitações e segurança
 
