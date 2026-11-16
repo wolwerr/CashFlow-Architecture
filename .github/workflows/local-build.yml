@@ -62,7 +62,7 @@ jobs:
 
       - name: Frontend | Install packages
         working-directory: web
-        run: npm install --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Frontend | Build TypeScript and Vite
         working-directory: web
@@ -121,7 +121,7 @@ jobs:
 
       - name: Sonar frontend | Restore TypeScript dependencies
         working-directory: web
-        run: npm install --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Sonar | Validate project credentials
         env:
