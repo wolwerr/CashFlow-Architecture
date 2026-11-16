@@ -33,6 +33,9 @@ jobs:
       - name: Backend | Transactions Application (min 80% lines)
         run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
 
+      - name: Backend | Transactions Infrastructure (min 80% lines)
+        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Infrastructure]*' /p:CoverletOutputFormat=cobertura
+
       - name: Backend | Generate OpenCover for Sonar
         run: |
           dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj \
