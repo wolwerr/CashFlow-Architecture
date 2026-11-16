@@ -38,8 +38,8 @@
 
 | # | Decisão | Regra aprovada |
 | --- | --- | --- |
-| 10 | Persistência de autorização | **Banco lógico próprio de autorização CashFlow** para `Merchant`, `Membership` e papéis; distinto dos bancos Transactions, Consolidation e Keycloak. A propriedade da camada de acesso e sua forma de deploy devem ser documentadas antes de codificar; não introduzir implicitamente um terceiro microsserviço financeiro nem consultas cross-db |
-| 11 | Verificação de vínculo | Consultar a fonte de autorização CashFlow com **cache curto e invalidação** para mudanças/revogações; **fail closed** quando a autorização não puder ser verificada de modo confiável. TTL exato, estratégia de invalidação e disponibilidade ainda precisam ser definidos/testados |
+| 10 | Persistência de autorização | **Revisada em 16/11/2026:** Keycloak é a fonte de vínculos e papéis ADMIN/OPERATOR por comerciante, usando Groups contextuais ao `merchant_id`. **Não criar banco de autorização CashFlow nem terceiro módulo/serviço.** As APIs mantêm gateways próprios de verificação. A decisão original de 15/11 sobre banco lógico próprio foi substituída no [ADR-006](adr/ADR-006-identity-and-access.md). |
+| 11 | Verificação de vínculo | Consultar vínculo **atual** usuário/comerciante/papel no Keycloak em cada operação protegida, inicialmente **sem cache positivo**. Revogações não podem depender exclusivamente do JWT emitido. Indisponibilidade ou dúvida implica **fail closed**. Cache curto/invalidação somente após validação de revogação segura e desempenho. Revisão de 16/11/2026 no [ADR-006](adr/ADR-006-identity-and-access.md). |
 | 12 | Token no frontend | React SPA pública com OIDC Authorization Code + PKCE; **access token somente em memória**, sem `localStorage` nem persistência em `sessionStorage`. Reload/logout exigem reaquisição de sessão conforme fluxo OIDC. Não implica adoção de BFF no MVP |
 | 13 | Retenção de auditoria | **365 dias como política inicial**, sujeita à revisão por obrigações legais, segurança e LGPD; expurgo, controle de acesso e evidências de retenção precisam de implementação |
 
@@ -67,7 +67,7 @@
 | --- | --- | --- |
 | 22 | Retenção Outbox/ProcessedEvent | **Configurável**, com expurgo seguro e reconciliação. Não definir TTL único arbitrário: expurgar só quando não comprometer replay/deduplicação, política operacional, idempotência ou auditoria |
 | 23 | Deploy PROD | **Aprovação humana obrigatória via GitHub Environments**, com configurações de proteção compatíveis com a conta/plano e bloqueio efetivo de deploy sem aprovação; configuração ainda não validada |
-| 24 | Backups/restore | **Backups automáticos e teste de restauração obrigatório antes da liberação em PROD**. Incluir dados de Transactions, Consolidation, autorização, Keycloak e persistências críticas; detalhes de periodicidade, RPO/RTO, dados em RabbitMQ e evidências dependem do desenho de operações |
+| 24 | Backups/restore | **Backups automáticos e teste de restauração obrigatório antes da liberação em PROD**. Incluir dados de Transactions, Consolidation, Keycloak (incluindo vínculos/papéis) e persistências críticas; detalhes de periodicidade, RPO/RTO, dados em RabbitMQ e evidências dependem do desenho de operações |
 
 ## Consequências importantes para o modelo
 
@@ -87,7 +87,7 @@ A consulta deve responder mesmo sem linha `DailyBalance` no dia solicitado: cré
 
 ### Limite entre autorização e disponibilidade
 
-Uma camada de autorização com banco lógico próprio pode criar dependência para operações financeiras. Manter validação local do JWT/JWKS e projetar cache **curto e invalidável** para consultas de vínculo. Não presumir continuidade irrestrita em caso de falha do serviço/banco de autorização: a política **fail closed** é prioritária sobre disponibilidade para acessos cujo vínculo não pode ser comprovado. Detalhar responsabilidades, cache e revogação sem quebrar independência dos **dois serviços financeiros** e sem acessar fisicamente bancos de outros domínios.
+O Keycloak concentra identidade, vínculos por comerciante e papéis para o MVP. As APIs validam JWT/JWKS localmente, mas verificam o **vínculo atual** no Keycloak para cada operação financeira, inicialmente sem cache positivo. A indisponibilidade do IAM pode bloquear operações financeiras: **fail closed** é prioritário quando o vínculo não puder ser comprovado. Os **dois serviços financeiros** mantêm seus bancos separados e não consultam diretamente as tabelas internas do Keycloak.
 
 ### Índices e integridade a especificar
 
@@ -96,14 +96,14 @@ Uma camada de autorização com banco lógico próprio pode criar dependência p
 - `ProcessedEvent`: `UNIQUE(event_id)` e transação única com a atualização de `DailyBalance`.
 - Idempotência HTTP: escopo da chave por comerciante/rota, hash do request e resultado estável, persistência transacional sem expor registros de outros comerciantes.
 - `AuditEvent`: ação confirmada vinculada a transação e ator, append-only no aplicativo, retenção inicial de 365 dias.
-- `Merchant`/`Membership`/`Role`: domínio de autorização com banco lógico independente; sem FK física aos bancos financeiros ou Keycloak.
+- Vínculos e papéis ADMIN/OPERATOR por comerciante: Keycloak Groups; sem banco lógico adicional de autorização no MVP. Identificadores de comerciantes usados nos serviços financeiros não conferem autorização por si sós.
 
-## Estratégia de execução, definida após as decisões\n\n**Fase atual: LOCAL exclusivamente.** Construir e testar React, NGINX, APIs .NET, quatro bancos lógicos PostgreSQL, RabbitMQ, Keycloak e telemetria usando Docker Compose. A homologação inicial ocorrerá por testes locais com evidências registradas. **Não implantar Azure agora.** O cenário AKS DEV/HOM/PROD, custos, GitHub Environments para PROD e políticas cloud são planejamento futuro, não tarefas bloqueadoras do desenvolvimento local.\n\n## O que ainda requer especificação e implementação
+## Estratégia de execução, definida após as decisões\n\n**Fase atual: LOCAL exclusivamente.** Construir e testar React, NGINX, APIs .NET, bancos lógicos de Transactions, Consolidation e Keycloak no PostgreSQL, RabbitMQ, Keycloak e telemetria usando Docker Compose. A homologação inicial ocorrerá por testes locais com evidências registradas. **Não implantar Azure agora.** O cenário AKS DEV/HOM/PROD, custos, GitHub Environments para PROD e políticas cloud são planejamento futuro, não tarefas bloqueadoras do desenvolvimento local.\n\n## O que ainda requer especificação e implementação
 
 Decisões aprovadas **não** significam contratos executáveis, schema físico, deploy, testes ou homologação. Ficam pendentes:
 
 1. **Contratos OpenAPI e eventos:** paths específicos de histórico, criação/consulta, `Location`, payloads, HTTP 400/401/403/409/422, JSON Schema, `schema_version`, esquema de erro e `Idempotency-Key`/retenção.
-2. **Autorização:** dono e interfaces do banco lógico próprio, matriz exata ADMIN/OPERATOR, provisionamento de comerciante, mudança de vínculo, cache TTL/invalidação, revogação, falhas e testes de isolamento.
+2. **Autorização:** implementar integração segura com Keycloak Groups para ADMIN/OPERATOR por comerciante, provisionamento controlado, consulta de vínculo atual por operação, revogação, indisponibilidade fail closed e testes de isolamento; cache positivo somente se houver invalidação/revogação comprovada.
 3. **Dados:** migrations EF Core, modelos físicos, índices, constraints e consistência monetária; custo/índices para soma de totais na leitura sob 50 RPS; política de histórico e auditoria.
 4. **Mensageria:** filas/exchanges, flags durable/mandatory, confirmações e retornos, retry/backoff com limites específicos, DLQ, regras de expurgo seguro, reconciliação, manutenção de `ProcessedEvent`.
 5. **Qualidade:** executar teste de 50 RPS/5 min, sucesso ≥95%, p95 <500ms, 95% de atualização em 30 s; testes de falha do consolidado, rollback, duplicação, concorrência, replay e integração JWT.
