@@ -1,39 +1,54 @@
-# SonarQube Cloud | CashFlow
+# CI unificado | Build, testes e SonarQube Cloud
 
-## Objetivo
+## Arquivo único
 
-Adicionar análise estática de C#/.NET 10 em GitHub Actions para bugs, vulnerabilidades, code smells, duplicação e cobertura de testes. A execução usa **GitHub-hosted runner**, sem VM ou Azure. O SonarQube Cloud não executa os testes: o pipeline produz **OpenCover** com Coverlet e o scanner importa o relatório.
+A esteira de CI do CashFlow usa apenas **`.github/workflows/local-build.yml`**. O workflow antigo `sonarqube-cloud.yml` foi removido para evitar compilações e análises duplicadas.
 
-## Habilitação manual obrigatória
+O job `Build and SonarQube` é executado nos pushes de `main` e `feat/**` e em pull requests:
 
-1. Projeto SonarQube Cloud: em **Administration > Analysis Method**, desabilitar **Automatic Analysis** para evitar conflito com CI-based analysis; manter análise via GitHub Actions.
-2. No projeto SonarQube Cloud, copiar os valores exatos de **Project Key** e **Organization Key**; **não adivinhar a partir do nome exibido**.
-3. GitHub: em **Settings > Secrets and variables > Actions**, criar os três **Repository secrets**:
-   - `SONAR_PROJECT_KEY`: Project Key exata do SonarQube Cloud.
-   - `SONAR_ORGANIZATION`: Organization Key exata do SonarQube Cloud.
-   - `SONAR_TOKEN`: token de análise gerado no SonarQube Cloud. **Não salvar nem transmitir o token em mensagens ou commits.**
-5. Concluir merge do PR contendo `.github/workflows/sonarqube-cloud.yml`. A análise roda para push na `main` e PRs internos do mesmo repositório. Para PRs provenientes de forks, a job é ignorada por segurança, porque segredos não são expostos pelo GitHub.
-6. Validar uma execução real e verificar se o Sonar recebeu análise **CI-based** e o relatório de **Coverage**. Depois disso, configurar o check Quality Gate como obrigatório no GitHub Ruleset/Branch Protection se desejado.
+1. Prepara .NET 10, Node.js 22, JDK 21 e instala dependências npm.
+2. Inicia SonarScanner for .NET antes do build, quando as credenciais estão disponíveis.
+3. Restaura e compila toda a solução backend `CashFlow.slnx`.
+4. Executa `npm run build` em `web` (TypeScript + Vite).
+5. Roda testes arquiteturais (NetArchTest) e testes de Transactions com cobertura mínima de 80% **separadamente** para Domain e Application.
+6. Gera relatório `OpenCover` com Coverlet, para importação de cobertura C# no Sonar.
+7. Executa `npm run test:coverage` com Vitest para validar o frontend e produzir `web/coverage/lcov.info`.
+8. Publica a análise C# + JS/TS em um único projeto SonarQube Cloud e aguarda o Quality Gate.
 
-**Importante:** o workflow verifica explicitamente a presença dos três secrets e falha se algum não estiver configurado. A job de PR originado de fork é ignorada por segurança. Isso evita inserir segredos no código.
+O SonarScanner for .NET suporta análise multilíngue por padrão (`sonar.scanner.scanAll=true`). O frontend é analisado pelo mesmo scanner; **não** se cria um segundo projeto Sonar nem se executa um segundo scanner.
 
-## Execução
+## Configuração GitHub
 
-Workflow dedicado `.github/workflows/sonarqube-cloud.yml`:
+Em `Settings > Secrets and variables > Actions`, cadastrar os três **Repository secrets**:
 
-- checkout completo (`fetch-depth: 0`) para histórico/PRs;
-- .NET SDK 10 e JDK 21;
-- instalar `dotnet-sonarscanner`;
-- `begin` antes do `dotnet build` para análise Roslyn;
-- `dotnet test` em Transactions com `coverlet.msbuild` para gerar `coverage.opencover.xml`;
-- `end` para publicar o resultado, com espera pelo Quality Gate (`sonar.qualitygate.wait=true`).
+- `SONAR_TOKEN`: token de análise do Sonar, sem inserir no chat ou no repositório.
+- `SONAR_PROJECT_KEY`: Project Key exata.
+- `SONAR_ORGANIZATION`: Organization Key exata.
 
-O workflow de testes `.github/workflows/local-build.yml` continua responsável pelos thresholds de **80% de cobertura de linhas por módulo** e testes arquiteturais. O Sonar não substitui essa exigência.
+Para habilitar análise por CI, desativar `Automatic Analysis` em `Administration > Analysis Method` no SonarQube Cloud.
 
-## Cobertura e limitações
+O CI verifica que os três secrets estão presentes e falha se faltar algum. Em PRs de forks, secrets não são disponibilizados pelo GitHub: build e testes seguem obrigatórios, mas os passos Sonar são omitidos. Se o Quality Gate Sonar for obrigatório para merge, PRs externos precisarão de política específica.
 
-- O Sonar importa o relatório **OpenCover** dos testes de Transactions. Cobertura do React/TypeScript **não será enviada** até termos testes de frontend e relatórios LCOV. Não interpretar a cobertura C# como cobertura completa de todo o produto.
-- Não foi criada VM, não houve provisionamento Azure e não foi conectado banco real.
-- Status de ativação: **pendente das três configurações no GitHub, da desativação de Automatic Analysis e de uma análise CI executada**.
-- Configurar regra de cobertura no novo código no Quality Gate no Sonar; a interface pode ignorar certas condições para mudanças pequenas.
-- Se o Sonar estiver usando a região US, verificar o parâmetro `sonar.region=us` e o endpoint recomendado para a organização. O workflow assume a região padrão apontada por `https://sonarcloud.io`.
+## Cobertura e gates
+
+- **Backend**: Coverlet produz OpenCover (`**/coverage.opencover.xml`) para Sonar e mantém gates separados de **80% line coverage** para Domain e Application.
+- **Frontend**: Vitest com `@vitest/coverage-v8` produz `web/coverage/lcov.info`. A primeira validação real é um smoke test renderizando a tela atual via ReactDOMServer. O relatório inclui arquivos de `web/src`; não concluir que a cobertura do frontend já é >=80% sem ver o resultado.
+- **Sonar**: inspeção de issues/code smells/vulnerabilidades/duplicação e ingestão dos dois formatos de cobertura; Quality Gate definido pela política da organização, e `sonar.qualitygate.wait=true` propaga falhas.
+- **Outros serviços**: ao adicionar código testável em Consolidation/Infrastructure, incluir testes e thresholds apropriados na mesma esteira. Não mascarar cobertura ausente com exclusões artificiais.
+
+O Sonar não executa os testes sozinho; ele importa os relatórios gerados. A análise multilíngue, os relatórios OpenCover/LCOV e o Quality Gate precisam ser comprovados em uma execução real do GitHub Actions.
+
+## Validação local
+
+```powershell
+dotnet restore CashFlow.slnx
+dotnet build CashFlow.slnx -c Release
+dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release
+dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release
+cd web
+npm install
+npm run build
+npm run test:coverage
+```
+
+Sem VM dedicada, sem deploy ou provisionamento Azure.
