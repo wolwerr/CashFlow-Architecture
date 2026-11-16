@@ -24,7 +24,7 @@ src/Services/<Service>/
     Exceptions/     # Custom typed domain exceptions derived from DomainException
   CashFlow.<Service>.Application/
     UseCases/       # Feature/use-case orchestration, e.g. CreateTransaction/
-    Interfaces/     # Ports as needed, created only when concrete contracts exist
+    Gateways/       # Application ports/contracts for external dependencies, added only as needed
   CashFlow.<Service>.Infrastructure/
     Entities/       # EF Core persistence entities ONLY
     ...             # DB mappings, repositories, broker implementations, etc. as needed
@@ -35,6 +35,7 @@ src/Services/<Service>/
 - **No `Domain/Entities`, `Domain/ValueObjects`, or `Domain/Services`.** Put domain data and rules in `Domain/Models`. Organize other real domain types only when needed; do not create empty placeholders.
 - **`Entities` means infrastructure persistence types only.** A domain `Models/Transaction.cs` is a different responsibility from an eventual `Infrastructure/Entities/TransactionEntity.cs`; define explicit mapping in Infrastructure.
 - Namespace mirrors the path, for example `CashFlow.Transactions.Domain.Models` and `CashFlow.Transactions.Domain.Exceptions`.
+- `Application/Gateways/` contains gateway contracts (interfaces) for external dependencies; concrete implementations live in Infrastructure. Do not create an `Application/Interfaces/` folder.
 - `Application/UseCases/<Action>/` contains each use case. Do not invent business `Services`, generic managers or framework-specific handlers in Domain.
 - Exceptions represent business rule failures, not HTTP status codes; API maps these to `ProblemDetails` where appropriate.
 - Do not introduce external framework dependencies or `PackageReference` into Domain or Application. Application may reference only its own Domain project. Domain has no project references.
@@ -48,12 +49,12 @@ Apply SOLID pragmatically to every new or modified C# component. SOLID is a desi
 - **S — Single Responsibility Principle (SRP):** one cohesive reason to change per class. Domain Models own business invariants; Application/UseCases orchestrate a single business intent; Infrastructure owns technical integrations and persistence; Api handles HTTP transport, composition and response mapping. Do not combine HTTP, ORM, broker operations and financial logic in one class.
 - **O — Open/Closed Principle (OCP):** extend behavior through cohesive composition/polymorphism only when genuine variation is required. Keep stable business invariants centralized; do not introduce speculative extension points or unnecessary strategy hierarchies.
 - **L — Liskov Substitution Principle (LSP):** implementations of a contract must preserve its promises, valid inputs, outputs, errors and invariants. Avoid subclassing that strengthens preconditions or weakens postconditions. Prefer composition when substitution is not meaningful.
-- **I — Interface Segregation Principle (ISP):** define narrow, use-case-oriented ports in Application only when there is an actual outside dependency or relevant seam to isolate. Avoid large generic interfaces (e.g. catch-all repositories) that force consumers to depend on unrelated operations.
+- **I — Interface Segregation Principle (ISP):** define narrow, use-case-oriented contracts in Application/Gateways only when there is an actual outside dependency or relevant seam to isolate. Avoid large generic interfaces (e.g. catch-all repositories) that force consumers to depend on unrelated operations.
 - **D — Dependency Inversion Principle (DIP):** Application defines abstractions for external I/O; Infrastructure implements them and Api wires them through dependency injection. Domain remains framework-free; Application may reference only its own Domain project and must not depend on EF Core, ASP.NET Core, RabbitMQ clients or concrete infrastructure.
 
 ### Practical enforcement and tests
 
-1. For each new UseCase, review whether it orchestrates one intent, depends only on necessary narrow contracts, and keeps external I/O behind Application interfaces.
+1. For each new UseCase, review whether it orchestrates one intent, depends only on necessary narrow contracts, and keeps external I/O behind Application Gateways contracts.
 2. For each new Infrastructure adapter, verify it obeys the Application contract and does not leak EF Core entities outside Infrastructure.
 3. Write behavior tests for implementations and contract/substitution tests where multiple implementations exist. Test edge cases and business invariants without relying exclusively on mocks.
 4. Use existing architectural tests to enforce forbidden references, layering, third-party packages in Domain/Application and separation between services. SOLID semantic judgments such as SRP/OCP/LSP/ISP require code review and behavioral tests; **do not falsely claim NetArchTest proves all five principles**.
