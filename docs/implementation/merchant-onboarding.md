@@ -1,8 +1,34 @@
 # Merchant onboarding local: cadastro e administradores no CashFlow
 
+## Perfis de acesso do MVP
+
+**ADMIN de plataforma (bootstrap local)**: entra com a conta `cashflow.admin` no Keycloak e acessa gestão de comerciantes, cadastro de contas e as três áreas financeiras (Novo lançamento, Saldo Diário, Histórico). O backend verifica o `preferred_username` assinado contra `CASHFLOW_BOOTSTRAP_USERNAME`, em Development. Não basta escolher ADMIN na interface.
+
+**COMERCIANTE (OPERATOR)**: o administrador cadastra **nome da loja, username único e senha inicial**, a API cria o usuário no Keycloak e associa exclusivamente ao grupo `/merchants/{uuid}/OPERATOR`. O comerciante entra usando essas próprias credenciais no mesmo provedor OIDC e vê **somente Novo lançamento, Saldo Diário e Histórico**. Não pode criar comerciantes nem gerenciar contas. As APIs validam o vínculo atual com o merchant, inclusive contra tentativas de chamada direta sem permissão.
+
+O Keycloak mantém as senhas; o CashFlow não as armazena. O username é único em todo o realm `cashflow`, não apenas na loja. Uma tentativa de cadastrar username já existente retorna HTTP 409 e não cria novo comerciante. Para este MVP local, a senha inicial tem **mínimo de 12 e máximo de 128 caracteres**, sem exigência de troca imediata, para permitir login no teste.
+
+### Evoluções de segurança e domínio documentadas
+
+- Endurecer senhas antes de produção com comprimento maior conforme política, bloqueio de credenciais comprometidas, prevenção de reutilização, MFA e recuperação segura, sem armazenar senhas em serviços CashFlow.
+- Implementar **unicidade transacional de usernames**, idempotência e rollback/compensação do cadastro composto, além da checagem prévia de username no Keycloak; evitar comerciantes órfãos após falha intermediária.
+- Expandir os campos de comerciante com dados fiscais, razão social, CNPJ, contato e endereço **quando houver necessidade**, em modelo de domínio próprio. Por ora, apenas nome.
+- Tratar convites, troca obrigatória da senha de bootstrap e auditoria de cadastro/acessos, e desenho de papéis para produção.
+- A visão de ADMIN é protegida também no backend. Ocultar botões no React não é controle de autorização.
+
+### Critérios de aceite local
+
+1. ADMIN cadastra Loja Campinas, `loja.campinas`, senha inicial; novo username aparece no Keycloak, apenas OPERATOR na loja.
+2. Login do comerciante exibe as três áreas financeiras e oculta gestão e inclusão de administradores.
+3. COMERCIANTE não consegue POST em `/api/v1/merchants/`, nem gerenciar ADMINs.
+4. Usuário sem merchant não pode criar lançamentos ou ler saldos de comerciantes não atribuídos.
+5. Crédito `100` e débito `25,00` geram histórico de dois eventos e saldo **R$ 75,00** depois da projeção assíncrona. Nunca repetir POST para corrigir saldo atrasado.
+6. Consultas entre comerciantes, autorização revogada e indisponibilidade do Keycloak devem negar acesso.
+
+
 ## Escopo
 
-O usuário não precisa mais cadastrar grupos manualmente para cada comerciante. Na SPA, em **Meus comerciantes**, informa somente o nome da loja. A API Transactions cria um UUID, provisiona os grupos `/merchants/{uuid}/ADMIN` e `/merchants/{uuid}/OPERATOR`, grava o nome como atributo `displayName` do grupo do comerciante e vincula o criador ao ADMIN. A listagem mostra apenas comerciantes aos quais o usuário autenticado pertence, com o papel vigente obtido do Keycloak.
+O usuário não precisa mais cadastrar grupos manualmente para cada comerciante. Na SPA administrativa, informa o nome da loja e o username/senha inicial do comerciante. A API Transactions cria um UUID, provisiona os grupos `/merchants/{uuid}/ADMIN` e `/merchants/{uuid}/OPERATOR`, grava o nome como atributo `displayName` do grupo do comerciante e vincula o criador ao ADMIN. A listagem mostra apenas comerciantes aos quais o usuário autenticado pertence, com o papel vigente obtido do Keycloak. O usuário OPERATOR tem visão financeira restrita.
 
 O ADMIN pode adicionar outro usuário existente como ADMIN digitando seu username. Para criar um usuário ainda inexistente, preenche também uma **senha temporária** (mínimo 12 caracteres), que o Keycloak exige trocar no primeiro login. Não há armazenamento de senha, membership ou role nas bases financeiras.
 
