@@ -10,7 +10,7 @@
 - **Tecnologia:** .NET 10 / C#, React SPA/TypeScript, PostgreSQL/EF Core, RabbitMQ, Keycloak/OIDC, NGINX como proxy, OpenTelemetry e GitHub Actions.
 - **Serviços financeiros independentes:** Transactions e Consolidation, cada um com seu banco lógico e Clean Architecture. O registro não depende da saúde do Consolidation.
 - **Consistência:** Transaction + Outbox no mesmo commit; publicação at-least-once; ProcessedEvent + DailyBalance no mesmo commit; ACK após commit, com idempotência.
-- **Cloud:** LOCAL Compose; DEV, HOM e PROD Azure AKS; SHARED ACR/DNS e custos documentados à parte.
+- **Ordem de implementação atual:** **somente LOCAL com Docker Compose** para desenvolver e executar testes. A arquitetura Azure AKS para DEV/HOM/PROD e SHARED (ACR/DNS), assim como o orçamento, permanece **planejamento para fase futura**, sem provisionamento agora.
 - **Financeiro já decidido:** BRL, `decimal`/.NET e `numeric(19,2)`/PostgreSQL; valores de entrada positivos, até duas casas; `CREDIT`/ `DEBIT` definem o efeito. Saldo inicial zero por comerciante. Exibir créditos, débitos, movimento líquido e acumulado; dia vazio apresenta movimento zero e saldo acumulado mantido. Data de competência informada pelo comerciante, instante de criação UTC. Datas passadas ou presentes permitidas, futuras rejeitadas, com ajuste dos saldos acumulados afetados.
 
 ## Decisões aprovadas em bloco
@@ -98,7 +98,7 @@ Uma camada de autorização com banco lógico próprio pode criar dependência p
 - `AuditEvent`: ação confirmada vinculada a transação e ator, append-only no aplicativo, retenção inicial de 365 dias.
 - `Merchant`/`Membership`/`Role`: domínio de autorização com banco lógico independente; sem FK física aos bancos financeiros ou Keycloak.
 
-## O que ainda requer especificação e implementação
+## Estratégia de execução, definida após as decisões\n\n**Fase atual: LOCAL exclusivamente.** Construir e testar React, NGINX, APIs .NET, quatro bancos lógicos PostgreSQL, RabbitMQ, Keycloak e telemetria usando Docker Compose. A homologação inicial ocorrerá por testes locais com evidências registradas. **Não implantar Azure agora.** O cenário AKS DEV/HOM/PROD, custos, GitHub Environments para PROD e políticas cloud são planejamento futuro, não tarefas bloqueadoras do desenvolvimento local.\n\n## O que ainda requer especificação e implementação
 
 Decisões aprovadas **não** significam contratos executáveis, schema físico, deploy, testes ou homologação. Ficam pendentes:
 
