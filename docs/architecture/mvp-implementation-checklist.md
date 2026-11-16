@@ -33,11 +33,11 @@
 - [ ] Executar **50 RPS por 5 minutos** após aquecimento, **até 5% de falhas** nas consultas válidas enviadas e **p95 < 500 ms**, com relatório de carga.
 - [ ] Medir **95% de lançamentos refletidos em até 30 segundos** em operação saudável.
 
-## Entrega e operação
+## Entrega e operação: LOCAL agora, Azure futuro
 
-- [ ] CI/CD separado por serviço; promover a mesma imagem pelos ambientes e exigir **aprovação manual GitHub Environments em PROD**.
-- [ ] Configurar TLS, AKS, PostgreSQL HA, rede, Kubernetes PDB/HPA, RabbitMQ quorum/volumes, observabilidade e alertas.
-- [ ] Backups automáticos e **teste documentado de restauração antes de liberar PROD**; RTO/RPO e retenções ainda a definir.
+- [ ] **LOCAL agora:** orquestrar todos os componentes com Docker Compose, configurar volumes/segredos de desenvolvimento, bootstrap dos quatro bancos lógicos e execução de testes de integração, falha e carga.\n- [ ] **FUTURO, não bloqueia MVP local:** CI/CD de promoção entre DEV/HOM/PROD, com **aprovação manual GitHub Environments em PROD**.
+- [ ] **FUTURO Azure:** configurar TLS externo, AKS, PostgreSQL gerenciado HA, rede, Kubernetes PDB/HPA, RabbitMQ quorum/volumes e observabilidade de produção. Instrumentação e métricas básicas serão testadas localmente.
+- [ ] **FUTURO, antes de PROD Azure:** backups automáticos e **teste documentado de restauração**, com RTO/RPO e retenções definidos. O MVP LOCAL também deve conseguir recriar o ambiente e preservar dados em volumes de desenvolvimento.
 - [ ] Inspecionar custo real do banco lógico adicional de autorização, do dimensionamento e das políticas de recuperação.
 - [ ] **Regenerar PNGs** dos arquivos PlantUML alterados e revisar os diagramas renderizados.
 
