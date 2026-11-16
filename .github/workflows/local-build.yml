@@ -75,13 +75,17 @@ jobs:
             /p:CoverletOutputFormat=opencover \
             /p:CoverletOutput=TestResults/sonar/coverage.integration.opencover.xml
 
+      - name: Backend | Assemble OpenCover reports
+        run: |
+          mkdir -p sonar-reports/backend
+          cp tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.unit.opencover.xml sonar-reports/backend/
+          cp tests/CashFlow.Transactions.IntegrationTests/TestResults/sonar/coverage.integration.opencover.xml sonar-reports/backend/
+
       - name: Backend | Upload OpenCover
         uses: actions/upload-artifact@v4
         with:
           name: backend-opencover
-          path: |
-            tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.unit.opencover.xml
-            tests/CashFlow.Transactions.IntegrationTests/TestResults/sonar/coverage.integration.opencover.xml
+          path: sonar-reports/backend/*.xml
           if-no-files-found: error
           retention-days: 7
 
@@ -154,8 +158,8 @@ jobs:
 
       - name: Sonar backend | Verify both coverage reports
         run: |
-          test -s sonar-reports/backend/tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.unit.opencover.xml
-          test -s sonar-reports/backend/tests/CashFlow.Transactions.IntegrationTests/TestResults/sonar/coverage.integration.opencover.xml
+          test -s sonar-reports/backend/coverage.unit.opencover.xml
+          test -s sonar-reports/backend/coverage.integration.opencover.xml
 
       - name: Sonar frontend | Verify coverage report
         run: test -s web/coverage/lcov.info
@@ -194,7 +198,7 @@ jobs:
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.scanner.scanAll=true \
-            /d:sonar.cs.opencover.reportsPaths="sonar-reports/backend/**/coverage.*.opencover.xml" \
+            /d:sonar.cs.opencover.reportsPaths="sonar-reports/backend/coverage.*.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="web/coverage/lcov.info" \
             /d:sonar.coverage.exclusions=".github/scripts/**" \
             /d:sonar.cpd.exclusions="**/Persistence/Migrations/**" \
