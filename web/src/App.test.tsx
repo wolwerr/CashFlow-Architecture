@@ -236,10 +236,8 @@ describe('CashFlow dashboard and interactions', () => {
     ];
     const nodes = render();
     const labels = nodes.filter(n => n.type === 'option').map(n => n.props.children);
-    expect(labels.some(label => Array.isArray(label) &&
-      label.join('') === 'Loja Campinas (ADMIN)')).toBe(true);
-    expect(labels.some(label => Array.isArray(label) &&
-      label.join('') === 'Loja Teste (Comerciante)')).toBe(true);
+    expect(labels).toContain('Loja Campinas (ADMIN)');
+    expect(labels).toContain('Loja Teste (Comerciante)');
     expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
