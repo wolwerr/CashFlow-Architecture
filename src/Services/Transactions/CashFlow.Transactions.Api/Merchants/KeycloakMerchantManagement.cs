@@ -197,4 +197,4 @@ public sealed class KeycloakMerchantManagement(
 
 public sealed record MerchantView(Guid Id, string Name, string Role);
 
-public sealed class MerchantUsernameConflictException : Exception;
+public sealed class MerchantUsernameConflictException : Exception { }
