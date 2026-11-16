@@ -12,6 +12,10 @@ const formatMoney = (value: string) => new Intl.NumberFormat('pt-BR', {
 const displayDate = (date: string) => date.split('-').reverse().join('/');
 const activeAccessToken = (session: TokenSet | null): string | null =>
   session && Date.now() < session.expiresAt - 5000 ? session.accessToken : null;
+const isMerchantAdmin = (items: Merchant[], id: string) =>
+  items.some(item => item.id === id && item.role === 'ADMIN');
+const selectedMerchant = (items: Merchant[], id: string) =>
+  items.some(item => item.id === id) ? id : '';
 
 export default function App() {
   const [session, setSession] = useState<TokenSet | null>(null);
@@ -206,7 +210,7 @@ export default function App() {
         <h2>Meus comerciantes</h2>
         <div className="fields merchant-fields">
           <label>Selecione um comerciante
-            <select aria-label="Selecionar comerciante" value={merchants.some(item => item.id === merchant) ? merchant : ''}
+            <select aria-label="Selecionar comerciante" value={selectedMerchant(merchants, merchant)}
               onChange={event => changeMerchant(event.target.value)}>
               <option value="">Selecione...</option>
               {merchants.map(item => <option key={item.id} value={item.id}>
@@ -223,7 +227,7 @@ export default function App() {
           <button type="submit" disabled={busy || !newMerchantName.trim()}>Cadastrar comerciante</button>
         </form>
         <p className="muted">A criação inicial é restrita ao administrador de bootstrap do ambiente local.</p>
-        {merchants.find(item => item.id === merchant)?.role === 'ADMIN' && <form className="merchant-action" onSubmit={registerAdmin}>
+        {isMerchantAdmin(merchants, merchant) && <form className="merchant-action" onSubmit={registerAdmin}>
           <h2>Adicionar administrador</h2>
           <label>Usuário no Keycloak
             <input aria-label="Usuário administrador" maxLength={100} placeholder="Nome de usuário"
@@ -234,7 +238,7 @@ export default function App() {
               value={adminPassword} onChange={event => setAdminPassword(event.target.value)} />
           </label>
           <button type="submit" disabled={busy || !adminUsername.trim() ||
-            (adminPassword.length > 0 && adminPassword.length < 12)}>Adicionar ADMIN</button>
+            Boolean(adminPassword && adminPassword.length < 12)}>Adicionar ADMIN</button>
         </form>}
       </section>
       <section className="panel">
