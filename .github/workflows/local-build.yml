@@ -28,6 +28,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      rabbitmq:
+        image: rabbitmq:4-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: cashflow
+          RABBITMQ_DEFAULT_PASS: local_ci_only
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 12
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -63,6 +75,7 @@ jobs:
       - name: Backend | PostgreSQL integration and Infrastructure coverage (min 80% lines)
         env:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
+          CASHFLOW_TEST_RABBITMQ: "true"
         run: dotnet test tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Infrastructure]*' /p:CoverletOutputFormat=cobertura
 
       - name: Backend | Consolidation unit tests and Domain coverage (min 80%)
