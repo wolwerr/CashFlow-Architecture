@@ -164,7 +164,7 @@ export default function App() {
             <input aria-label="Data de referência" type="date" value={date}
               onChange={event => { setDate(event.target.value); clearFinancialData(); }} />
           </label>
-          <button type="button" disabled={busy || !validMerchant(merchant)} onClick={() => void showBalance()}>
+          <button type="button" disabled={busy || !validMerchant(merchant)} onClick={() => showBalance()}>
             Consultar
           </button>
         </div>
@@ -173,7 +173,7 @@ export default function App() {
       <div className="columns">
         <section className="panel">
           <h2>Novo lançamento</h2>
-          <form onSubmit={event => void submitTransaction(event)}>
+          <form onSubmit={submitTransaction}>
             <label>Tipo
               <select value={type} onChange={event => { setType(event.target.value as 'CREDIT' | 'DEBIT'); pendingKey.current = null; }}>
                 <option value="CREDIT">Crédito</option>
@@ -214,10 +214,10 @@ export default function App() {
           </table></div> : <p>Nenhum lançamento encontrado.</p>}
           <div className="pagination">
             <button type="button" className="outline" disabled={busy || page <= 1}
-              onClick={() => void showBalance(page - 1)}>Anterior</button>
+              onClick={() => showBalance(page - 1)}>Anterior</button>
             <span>Página {page}</span>
             <button type="button" className="outline" disabled={busy || !history.has_more}
-              onClick={() => void showBalance(page + 1)}>Próxima</button>
+              onClick={() => showBalance(page + 1)}>Próxima</button>
           </div>
         </> : <p className="muted">O histórico aparece após a consulta.</p>}
       </section>
