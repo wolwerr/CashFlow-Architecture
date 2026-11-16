@@ -47,6 +47,18 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "cashflow-authorization-service",
+      "name": "CashFlow Authorization (server-to-server only)",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "description": "Confidential service client: configure realm-management view-users only, then set KEYCLOAK_AUTHZ_CLIENT_SECRET locally. Never expose the secret to SPA."
     }
   ]
 }

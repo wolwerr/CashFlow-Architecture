@@ -44,10 +44,16 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       Authentication__Authority: http://localhost:8081/realms/cashflow
       Authentication__Audience: cashflow-transactions-api
+      KeycloakAuthorization__BaseUrl: http://keycloak:8080
+      KeycloakAuthorization__Realm: cashflow
+      KeycloakAuthorization__ClientId: cashflow-authorization-service
+      KeycloakAuthorization__ClientSecret: ${KEYCLOAK_AUTHZ_CLIENT_SECRET:-}
+      Transactions__ApplyMigrationsOnStartup: "true"
       Authentication__MetadataAddress: http://keycloak:8080/realms/cashflow/.well-known/openid-configuration
       ConnectionStrings__Transactions: Host=postgres;Database=cashflow_transactions;Username=cashflow;Password=${POSTGRES_PASSWORD:-cashflow_local_only}
     depends_on:
       postgres: {condition: service_healthy}
+      keycloak: {condition: service_started}
   consolidation:
     build: {context: ., dockerfile: src/Services/Consolidation/Dockerfile}
     environment:
