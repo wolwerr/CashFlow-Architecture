@@ -54,6 +54,7 @@ app.MapHealthChecks("/health").AllowAnonymous();
 app.MapGet("/internal/authentication/check", () => Results.NoContent())
     .RequireAuthorization();
 app.MapCreateTransaction();
+app.MapTransactionHistory();
 app.Run();
 
 public partial class Program { }
