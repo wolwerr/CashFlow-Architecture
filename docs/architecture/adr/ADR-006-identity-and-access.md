@@ -44,6 +44,15 @@ As comparações tratam de **soluções de identidade**, não de desempenho comp
 - Matriz inicial do MVP: ambos podem criar e consultar lançamentos e consultar o consolidado **do seu comerciante**. Apenas ADMIN pode gerenciar membros/papéis do **mesmo comerciante**, mediante operação administrativa protegida e validação de que um vínculo não pode elevar seus próprios privilégios indevidamente. Sem papel VIEWER.
 - Cadastro inicial de comerciante e primeiro ADMIN requer processo de bootstrap administrativo de acesso restrito; **nenhum endpoint público de autoatribuição**. A existência de dados comerciais adicionais (CNPJ, contratos, etc.) será revista se necessária, e não deve ser simulada com atributos IAM genéricos.
 
+### Provisionamento de comerciantes e administradores no aplicativo (evolução local)
+
+- O usuário autorizado para bootstrap local pode cadastrar um comerciante informando somente seu nome na SPA. A API Transactions, usando um **cliente confidencial de gestão separado** do cliente somente leitura, cria um UUID e os grupos Keycloak ADMIN e OPERATOR e atribui o primeiro ADMIN ao próprio usuário autenticado.
+- Apenas em Development e para o `preferred_username` assinado que corresponde ao valor de `CASHFLOW_BOOTSTRAP_USERNAME` o cadastro inicial é permitido. Não há autoatribuição irrestrita nem disponibilização pública dessa capacidade para produção.
+- Um ADMIN do comerciante pode vincular outros usuários como ADMIN ou solicitar criação com senha temporária no Keycloak. Somente o backend guarda as credenciais do cliente de gestão; nenhum segredo administrativo é exposto à SPA.
+- O nome da loja é armazenado como `displayName` no grupo do comerciante, apenas para facilitar a seleção. Continua **sem banco de autorização próprio**. Novos requisitos fiscais/comerciais poderão exigir modelo de domínio distinto.
+- Contrato e procedimento de bootstrap local em [merchant-onboarding.md](../../implementation/merchant-onboarding.md). Atribuição de permissões à Service Account de gestão é uma configuração inicial restrita, não uma tarefa por comerciante.
+- **Limite conhecido:** a criação dos grupos/vínculos não é uma transação distribuída. Provisionamento parcial, auditoria administrativa e política de produção devem ser endurecidos antes do deployment externo.
+
 ### Integração, validade e revogação
 
 - Transactions e Consolidation verificam o **access token** via assinatura RS256, JWKS, issuer, audience e expiração localmente, conforme a implementação de JWT já existente para Transactions. O Keycloak não substitui as verificações de negócio dentro da API.
