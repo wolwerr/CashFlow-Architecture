@@ -35,11 +35,11 @@ export default function App() {
     finishLogin().then(tokens => {
       setSession(tokens);
       setIdentity(getSubject(tokens.accessToken));
-      history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', '/');
       setNotice({ text: 'Login realizado. Informe o ID de um comerciante ao qual você tenha acesso.', isError: false });
     }).catch((error: unknown) => {
       setNotice({ text: (error as Error).message, isError: true });
-      history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', '/');
     }).finally(() => setAuthPending(false));
   }, []);
 
