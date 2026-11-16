@@ -33,6 +33,8 @@
 
 **Progresso complementar Trilha 04:** executor de falhas locais e testes de segurança do procedimento documentados em [Drills de recuperação local](local-recovery-drills.md). Os cenários financeiros reais e os SLOs permanecem pendentes de comprovação.
 
+**Progresso complementar Trilha 04:** verificador estrutural de backup/restauração local PostgreSQL, sem sobrescrever bancos da aplicação, descrito em [Backup e restauração local](local-postgres-backup-verification.md). Execução real, integridade financeira, RPO/RTO e observabilidade continuam pendentes.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
