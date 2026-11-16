@@ -10,7 +10,7 @@ Existe um único workflow GitHub Actions: `.github/workflows/local-build.yml`, c
 
 Os três jobs ficam separados no gráfico de execução do GitHub Actions. Os relatórios são transferidos por `upload-artifact` e `download-artifact`. O Sonar fica em um único job porque **um projeto SonarQube Cloud recebe uma análise atômica por execução**. Rodar scanners concorrentes separados para C# e TypeScript com a mesma Project Key poderia produzir análises inconsistentes ou sobrepostas. Para Quality Gates totalmente independentes por linguagem seriam necessários dois projetos Sonar e suas respectivas configurações.
 
-O `sonar.scanner.scanAll=true` analisa JS/TS junto ao .NET. O scanner importa `sonar-reports/backend/coverage.opencover.xml` e `web/coverage/lcov.info`. O Sonar não executa testes; o CI produz os relatórios.
+O `sonar.scanner.scanAll=true` analisa JS/TS junto ao .NET. O scanner importa `sonar-reports/backend/coverage.opencover.xml` e `web/coverage/lcov.info`. O Sonar não executa testes; o CI produz os relatórios. O código auxiliar em `.github/scripts/**` participa da análise de issues, mas é excluído **somente do cálculo de cobertura de código de aplicação** (`sonar.coverage.exclusions`), pois não integra o backend ou frontend e possui testes de política executados pelo CI.
 
 ## Política de bloqueio no plano gratuito
 
