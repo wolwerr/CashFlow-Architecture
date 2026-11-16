@@ -27,27 +27,27 @@ else JWT valido
     G --> W: HTTP 503
   else Consulta autorizada
     KC --> C: Autorizado
-  C -> C: Valida data e parametros
-  alt Parametros invalidos
-    C --> G: Resposta de validacao; contrato pendente
-    G --> W: Exibe erro
-  else Parametros validos
-    C -> DB: Consulta totais do dia e soma net_amount\nate a data, no banco proprio
-    alt Projecao encontrada
-      DB --> C: Totais diarios e soma historica
-      C --> G: Creditos, debitos, liquido e acumulado
-      G --> W: Apresenta saldo
-    else Dia sem movimentacao
-      DB --> C: Sem movimento na data; soma anteriores
-      C --> G: Credito 0, debito 0, liquido 0; acumulado anterior
-      G --> W: Mostra movimento zero e saldo mantido
-    else Dados atrasados ou falha na projecao
-      DB --> C: Projecao potencialmente desatualizada
-      C --> G: Tratamento conforme contrato a definir
-      G --> W: Exibe estado adequado
+    C -> C: Valida data e parametros
+    alt Parametros invalidos
+      C --> G: Resposta de validacao; contrato pendente
+      G --> W: Exibe erro
+    else Parametros validos
+      C -> DB: Consulta totais do dia e soma net_amount\nate a data, no banco proprio
+      alt Projecao encontrada
+        DB --> C: Totais diarios e soma historica
+        C --> G: Creditos, debitos, liquido e acumulado
+        G --> W: Apresenta saldo
+      else Dia sem movimentacao
+        DB --> C: Sem movimento na data; soma anteriores
+        C --> G: Credito 0, debito 0, liquido 0; acumulado anterior
+        G --> W: Mostra movimento zero e saldo mantido
+      else Dados atrasados ou falha na projecao
+        DB --> C: Projecao potencialmente desatualizada
+        C --> G: Tratamento conforme contrato a definir
+        G --> W: Exibe estado adequado
+      end
     end
   end
-end
 end
 note over C,DB
 Consolidation nao consulta Transactions.
