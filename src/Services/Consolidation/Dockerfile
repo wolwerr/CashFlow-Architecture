@@ -1,5 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
+COPY src/Shared/CashFlow.Security/ ./src/Shared/CashFlow.Security/
 COPY src/Services/Consolidation/ ./src/Services/Consolidation/
 RUN dotnet restore src/Services/Consolidation/CashFlow.Consolidation.Api/CashFlow.Consolidation.Api.csproj
 RUN dotnet publish src/Services/Consolidation/CashFlow.Consolidation.Api/CashFlow.Consolidation.Api.csproj -c Release -o /out --no-restore
