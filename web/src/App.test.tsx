@@ -195,6 +195,44 @@ describe('CashFlow dashboard and interactions', () => {
       reference_date: '2026-11-16'
     }, 'unique-key');
   });
+  it('records a debit of 25 BRL only once and schedules asynchronous balance refresh', async () => {
+    setupSignedIn();
+    mock.state[5] = 'DEBIT';
+    mock.state[6] = '25';
+    mock.state[7] = {
+      merchant_id: mock.state[3], reference_date: '2026-11-16',
+      currency: 'BRL', credit_total: '100.00', debit_total: '0.00',
+      net_amount: '100.00', closing_balance: '100.00'
+    };
+    vi.mocked(createTransaction).mockResolvedValue({
+      id: 'debit-id', merchant_id: mock.state[3] as string,
+      type: 'DEBIT', amount: '25.00', currency: 'BRL',
+      reference_date: '2026-11-16', created_at: '2026-11-16T15:00:00Z'
+    });
+    const form = render().filter(n => n.type === 'form').at(-1)!;
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createTransaction).toHaveBeenCalledTimes(1);
+    expect(createTransaction).toHaveBeenCalledWith('access-token', {
+      merchant_id: mock.state[3], type: 'DEBIT', amount: '25.00',
+      reference_date: '2026-11-16'
+    }, 'unique-key');
+    expect(mock.state[16]).toMatchObject({
+      type: 'DEBIT', amount: '25.00',
+      before: { credit_total: '100.00', debit_total: '0.00' }
+    });
+  });
+  it('cannot launch an operation until the administrator links a merchant', async () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    mock.state[3] = '';
+    mock.state[6] = '100';
+    const nodes = render();
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Registrar lançamento');
+    expect(submit?.props.disabled).toBe(true);
+    const form = nodes.filter(n => n.type === 'form').at(-1)!;
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createTransaction).not.toHaveBeenCalled();
+  });
   it('preserves idempotency for an uncertain network failure and clears on new input', async () => {
     setupSignedIn();
     mock.state[6] = '10.25';
