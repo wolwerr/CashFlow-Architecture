@@ -28,7 +28,7 @@ O Coverlet retorna código de saída diferente de zero se o módulo instrumentad
 
 ## Proteção de merge
 
-O workflow falha quando os testes ou o limite de cobertura falham. Para que o merge na branch `main` seja efetivamente impedido, **configurar GitHub Ruleset / Branch Protection** exigindo o check **`Build and SonarQube`** do workflow unificado como obrigatório. Isso ainda precisa ser conferido com as permissões e a configuração da conta. O workflow não faz deploy.
+O workflow falha quando os testes ou o limite de cobertura falham. Para que o merge na branch `main` seja efetivamente impedido, **configurar GitHub Ruleset / Branch Protection** exigindo os checks **`Backend | Build and tests`**, **`Frontend | Build and tests`** e **`Sonar | Backend and frontend`** do workflow unificado como obrigatórios (considerar política de PRs externos sem secrets). Isso ainda precisa ser conferido com as permissões e a configuração da conta. O workflow não faz deploy.
 
 ## Evidências ainda pendentes
 
