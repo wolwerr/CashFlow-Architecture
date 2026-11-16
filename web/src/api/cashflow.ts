@@ -64,3 +64,29 @@ export function transactionHistory(token: string, merchant: string, page = 1): P
   return call('/api/v1/transactions?' +
     new URLSearchParams({ merchant_id: merchant, page: String(page), page_size: '20' }), token);
 }
+
+export type Merchant = { id: string; name: string; role: 'ADMIN' | 'OPERATOR' };
+
+export function listMerchants(token: string): Promise<Merchant[]> {
+  return call('/api/v1/merchants/', token);
+}
+
+export function createMerchant(token: string, name: string): Promise<Merchant> {
+  return call('/api/v1/merchants/', token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+}
+
+export async function addMerchantAdmin(token: string, merchantId: string,
+  username: string, temporaryPassword?: string): Promise<void> {
+  const response = await fetch('/api/v1/merchants/' + encodeURIComponent(merchantId) + '/admins', {
+    method: 'POST', cache: 'no-store',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, temporaryPassword: temporaryPassword || null })
+  });
+  if (!response.ok) {
+    const problem = await response.json().catch(() => ({})) as { title?: string };
+    throw new ApiError(response.status, problem.title || 'Não foi possível cadastrar o administrador.');
+  }
+}
