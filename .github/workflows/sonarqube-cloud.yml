@@ -1,0 +1,76 @@
+name: SonarQube Cloud analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonar:
+    name: SonarQube Cloud
+    # Fork PRs cannot access repository secrets.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Validate Sonar secrets
+        shell: bash
+        run: |
+          for name in SONAR_TOKEN SONAR_PROJECT_KEY SONAR_ORGANIZATION; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Configure the $name repository secret."
+              exit 1
+            fi
+          done
+
+      - name: Install SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin SonarQube Cloud analysis
+        shell: bash
+        run: |
+          dotnet sonarscanner begin \
+            /k:"$SONAR_PROJECT_KEY" \
+            /o:"$SONAR_ORGANIZATION" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.qualitygate.timeout=300
+
+      - name: Restore
+        run: dotnet restore CashFlow.slnx
+
+      - name: Build under SonarScanner
+        run: dotnet build CashFlow.slnx --configuration Release --no-restore
+
+      - name: Collect OpenCover coverage for Sonar
+        run: |
+          dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj \
+            --configuration Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=TestResults/sonar/coverage.opencover.xml
+
+      - name: Complete and publish analysis
+        if: success()
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
