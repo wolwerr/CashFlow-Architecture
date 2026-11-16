@@ -1,4 +1,5 @@
-using CashFlow.Consolidation.Api.Authentication;
+using CashFlow.Security.Authentication;
+using CashFlow.Security.Keycloak;
 using CashFlow.Consolidation.Api.Endpoints;
 using CashFlow.Consolidation.Application.Gateways;
 using CashFlow.Consolidation.Application.UseCases.GetDailyConsolidation;
@@ -13,8 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHealthChecks();
 builder.Services.AddCashFlowAuthentication(builder.Configuration, builder.Environment);
 
-var authorization = builder.Configuration.GetSection(KeycloakConsolidationSettings.SectionName)
-    .Get<KeycloakConsolidationSettings>() ?? new KeycloakConsolidationSettings();
+var authorization = builder.Configuration.GetSection(KeycloakAuthorizationSettings.SectionName)
+    .Get<KeycloakAuthorizationSettings>() ?? new KeycloakAuthorizationSettings();
 authorization.Validate(builder.Environment.IsDevelopment());
 builder.Services.AddSingleton(Options.Create(authorization));
 builder.Services.AddMemoryCache();
