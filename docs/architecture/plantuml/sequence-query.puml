@@ -40,6 +40,8 @@ note over C,DB
 Consolidation nao consulta Transactions.
 Liquido e acumulado sao apresentados.
 Dias vazios mantem saldo anterior.
-Retroativos atualizam totais do dia.\nAcumulado calculado pela soma historica.\nSLO 95% em 30s, ainda nao testado.
+Retroativos atualizam totais do dia.
+Acumulado calculado pela soma historica.
+SLO 95% em 30s, ainda nao testado.
 end note
 @enduml
