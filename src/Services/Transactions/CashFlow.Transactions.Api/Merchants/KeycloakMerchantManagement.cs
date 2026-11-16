@@ -129,34 +129,60 @@ public sealed class KeycloakMerchantManagement(
         return new MerchantView(id, name, "ADMIN");
     }
 
+    public async Task<MerchantView> CreateWithOperatorAsync(
+        string name, Guid ownerId, string username, string password, CancellationToken ct)
+    {
+        // Usernames belong to the realm, not to an individual merchant. Never link an
+        // existing account automatically, because it could grant access to the wrong person.
+        if ((await UsersAsync(username, ct)).Count > 0)
+            throw new MerchantUsernameConflictException();
+
+        var created = await CreateAsync(name, ownerId, ct);
+        var assigned = await AddMemberAsync(created.Id, username, password, "OPERATOR", ct);
+        if (!assigned)
+            throw new HttpRequestException("Merchant operator provisioning incomplete.");
+        return created;
+    }
+
     private async Task AssignAsync(Guid userId, string groupId, CancellationToken ct)
     {
         using var response = await SendAsync(HttpMethod.Put, $"users/{userId:D}/groups/{groupId}", null, ct);
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<bool> AddAdminAsync(Guid merchantId, string username,
-        string? temporaryPassword, CancellationToken ct)
+    public Task<bool> AddAdminAsync(Guid merchantId, string username,
+        string? temporaryPassword, CancellationToken ct) =>
+        AddMemberAsync(merchantId, username, temporaryPassword, "ADMIN", ct);
+
+    private async Task<bool> AddMemberAsync(Guid merchantId, string username,
+        string? password, string role, CancellationToken ct)
     {
         var merchant = await MerchantGroupAsync(merchantId, ct);
         if (merchant is null) return false;
-        var admin = (await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct))
-            .FirstOrDefault(g => g.Name == "ADMIN");
-        if (admin is null) throw new HttpRequestException("Merchant ADMIN group missing.");
+        var group = (await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct))
+            .FirstOrDefault(g => g.Name == role);
+        if (group is null) throw new HttpRequestException("Merchant role group missing.");
         var users = await UsersAsync(username, ct);
-        if (users.Count == 0 && !string.IsNullOrWhiteSpace(temporaryPassword))
+        if (users.Count == 0 && !string.IsNullOrWhiteSpace(password))
         {
+            // New merchant credentials are usable immediately in the local MVP.
+            // Password strength and recovery hardening are deferred and documented.
             using var created = await SendAsync(HttpMethod.Post, "users", new
             {
                 username, enabled = true,
-                credentials = new[] { new { type = "password", value = temporaryPassword, temporary = true } }
+                credentials = new[] { new {
+                    type = "password", value = password,
+                    temporary = role == "ADMIN"
+                } }
             }, ct);
             created.EnsureSuccessStatusCode();
             users = await UsersAsync(username, ct);
         }
         if (users.Count != 1) return false;
+        if (!string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase))
+            return false;
         if (!Guid.TryParse(users[0].Id, out var userId)) return false;
-        await AssignAsync(userId, admin.Id, ct);
+        await AssignAsync(userId, group.Id, ct);
         return true;
     }
 
@@ -170,3 +196,5 @@ public sealed class KeycloakMerchantManagement(
 }
 
 public sealed record MerchantView(Guid Id, string Name, string Role);
+
+public sealed class MerchantUsernameConflictException : Exception;
