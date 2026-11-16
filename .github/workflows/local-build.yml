@@ -15,9 +15,6 @@ jobs:
     name: Build and SonarQube
     runs-on: ubuntu-latest
     env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
-      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
       # GitHub does not pass repository secrets to workflows triggered from forks.
       RUN_SONAR: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
@@ -42,6 +39,10 @@ jobs:
 
       - name: Validate Sonar secrets
         if: env.RUN_SONAR == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
         shell: bash
         run: |
           for name in SONAR_TOKEN SONAR_PROJECT_KEY SONAR_ORGANIZATION; do
@@ -57,6 +58,10 @@ jobs:
 
       - name: Begin Sonar analysis (C# and TypeScript)
         if: env.RUN_SONAR == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
         shell: bash
         run: |
           dotnet sonarscanner begin \
@@ -105,4 +110,6 @@ jobs:
 
       - name: Publish Sonar analysis and enforce Quality Gate
         if: env.RUN_SONAR == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
