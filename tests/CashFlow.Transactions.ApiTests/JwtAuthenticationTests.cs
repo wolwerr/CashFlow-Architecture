@@ -15,29 +15,33 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace CashFlow.Transactions.ApiTests;
 
 public sealed class JwtAuthenticationTests : IDisposable
 {
     private const string Issuer = "http://localhost:8081/realms/cashflow";
     private const string Audience = "cashflow-transactions-api";
+    private readonly string? _priorAuthority;
+    private readonly string? _priorAudience;
     private readonly RSA _rsa = RSA.Create(2048);
     private readonly RsaSecurityKey _key;
     private readonly WebApplicationFactory<Program> _factory;
 
     public JwtAuthenticationTests()
     {
+        // Minimal-hosting WebApplication validates configuration during Program startup,
+        // before WebApplicationFactory.ConfigureAppConfiguration can amend it.
+        _priorAuthority = Environment.GetEnvironmentVariable("Authentication__Authority");
+        _priorAudience = Environment.GetEnvironmentVariable("Authentication__Audience");
+        Environment.SetEnvironmentVariable("Authentication__Authority", Issuer);
+        Environment.SetEnvironmentVariable("Authentication__Audience", Audience);
         _key = new RsaSecurityKey(_rsa) { KeyId = "test-key" };
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("environment", "Development");
-                builder.ConfigureAppConfiguration((_, config) =>
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["Authentication:Authority"] = Issuer,
-                        ["Authentication:Audience"] = Audience
-                    }));
                 builder.ConfigureTestServices(services =>
                     services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
                     {
@@ -143,6 +147,8 @@ public sealed class JwtAuthenticationTests : IDisposable
     public void Dispose()
     {
         _factory.Dispose();
+        Environment.SetEnvironmentVariable("Authentication__Authority", _priorAuthority);
+        Environment.SetEnvironmentVariable("Authentication__Audience", _priorAudience);
         _rsa.Dispose();
     }
 }
