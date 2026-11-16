@@ -52,6 +52,9 @@ jobs:
       - name: Backend | Transactions Application (min 80% lines)
         run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
 
+      - name: Backend | JWT authentication API tests
+        run: dotnet test tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj -c Release --no-build
+
       - name: Backend | PostgreSQL integration and Infrastructure coverage (min 80% lines)
         env:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
