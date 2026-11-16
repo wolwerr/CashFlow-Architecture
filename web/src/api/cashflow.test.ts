@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin } from './cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions } from './cashflow';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('CashFlow API contracts', () => {
@@ -58,12 +58,21 @@ describe('CashFlow API contracts', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/merchants/');
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer access');
   });
+  it('queries platform administration permission from the protected API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ can_manage_merchants: false })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await merchantPermissions('operator-access')).toEqual({ can_manage_merchants: false });
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/merchants/permissions');
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer operator-access');
+  });
   it('creates a merchant by name and returns the generated ID', async () => {
     const created = { id: 'merchant-id', name: 'Loja Campinas', role: 'ADMIN' };
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => created });
     vi.stubGlobal('fetch', fetchMock);
-    expect(await createMerchant('access', 'Loja Campinas')).toEqual(created);
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ name: 'Loja Campinas' });
+    expect(await createMerchant('access', 'Loja Campinas', 'loja.campinas', 'senha-local-segura')).toEqual(created);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ name: 'Loja Campinas', username: 'loja.campinas', password: 'senha-local-segura' });
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
   });
   it('adds a merchant administrator without storing its password', async () => {

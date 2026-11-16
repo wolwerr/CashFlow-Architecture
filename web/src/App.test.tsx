@@ -29,7 +29,7 @@ vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
   return {
     ...original, createTransaction: vi.fn(), dailyBalance: vi.fn(),
-    transactionHistory: vi.fn(), listMerchants: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn()
+    transactionHistory: vi.fn(), listMerchants: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
   };
 });
 import App from './App';
@@ -42,6 +42,10 @@ function walk(root: unknown): Node[] {
   if (Array.isArray(root)) return root.flatMap(walk);
   if (typeof root !== 'object' || root === null || !('props' in root)) return [];
   const el = root as Node;
+  if (typeof el.type === 'function') {
+    const view = el.type as (props: Node['props']) => unknown;
+    return [el, ...walk(view(el.props))];
+  }
   return [el, ...walk(el.props.children)];
 }
 function render() {
@@ -64,6 +68,7 @@ function setupSignedIn() {
   mock.state[0] = { accessToken: 'access-token', expiresAt: Date.now() + 120_000 };
   mock.state[3] = '68a5baac-d97f-45b4-9119-b4c5b9de7c9b';
   mock.state[4] = '2026-11-16';
+  mock.state[19] = true;
 }
 function seedApi() {
   vi.mocked(dailyBalance).mockResolvedValue({
@@ -194,6 +199,44 @@ describe('CashFlow dashboard and interactions', () => {
       reference_date: '2026-11-16'
     }, 'unique-key');
   });
+  it('records a debit of 25 BRL only once and schedules asynchronous balance refresh', async () => {
+    setupSignedIn();
+    mock.state[5] = 'DEBIT';
+    mock.state[6] = '25';
+    mock.state[7] = {
+      merchant_id: mock.state[3], reference_date: '2026-11-16',
+      currency: 'BRL', credit_total: '100.00', debit_total: '0.00',
+      net_amount: '100.00', closing_balance: '100.00'
+    };
+    vi.mocked(createTransaction).mockResolvedValue({
+      id: 'debit-id', merchant_id: mock.state[3] as string,
+      type: 'DEBIT', amount: '25.00', currency: 'BRL',
+      reference_date: '2026-11-16', created_at: '2026-11-16T15:00:00Z'
+    });
+    const form = render().filter(n => n.type === 'form').at(-1)!;
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createTransaction).toHaveBeenCalledTimes(1);
+    expect(createTransaction).toHaveBeenCalledWith('access-token', {
+      merchant_id: mock.state[3], type: 'DEBIT', amount: '25.00',
+      reference_date: '2026-11-16'
+    }, 'unique-key');
+    expect(mock.state[16]).toMatchObject({
+      type: 'DEBIT', amount: '25.00',
+      before: { credit_total: '100.00', debit_total: '0.00' }
+    });
+  });
+  it('cannot launch an operation until the administrator links a merchant', async () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    mock.state[3] = '';
+    mock.state[6] = '100';
+    const nodes = render();
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Registrar lançamento');
+    expect(submit?.props.disabled).toBe(true);
+    const form = nodes.filter(n => n.type === 'form').at(-1)!;
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createTransaction).not.toHaveBeenCalled();
+  });
   it('preserves idempotency for an uncertain network failure and clears on new input', async () => {
     setupSignedIn();
     mock.state[6] = '10.25';
@@ -217,13 +260,15 @@ describe('CashFlow dashboard and interactions', () => {
     setupSignedIn();
     const input = find('input', 'Nome do comerciante');
     (input.props.onChange as (event: unknown) => void)({ target: { value: 'Loja Campinas' } });
+    mock.state[17] = 'loja.campinas';
+    mock.state[18] = 'senha-local-segura';
     vi.mocked(createMerchant).mockResolvedValue({
       id: '68a5baac-d97f-45b4-9119-b4c5b9de7c9b',
       name: 'Loja Campinas', role: 'ADMIN'
     });
     const form = render().filter(n => n.type === 'form')[0];
     await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
-    expect(createMerchant).toHaveBeenCalledWith('access-token', 'Loja Campinas');
+    expect(createMerchant).toHaveBeenCalledWith('access-token', 'Loja Campinas', 'loja.campinas', 'senha-local-segura');
     expect(mock.state[3]).toBe('68a5baac-d97f-45b4-9119-b4c5b9de7c9b');
   });
   it('adds an existing administrator only after selecting a merchant with ADMIN role', async () => {
@@ -238,6 +283,88 @@ describe('CashFlow dashboard and interactions', () => {
     expect(addMerchantAdmin).toHaveBeenCalledWith('access-token',
       '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', 'new.admin', undefined);
   });
+  it('merchant session shows only financial sections, without provisioning UI', () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    mock.state[12] = [{
+      id: mock.state[3], name: 'Loja Campinas', role: 'OPERATOR'
+    }];
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Gestão de comerciantes')).toBe(false);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Comerciante e competência')).toBe(false);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Saldo diário')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Histórico de lançamentos')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(false);
+  });
+  it('operator session cannot submit merchant creation even through a forged callback', async () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    const nodes = render();
+    expect(nodes.filter(n => n.type === 'form')).toHaveLength(1);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(false);
+    expect(createMerchant).not.toHaveBeenCalled();
+  });
+  it('admin sees merchant creation only after login and requires username and password', () => {
+    setupSignedIn();
+    const nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Comerciante e competência')).toBe(true);
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Cadastrar comerciante e acesso');
+    expect(submit?.props.disabled).toBe(true);
+  });
+
+  it('merchant account registration rejects missing username and short password', async () => {
+    setupSignedIn();
+    mock.state[13] = 'Nova Loja';
+    mock.state[17] = '';
+    mock.state[18] = 'short';
+    const form = render().filter(n => n.type === 'form')[0];
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createMerchant).not.toHaveBeenCalled();
+    expect(mock.state[11]).toBe(false);
+  });
+
+  it('merchant registration exposes username conflicts without creating a local merchant', async () => {
+    setupSignedIn();
+    mock.state[13] = 'Nova Loja';
+    mock.state[17] = 'loja.existente';
+    mock.state[18] = 'senha-local-segura';
+    vi.mocked(createMerchant).mockRejectedValue(new Error('Username already exists in this realm.'));
+    const form = render().filter(n => n.type === 'form')[0];
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(mock.state[10]).toMatchObject({ isError: true });
+    expect(mock.state[12]).toEqual([]);
+    expect(mock.state[11]).toBe(false);
+  });
+
+  it('merchant financial panel can consult its linked merchant without admin fields', async () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    mock.state[12] = [{
+      id: mock.state[3], name: 'Loja Campinas', role: 'OPERATOR'
+    }];
+    const nodes = render();
+    const consult = nodes.find(n => n.type === 'button' && n.props.children === 'Consultar');
+    expect(consult).toBeDefined();
+    await (consult!.props.onClick as () => Promise<void>)();
+    expect(dailyBalance).toHaveBeenCalledOnce();
+    expect(transactionHistory).toHaveBeenCalledOnce();
+    expect(nodes.some(n => n.props['aria-label'] === 'ID do comerciante')).toBe(false);
+  });
+
+  it('history displays empty state and disables navigation when there are no transactions', () => {
+    setupSignedIn();
+    mock.state[8] = { page: 1, page_size: 20, items: [], has_more: false };
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'p' && n.props.children === 'Nenhum lançamento encontrado.')).toBe(true);
+    const next = nodes.find(n => n.type === 'button' && n.props.children === 'Próxima');
+    expect(next?.props.disabled).toBe(true);
+  });
+
   it('delegates logout and blocks queries after expiry', async () => {
     setupSignedIn();
     const exit = find('button', 'Sair');

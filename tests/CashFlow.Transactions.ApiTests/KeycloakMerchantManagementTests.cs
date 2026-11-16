@@ -169,6 +169,107 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task DuplicateMerchantUsernameDoesNotCreateAnyGroups()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+            Path(request).EndsWith("/users", StringComparison.Ordinal)
+                ? JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.campinas" } })
+                : new HttpResponseMessage(HttpStatusCode.NotFound)));
+        await Assert.ThrowsAsync<MerchantUsernameConflictException>(() =>
+            Create(fake).CreateWithOperatorAsync("Loja Campinas", UserId,
+                "loja.campinas", "senha-local-segura", CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "POST" &&
+            call.Path.EndsWith("/groups", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task NewMerchantAccountIsOperatorNotAdmin()
+    {
+        var rootCreated = false;
+        string? generatedId = null;
+        var merchantCreated = false;
+        var adminCreated = false;
+        var operatorCreated = false;
+        var userCreated = false;
+        var assignedAdmin = false;
+        var assignedOperator = false;
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            var method = request.Method;
+            if (path.EndsWith("/users", StringComparison.Ordinal) && method == HttpMethod.Get)
+                return userCreated ? JsonResponse(new[] {
+                    new { id = "788cad48-77e3-4e09-b6b1-2d39c58b2233", username = "loja.campinas" }
+                }) : JsonResponse(Array.Empty<object>());
+            if (path.EndsWith("/users", StringComparison.Ordinal) && method == HttpMethod.Post)
+            {
+                using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
+                Assert.Equal("loja.campinas", body.RootElement.GetProperty("username").GetString());
+                var credential = body.RootElement.GetProperty("credentials")[0];
+                Assert.False(credential.GetProperty("temporary").GetBoolean());
+                Assert.Equal("senha-local-segura", credential.GetProperty("value").GetString());
+                userCreated = true;
+                return new HttpResponseMessage(HttpStatusCode.Created);
+            }
+            if (path.EndsWith("/groups", StringComparison.Ordinal) && method == HttpMethod.Get)
+                return JsonResponse(rootCreated ? new[] { Root() } : Array.Empty<object>());
+            if (path.EndsWith("/groups", StringComparison.Ordinal) && method == HttpMethod.Post)
+            {
+                rootCreated = true;
+                return new HttpResponseMessage(HttpStatusCode.Created);
+            }
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal) && method == HttpMethod.Get)
+                return JsonResponse(merchantCreated ? new[] {
+                    new { id = "merchant-group-id", name = generatedId, path = "/merchants/" + generatedId }
+                } : Array.Empty<object>());
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal) && method == HttpMethod.Post)
+            {
+                using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
+                generatedId = body.RootElement.GetProperty("name").GetString();
+                merchantCreated = true;
+                return new HttpResponseMessage(HttpStatusCode.Created);
+            }
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal) && method == HttpMethod.Get)
+            {
+                var roles = new List<object>();
+                if (adminCreated) roles.Add(new {
+                    id = "admin-id", name = "ADMIN", path = "/merchants/" + generatedId + "/ADMIN" });
+                if (operatorCreated) roles.Add(new {
+                    id = "operator-id", name = "OPERATOR", path = "/merchants/" + generatedId + "/OPERATOR" });
+                return JsonResponse(roles);
+            }
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal) && method == HttpMethod.Post)
+            {
+                using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
+                if (body.RootElement.GetProperty("name").GetString() == "ADMIN") adminCreated = true;
+                else operatorCreated = true;
+                return new HttpResponseMessage(HttpStatusCode.Created);
+            }
+            if (method == HttpMethod.Put && path.EndsWith("/groups/admin-id", StringComparison.Ordinal))
+            {
+                assignedAdmin = true;
+                Assert.Contains(UserId.ToString("D"), path, StringComparison.Ordinal);
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+            if (method == HttpMethod.Put && path.EndsWith("/groups/operator-id", StringComparison.Ordinal))
+            {
+                assignedOperator = true;
+                Assert.DoesNotContain(UserId.ToString("D"), path, StringComparison.Ordinal);
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+            if (method == HttpMethod.Put) return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        var result = await Create(fake).CreateWithOperatorAsync(
+            "Loja Campinas", UserId, "loja.campinas", "senha-local-segura", CancellationToken.None);
+        Assert.Equal(generatedId, result.Id.ToString("D"));
+        Assert.True(assignedAdmin);
+        Assert.True(assignedOperator);
+        Assert.True(userCreated);
+        Assert.Contains(fake.Calls, call => call.Path.EndsWith("/groups/operator-id", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AddsExistingUserToMerchantAdminGroup()
     {
         var fake = new FakeHandler(req => TokenOr(req, request =>

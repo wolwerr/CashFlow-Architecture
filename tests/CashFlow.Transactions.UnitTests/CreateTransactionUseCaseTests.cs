@@ -37,6 +37,23 @@ public sealed class CreateTransactionUseCaseTests
     }
 
     [Fact]
+    public async Task DebitOf25PersistsAsDebitWithoutChangingItsSignOrAmount()
+    {
+        var auth = new FakeAuthorization();
+        var store = new FakeRegistration();
+        var command = new CreateTransactionCommand(
+            Merchant, Actor, TransactionType.Debit, 25m, Today, "debit-key", "debit-correlation");
+        var result = await UseCase(auth, store).ExecuteAsync(command);
+
+        Assert.Equal(TransactionType.Debit, result.Type);
+        Assert.Equal(25m, result.Amount);
+        Assert.Equal(TransactionType.Debit, store.LastTransaction!.Type);
+        Assert.Equal(25m, store.LastTransaction.Amount);
+        Assert.Equal(1, auth.Calls);
+        Assert.Equal(1, store.Calls);
+    }
+
+    [Fact]
     public async Task UnauthorizedDoesNotPersist()
     {
         var auth = new FakeAuthorization { Allowed = false };
