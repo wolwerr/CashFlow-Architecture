@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json;
 using CashFlow.Transactions.Application.Gateways;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -23,6 +24,8 @@ public sealed class KeycloakMerchantAuthorizationGateway(
         if (actorId == Guid.Empty || merchantId == Guid.Empty)
             return false;
 
+        try
+        {
         var bearer = await GetAccessTokenAsync(ct);
         // Admin Groups endpoint queries current memberships, never claims from an old JWT.
         for (var page = 0; page < MaxPages; page++)
@@ -50,6 +53,19 @@ public sealed class KeycloakMerchantAuthorizationGateway(
         }
         // Never grant if a very large group list cannot be exhaustively examined.
         throw new MerchantAuthorizationUnavailableException("Keycloak group page limit exceeded.");
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new MerchantAuthorizationUnavailableException("Keycloak network request failed.", ex);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            throw new MerchantAuthorizationUnavailableException("Keycloak request timed out.", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new MerchantAuthorizationUnavailableException("Keycloak response is invalid.", ex);
+        }
     }
 
     private async Task<string> GetAccessTokenAsync(CancellationToken ct)
@@ -92,7 +108,11 @@ public sealed class KeycloakMerchantAuthorizationGateway(
         [property: JsonPropertyName("expires_in")] int ExpiresIn);
 }
 
-public sealed class MerchantAuthorizationUnavailableException(string message) : Exception(message);
+public sealed class MerchantAuthorizationUnavailableException : Exception
+{
+    public MerchantAuthorizationUnavailableException(string message) : base(message) { }
+    public MerchantAuthorizationUnavailableException(string message, Exception inner) : base(message, inner) { }
+}
 
 public sealed class KeycloakAuthorizationSettings
 {
