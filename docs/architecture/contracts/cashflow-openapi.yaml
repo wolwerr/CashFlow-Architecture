@@ -1,0 +1,258 @@
+openapi: 3.0.3
+info:
+  title: CashFlow Financial APIs
+  version: 1.0.0-draft
+  description: >
+    Contrato proposto para o MVP conforme decisões consolidadas de 15/11/2026.
+    Endpoints e formatos específicos aqui detalhados são propostas técnicas para implementação,
+    não evidência de API existente nem exigências textuais do desafio.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Transactions
+  - name: Consolidation
+paths:
+  /api/v1/transactions:
+    post:
+      tags: [Transactions]
+      operationId: createTransaction
+      summary: Registra crédito ou débito com idempotência HTTP
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Registro persistido no banco Transactions, consolidação assíncrona
+          headers:
+            Location:
+              description: URL pública do recurso registrado
+              schema: { type: string }
+            X-Correlation-ID:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+    get:
+      tags: [Transactions]
+      operationId: listTransactions
+      summary: Histórico paginado e restrito ao comerciante
+      parameters:
+        - $ref: '#/components/parameters/MerchantId'
+        - name: from
+          in: query
+          description: Competência inicial, inclusive
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Competência final, inclusive
+          required: true
+          schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Lista por competência decrescente, desempate por id estável
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/transactions/{transaction_id}:
+    get:
+      tags: [Transactions]
+      operationId: getTransaction
+      summary: Busca lançamento confirmado
+      parameters:
+        - in: path
+          name: transaction_id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/MerchantId'
+      responses:
+        '200':
+          description: Lançamento encontrado e autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/consolidation/daily:
+    get:
+      tags: [Consolidation]
+      operationId: getDailyConsolidation
+      summary: Totais diários e saldo acumulado derivado
+      parameters:
+        - $ref: '#/components/parameters/MerchantId'
+        - in: query
+          name: date
+          required: true
+          description: Data de competência em America/Sao_Paulo
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: >
+            Retorna 200 mesmo em dia vazio. Totais são zero e acumulado é
+            a soma dos movimentos das competências anteriores ou iguais à data.
+            Pode haver atraso de projeção após registro.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyConsolidation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token Keycloak OIDC, validado localmente pela API; merchant_id é autorizado pelo CashFlow
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      description: UUID v4 sugerido; mesmo comerciante e mesma chave com payload diferente retornam 409
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    CorrelationId:
+      in: header
+      name: X-Correlation-ID
+      required: false
+      schema: { type: string, maxLength: 128 }
+    MerchantId:
+      in: query
+      name: merchant_id
+      required: true
+      description: Identificador selecionado, sempre validado contra vínculo do sujeito autenticado
+      schema: { type: string, format: uuid }
+  schemas:
+    CreateTransactionRequest:
+      type: object
+      additionalProperties: false
+      required: [merchant_id, type, amount, reference_date]
+      properties:
+        merchant_id: { type: string, format: uuid }
+        type: { type: string, enum: [CREDIT, DEBIT] }
+        amount:
+          type: string
+          pattern: '^[0-9]+\\.[0-9]{2}$'
+          example: '125.50'
+          description: >
+            BRL, valor estritamente positivo com duas casas; string decimal para
+            evitar ponto flutuante JSON. O servidor rejeita zero, negativo,
+            precisão excessiva e valores que excedam numeric(19,2).
+        reference_date:
+          type: string
+          format: date
+          description: Competência do comerciante, hoje ou anterior, nunca futura no fuso America/Sao_Paulo
+    Transaction:
+      type: object
+      additionalProperties: false
+      required: [id, merchant_id, type, amount, currency, reference_date, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        merchant_id: { type: string, format: uuid }
+        type: { type: string, enum: [CREDIT, DEBIT] }
+        amount: { type: string, pattern: '^-?[0-9]+\\.[0-9]{2}$', example: '125.50' }
+        currency: { type: string, enum: [BRL] }
+        reference_date: { type: string, format: date }
+        created_at: { type: string, format: date-time, description: Instante UTC }
+    TransactionPage:
+      type: object
+      required: [items, page, page_size, has_next]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Transaction' } }
+        page: { type: integer, minimum: 1 }
+        page_size: { type: integer, minimum: 1 }
+        has_next: { type: boolean }
+    DailyConsolidation:
+      type: object
+      additionalProperties: false
+      required: [merchant_id, reference_date, currency, credit_total, debit_total, net_amount, closing_balance]
+      properties:
+        merchant_id: { type: string, format: uuid }
+        reference_date: { type: string, format: date }
+        currency: { type: string, enum: [BRL] }
+        credit_total: { type: string, pattern: '^[0-9]+\\.[0-9]{2}$', example: '500.00' }
+        debit_total: { type: string, pattern: '^[0-9]+\\.[0-9]{2}$', example: '100.00' }
+        net_amount: { type: string, pattern: '^-?[0-9]+\\.[0-9]{2}$', example: '400.00' }
+        closing_balance: { type: string, pattern: '^-?[0-9]+\\.[0-9]{2}$', example: '550.00' }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, example: 'about:blank' }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        correlation_id: { type: string }
+  responses:
+    BadRequest:
+      description: Formato ou parâmetro inválido
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Token ausente, expirado ou inválido
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Token válido, mas sem vínculo ou permissão para merchant_id
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Idempotency-Key reutilizada com conteúdo diferente
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unprocessable:
+      description: Regra de negócio rejeitada, como precisão monetária excessiva ou competência futura
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Recurso inexistente ou não revelável ao comerciante
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
