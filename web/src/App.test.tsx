@@ -108,7 +108,11 @@ describe('CashFlow dashboard and interactions', () => {
   it('does not leak merchant data after selection changes', () => {
     setupSignedIn();
     mock.state[7] = { closing_balance: '100.00' };
-    mock.state[8] = { page: 1, items: [{ id: 'one', reference_date: '2026-11-16', amount: '10.00', type: 'CREDIT' }], has_more: true };
+    mock.state[8] = { page: 1, page_size: 20, items: [{
+      id: 'a7f4c9b1-1111-4111-8111-111111111111', merchant_id: mock.state[3],
+      reference_date: '2026-11-16', amount: '10.00', type: 'CREDIT',
+      currency: 'BRL', created_at: '2026-11-16T15:00:00Z'
+    }], has_more: true };
     (merchantInput().props.onChange as (e: unknown) => void)({ target: { value: ' other ' } });
     expect(mock.state[3]).toBe('other');
     expect(mock.state[7]).toBe(null);
@@ -173,7 +177,7 @@ describe('CashFlow dashboard and interactions', () => {
       reference_date: '2026-11-16'
     }, 'unique-key');
     expect(mock.state[6]).toBe('');
-    expect(mock.references[0]?.current).toBe(null);
+    expect(mock.references.some(ref => ref.current === 'unique-key')).toBe(false);
   });
   it('preserves idempotency for an uncertain network failure and clears on new input', async () => {
     setupSignedIn();
@@ -181,10 +185,10 @@ describe('CashFlow dashboard and interactions', () => {
     vi.mocked(createTransaction).mockRejectedValue(new Error('Connection lost'));
     const form = render().find(n => n.type === 'form')!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
-    expect(mock.references[0]?.current).toBe('unique-key');
+    expect(mock.references.some(ref => ref.current === 'unique-key')).toBe(true);
     const input = find('input', 'Valor (BRL)');
     (input.props.onChange as (e: unknown) => void)({ target: { value: '12.00' } });
-    expect(mock.references[0]?.current).toBe(null);
+    expect(mock.references.some(ref => ref.current === 'unique-key')).toBe(false);
   });
   it('does not submit invalid amounts', async () => {
     setupSignedIn();
