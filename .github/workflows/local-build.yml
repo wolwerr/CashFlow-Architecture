@@ -159,7 +159,7 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="sonar-reports/backend/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="web/coverage/lcov.info" \
             /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/coverage/**,**/bin/**,**/obj/**" \
-            /d:sonar.qualitygate.wait=true \
+            /d:sonar.qualitygate.wait=false \
             /d:sonar.qualitygate.timeout=300
 
       - name: Sonar backend | Restore .NET
@@ -174,7 +174,17 @@ jobs:
           test -s web/src/App.tsx
           test -s web/coverage/lcov.info
 
-      - name: Sonar | Publish C# and TypeScript and check Quality Gate
+      - name: Sonar | Publish C# and TypeScript (built-in gate is informational)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: Sonar | Run CI severity policy tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_sonar_severity_gate.py'
+
+      - name: Sonar | Enforce High/Blocker issue policy and quality metrics
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 .github/scripts/sonar_severity_gate.py
