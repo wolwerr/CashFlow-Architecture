@@ -298,8 +298,8 @@ describe('CashFlow dashboard and interactions', () => {
     setupSignedIn();
     mock.state[19] = false;
     const nodes = render();
-    expect(nodes.some(n => n.type === 'form' &&
-      (n.props.children as unknown[]).some?.(child => String(child).includes('merchant')))).toBe(false);
+    expect(nodes.filter(n => n.type === 'form')).toHaveLength(1);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(false);
     expect(createMerchant).not.toHaveBeenCalled();
   });
   it('delegates logout and blocks queries after expiry', async () => {
