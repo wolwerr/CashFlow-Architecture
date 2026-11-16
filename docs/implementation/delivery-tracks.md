@@ -31,6 +31,8 @@
 
 **Progresso Trilha 04:** instrumento de carga local e testes automatizados documentados em [Hardening e evidências de carga](local-hardening-load.md). O benchmark real, as simulações de recuperação, auditoria, observabilidade e SLO de projeção continuam pendentes de execução e evidência.
 
+**Progresso complementar Trilha 04:** executor de falhas locais e testes de segurança do procedimento documentados em [Drills de recuperação local](local-recovery-drills.md). Os cenários financeiros reais e os SLOs permanecem pendentes de comprovação.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
