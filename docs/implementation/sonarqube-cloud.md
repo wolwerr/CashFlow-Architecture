@@ -12,6 +12,12 @@ Os três jobs ficam separados no gráfico de execução do GitHub Actions. Os re
 
 O `sonar.scanner.scanAll=true` analisa JS/TS junto ao .NET. O scanner importa `sonar-reports/backend/coverage.opencover.xml` e `web/coverage/lcov.info`. O Sonar não executa testes; o CI produz os relatórios.
 
+## Segurança das dependências npm
+
+O frontend versiona `web/package-lock.json` (lockfile v3) para fixar a árvore de versões resolvidas. Os jobs Frontend e Sonar utilizam `npm ci --ignore-scripts --no-audit --no-fund`, impedindo a execução de scripts de instalação de terceiros e garantindo que a instalação falhe caso `package.json` e o lockfile estejam divergentes. O lockfile foi gerado com Node.js 22/npm 10 em ambiente GitHub Actions. Não apagar o lockfile nem voltar a `npm install` no CI; atualizar dependências intencionalmente por PR e revisar o diff do lockfile.
+
+`--ignore-scripts` desabilita scripts no momento da instalação, mas `npm run build` e `npm run test:coverage` executam explicitamente as tarefas próprias do projeto. Caso alguma dependência necessite script de pós-instalação, avaliar risco e alternativa antes de flexibilizar essa proteção.
+
 ## Secrets e segurança
 
 GitHub `Settings > Secrets and variables > Actions`, em **Repository secrets**:
