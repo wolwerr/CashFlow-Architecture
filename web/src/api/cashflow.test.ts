@@ -3,10 +3,10 @@ import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl
 
 afterEach(() => vi.unstubAllGlobals());
 describe('CashFlow API contracts', () => {
-  it.each(['10.25', '0.01', '100000.00'])('accepts positive BRL %s', value => {
+  it.each(['10.25', '0.01', '100000.00', '100', '100,00', '1.234,56'])('accepts positive BRL %s', value => {
     expect(validBrl(value)).toBe(true);
   });
-  it.each(['0.00', '1', '10,25', '-1.00', '10.251', 'abc', 'Infinity', '1.0'])('rejects BRL %s', value => {
+  it.each(['0.00', '0', '-1.00', '10.251', '10,251', 'abc', 'Infinity', '1,000.00'])('rejects BRL %s', value => {
     expect(validBrl(value)).toBe(false);
   });
   it('validates UUID merchant', () => {
