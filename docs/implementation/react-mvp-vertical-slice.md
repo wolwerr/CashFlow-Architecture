@@ -27,3 +27,11 @@
 - Ainda não há telas administrativas para criação de merchants ou gerência de membros.
 - Os testes de carga, revogação, falhas e SLO exigem evidências na Trilha 04.
 - Azure futuro, sem deployment cloud nesta trilha.
+
+## Valores brasileiros e atualização assíncrona do saldo
+
+Na interface, o campo BRL aceita **`100`**, **`100,00`**, **`100.00`** e **`1.234,56`**. O frontend normaliza os valores para a representação decimal invariante `100.00` antes do POST, mantendo a validação estrita do contrato financeiro da API. Valores zero, negativos, com precisão superior a centavos e formatos ambíguos são rejeitados.
+
+O registro HTTP 201 confirma persistência da transação, **não a consolidação imediata**. O histórico é uma leitura do Transactions e pode mostrar um débito antes de o saldo do Consolidation refletir esse evento. A SPA consulta o consolidado periodicamente por até seis tentativas, sem repetir o POST e sem criar transações duplicadas. Quando a projeção não alcança o valor esperado, informa explicitamente que o saldo ainda está pendente, sem declarar sucesso da consolidação.
+
+Para investigar uma pendência prolongada, consultar `docker compose logs consolidation --tail=100`, `docker compose logs transactions --tail=100` e a fila/dlq no RabbitMQ em `http://localhost:15672`. Não recriar transações já presentes no histórico e não apagar volumes. A validação definitiva da projeção continua sendo necessária em ambiente local.

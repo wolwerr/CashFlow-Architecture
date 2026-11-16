@@ -18,10 +18,7 @@ export class ApiError extends Error {
 export function validMerchant(merchant: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(merchant);
 }
-export function validBrl(value: string): boolean {
-  return /^(?:0|[1-9]\d*)\.\d{2}$/.test(value) && Number(value) > 0 &&
-    Number.isFinite(Number(value)) && Number(value) <= 99999999999999999.99;
-}
+export { validBrl } from './brl';
 
 async function call<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {

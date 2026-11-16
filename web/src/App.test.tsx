@@ -179,6 +179,21 @@ describe('CashFlow dashboard and interactions', () => {
     expect(mock.state[6]).toBe('');
     expect(mock.references.some(ref => ref.current === 'unique-key')).toBe(false);
   });
+  it('sends Brazilian comma input as invariant amount without changing the backend contract', async () => {
+    setupSignedIn();
+    mock.state[6] = '100,00';
+    vi.mocked(createTransaction).mockResolvedValue({
+      id: 'new-id', merchant_id: mock.state[3] as string,
+      type: 'DEBIT', amount: '100.00', currency: 'BRL',
+      reference_date: '2026-11-16', created_at: '2026-11-16T15:00:00Z'
+    });
+    const form = render().filter(n => n.type === 'form').at(-1)!;
+    await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createTransaction).toHaveBeenCalledWith('access-token', {
+      merchant_id: mock.state[3], type: 'CREDIT', amount: '100.00',
+      reference_date: '2026-11-16'
+    }, 'unique-key');
+  });
   it('preserves idempotency for an uncertain network failure and clears on new input', async () => {
     setupSignedIn();
     mock.state[6] = '10.25';
@@ -192,7 +207,7 @@ describe('CashFlow dashboard and interactions', () => {
   });
   it('does not submit invalid amounts', async () => {
     setupSignedIn();
-    mock.state[6] = '10,25';
+    mock.state[6] = '10,251';
     const form = render().filter(n => n.type === 'form').at(-1)!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(createTransaction).not.toHaveBeenCalled();
