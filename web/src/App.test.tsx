@@ -108,7 +108,7 @@ describe('CashFlow dashboard and interactions', () => {
   it('does not leak merchant data after selection changes', () => {
     setupSignedIn();
     mock.state[7] = { closing_balance: '100.00' };
-    mock.state[8] = { page: 1, items: [{ id: 'one' }], has_more: true };
+    mock.state[8] = { page: 1, items: [{ id: 'one', reference_date: '2026-11-16', amount: '10.00', type: 'CREDIT' }], has_more: true };
     (merchantInput().props.onChange as (e: unknown) => void)({ target: { value: ' other ' } });
     expect(mock.state[3]).toBe('other');
     expect(mock.state[7]).toBe(null);
@@ -173,7 +173,7 @@ describe('CashFlow dashboard and interactions', () => {
       reference_date: '2026-11-16'
     }, 'unique-key');
     expect(mock.state[6]).toBe('');
-    expect(mock.references[1]?.current ?? mock.references[0]?.current).toBe(null);
+    expect(mock.references[0]?.current).toBe(null);
   });
   it('preserves idempotency for an uncertain network failure and clears on new input', async () => {
     setupSignedIn();
