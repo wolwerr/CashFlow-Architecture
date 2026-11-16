@@ -193,6 +193,61 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task CreatesAnAdministratorWithTemporaryPasswordWhenUserDoesNotExist()
+    {
+        var userCreated = false;
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/groups", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+                return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin() });
+            if (path.EndsWith("/users", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+                return userCreated ? JsonResponse(new[] {
+                    new { id = UserId.ToString("D"), username = "new-manager" }
+                }) : JsonResponse(Array.Empty<object>());
+            if (path.EndsWith("/users", StringComparison.Ordinal) && request.Method == HttpMethod.Post)
+            {
+                userCreated = true;
+                return new HttpResponseMessage(HttpStatusCode.Created);
+            }
+            if (path.EndsWith($"/users/{UserId:D}/groups/admin-id", StringComparison.Ordinal)
+                && request.Method == HttpMethod.Put)
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        var service = Create(fake);
+        Assert.True(await service.AddAdminAsync(MerchantId,
+            "new-manager", "a-temporary-password", CancellationToken.None));
+        Assert.True(userCreated);
+        Assert.Contains(fake.Calls, call => call.Method == "POST" &&
+            call.Path.EndsWith("/users", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MissingUserReturnsFalseEvenWhenMerchantExists()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/groups", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+                return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin() });
+            if (path.EndsWith("/users", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+                return JsonResponse(Array.Empty<object>());
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.False(await Create(fake).AddAdminAsync(MerchantId,
+            "unknown", null, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task DeniesMissingMerchantAndMissingUserWithoutCreatingAccount()
     {
         var fake = new FakeHandler(req => TokenOr(req, request =>
