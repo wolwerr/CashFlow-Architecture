@@ -23,6 +23,7 @@ comerciante --> UC04
 comerciante --> UC05
 legend bottom
   UC-01 a UC-03: exigidos pelo desafio
-  UC-04: aprovado para MVP\n  UC-05: proxima versao
+  UC-04: aprovado para MVP
+  UC-05: proxima versao
 endlegend
 @enduml
