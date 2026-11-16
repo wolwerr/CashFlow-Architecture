@@ -10,13 +10,11 @@
 
 ## Execução local (somente Docker)
 
+Use exclusivamente um banco **descartável** para esses testes. Não aponte a conexão para o banco de desenvolvimento `cashflow_transactions` ou outro banco com dados persistentes.
+
 ```powershell
 docker compose up -d postgres
-$env:CASHFLOW_TEST_POSTGRES="Host=localhost;Port=5432;Database=cashflow_transactions;Username=cashflow;Password=cashflow_local_only"
-dotnet test tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj -c Release
 ```
-
-**Atenção:** os testes fazem gravações reais e requerem um banco dedicado e descartável. **Não apontar o teste para `cashflow_transactions` com dados de desenvolvimento existentes**, especialmente se houver chaves de teste persistidas. Preferir criar o banco `cashflow_transactions_test` no PostgreSQL local e alterar a connection string. O CI utiliza `cashflow_transactions_test` descartável.
 
 ```powershell
 docker compose exec postgres psql -U cashflow -d postgres -c "CREATE DATABASE cashflow_transactions_test;"
