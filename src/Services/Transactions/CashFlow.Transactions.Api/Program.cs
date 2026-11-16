@@ -3,6 +3,7 @@ using CashFlow.Transactions.Api.Endpoints;
 using CashFlow.Transactions.Application.Gateways;
 using CashFlow.Transactions.Application.UseCases.CreateTransaction;
 using CashFlow.Transactions.Infrastructure.Gateways;
+using CashFlow.Transactions.Infrastructure.Messaging;
 using CashFlow.Transactions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,6 +29,15 @@ builder.Services.AddDbContext<TransactionsDbContext>(o => o.UseNpgsql(connection
 builder.Services.AddScoped<ITransactionRegistrationGateway, TransactionRegistrationGateway>();
 builder.Services.AddScoped<CreateTransactionUseCase>();
 builder.Services.AddSingleton(TimeProvider.System);
+
+if (builder.Configuration.GetValue<bool>("Transactions:EnableOutboxPublisher"))
+{
+    var rabbit = builder.Configuration.GetSection(RabbitMqConnectionSettings.SectionName)
+        .Get<RabbitMqConnectionSettings>() ?? new RabbitMqConnectionSettings();
+    rabbit.Validate();
+    builder.Services.AddSingleton(Microsoft.Extensions.Options.Options.Create(rabbit));
+    builder.Services.AddHostedService<OutboxPublisherWorker>();
+}
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment() &&
