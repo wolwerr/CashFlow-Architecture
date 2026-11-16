@@ -13,14 +13,13 @@ permissions:
 jobs:
   sonar:
     name: SonarQube Cloud
-    # Configure both repository variables before enabling CI-based analysis.
-    # On external fork PRs, GitHub does not expose repository secrets.
-    if: ${{ vars.SONAR_PROJECT_KEY != '' && vars.SONAR_ORGANIZATION != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    # Fork PRs cannot access repository secrets.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
-      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,13 +32,15 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Require Sonar authentication token
+      - name: Validate Sonar secrets
         shell: bash
         run: |
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error::Configure the SONAR_TOKEN repository secret."
-            exit 1
-          fi
+          for name in SONAR_TOKEN SONAR_PROJECT_KEY SONAR_ORGANIZATION; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Configure the $name repository secret."
+              exit 1
+            fi
+          done
 
       - name: Install SonarScanner for .NET
         run: dotnet tool install --global dotnet-sonarscanner
