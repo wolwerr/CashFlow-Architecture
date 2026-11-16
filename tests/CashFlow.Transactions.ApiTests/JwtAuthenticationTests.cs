@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using CashFlow.Transactions.Application.Gateways;
+using CashFlow.Transactions.Application.Exceptions;
 using CashFlow.Transactions.Application.UseCases.CreateTransaction.Results;
 using CashFlow.Transactions.Domain.Models;
 using CashFlow.Transactions.Domain.Enums;
@@ -217,6 +218,75 @@ public sealed class JwtAuthenticationTests : IDisposable
     }
 
     [Fact]
+    public async Task ConflictingIdempotencyKeyReturns409()
+    {
+        _registration.Conflict = true;
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var response = await Submit(client, "10.25");
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(1, _registration.Calls);
+    }
+
+    [Fact]
+    public async Task InvalidTransactionTypeReturns400()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/transactions")
+        {
+            Content = JsonContent.Create(new
+            {
+                merchant_id = Guid.NewGuid(), type = "TRANSFER", amount = "10.25",
+                reference_date = "2020-01-01"
+            })
+        };
+        req.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("D"));
+        var response = await client.SendAsync(req);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, _registration.Calls);
+    }
+
+    [Fact]
+    public async Task InvalidCorrelationHeaderReturns400()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/transactions")
+        {
+            Content = JsonContent.Create(new
+            {
+                merchant_id = Guid.NewGuid(), type = "CREDIT", amount = "10.25",
+                reference_date = "2020-01-01"
+            })
+        };
+        req.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("D"));
+        req.Headers.TryAddWithoutValidation("X-Correlation-ID", new string('x', 129));
+        var response = await client.SendAsync(req);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, _registration.Calls);
+    }
+
+    [Fact]
+    public async Task FutureReferenceDateReturns422()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/transactions")
+        {
+            Content = JsonContent.Create(new
+            {
+                merchant_id = Guid.NewGuid(), type = "DEBIT", amount = "10.25",
+                reference_date = "2099-01-01"
+            })
+        };
+        req.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("D"));
+        var response = await client.SendAsync(req);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.Equal(0, _registration.Calls);
+    }
+
+    [Fact]
     public async Task MissingIdempotencyKeyDoesNotPersist()
     {
         using var client = _factory.CreateClient();
@@ -268,10 +338,12 @@ public sealed class JwtAuthenticationTests : IDisposable
     private sealed class MockRegistration : ITransactionRegistrationGateway
     {
         public int Calls { get; private set; }
+        public bool Conflict { get; set; }
         public Task<CreateTransactionResult> RegisterAsync(Transaction transaction,
             string key, string correlation, CancellationToken ct)
         {
             Calls++;
+            if (Conflict) throw new TransactionIdempotencyConflictException();
             return Task.FromResult(new CreateTransactionResult(
                 transaction.Id, transaction.MerchantId, transaction.Type,
                 transaction.Amount, transaction.ReferenceDate, transaction.CreatedAtUtc));
