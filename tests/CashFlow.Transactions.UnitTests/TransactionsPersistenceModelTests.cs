@@ -1,6 +1,8 @@
 using CashFlow.Transactions.Infrastructure.Entities;
 using CashFlow.Transactions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Xunit;
 
 namespace CashFlow.Transactions.UnitTests;
@@ -33,8 +35,8 @@ public sealed class TransactionsPersistenceModelTests
         Assert.Equal("date", entity.FindProperty(nameof(TransactionEntity.ReferenceDate))!.GetColumnType());
         Assert.Equal("smallint", entity.FindProperty(nameof(TransactionEntity.Type))!.GetColumnType());
         Assert.Equal("timestamp with time zone", entity.FindProperty(nameof(TransactionEntity.CreatedAtUtc))!.GetColumnType());
-        Assert.Contains(entity.GetCheckConstraints(), c => c.Name == "ck_transactions_amount");
-        Assert.Contains(entity.GetCheckConstraints(), c => c.Name == "ck_transactions_type");
+        Assert.Contains(context.GetService<IDesignTimeModel>().Model.FindEntityType(entity.ClrType)!.GetCheckConstraints(), c => c.Name == "ck_transactions_amount");
+        Assert.Contains(context.GetService<IDesignTimeModel>().Model.FindEntityType(entity.ClrType)!.GetCheckConstraints(), c => c.Name == "ck_transactions_type");
         Assert.Contains(entity.GetIndexes(), i => i.Properties.Select(p => p.Name).SequenceEqual(
             [nameof(TransactionEntity.MerchantId), nameof(TransactionEntity.ReferenceDate), nameof(TransactionEntity.Id)]));
     }
@@ -59,7 +61,7 @@ public sealed class TransactionsPersistenceModelTests
         Assert.Equal(128, entity.FindProperty(nameof(OutboxMessageEntity.CorrelationId))!.GetMaxLength());
         Assert.Contains(entity.GetIndexes(), i => i.Properties.Select(p => p.Name).SequenceEqual(
             [nameof(OutboxMessageEntity.PublishedAtUtc), nameof(OutboxMessageEntity.CreatedAtUtc)]));
-        Assert.Contains(entity.GetCheckConstraints(), c => c.Name == "ck_outbox_attempts");
+        Assert.Contains(context.GetService<IDesignTimeModel>().Model.FindEntityType(entity.ClrType)!.GetCheckConstraints(), c => c.Name == "ck_outbox_attempts");
     }
 
     [Fact]
