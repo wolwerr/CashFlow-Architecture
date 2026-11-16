@@ -102,7 +102,6 @@ def main(argv=None):
     parser.add_argument("--duration", type=float, default=300)
     parser.add_argument("--workers", type=int, default=64)
     parser.add_argument("--timeout", type=float, default=5)
-    parser.add_argument("--report", default="reports/load-local.json")
     args = parser.parse_args(argv)
     token = os.environ.get("CASHFLOW_LOAD_TOKEN")
     if not token:
@@ -126,7 +125,8 @@ def main(argv=None):
     report["pass"] = (report["failure_ratio"] <= 0.05
                       and report["successful_p95_ms"] is not None
                       and report["successful_p95_ms"] < 500)
-    destination = pathlib.Path(args.report)
+    # Fixed local output path: never accept a filesystem destination from CLI input.
+    destination = pathlib.Path("reports/load-local.json")
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, ensure_ascii=False))
