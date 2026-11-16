@@ -64,7 +64,7 @@ function find(tag: string, label: string) {
   return found;
 }
 function merchantInput() {
-  return find('input', 'ID do comerciante');
+  return find('select', 'Comerciante da consulta');
 }
 function setupSignedIn() {
   mock.state[0] = { accessToken: 'access-token', expiresAt: Date.now() + 120_000 };
@@ -228,6 +228,41 @@ describe('CashFlow dashboard and interactions', () => {
     mock.state[0] = { accessToken: 'expired', expiresAt: Date.now() - 1000 };
     expect(render().filter(n => n.type === 'form')).toHaveLength(0);
   });
+  it('shows names and translated roles in both admin selectors and merchant directory', () => {
+    setupSignedIn();
+    mock.state[12] = [
+      { id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' },
+      { id: '59d0b4c5-4e64-46e1-ac52-ad946d2b4865', name: 'Loja Teste', role: 'OPERATOR' }
+    ];
+    const nodes = render();
+    const labels = nodes.filter(n => n.type === 'option').map(n => n.props.children);
+    expect(labels.some(label => Array.isArray(label) &&
+      label.join('') === 'Loja Campinas (ADMIN)')).toBe(true);
+    expect(labels.some(label => Array.isArray(label) &&
+      label.join('') === 'Loja Teste (Comerciante)')).toBe(true);
+    expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
+    expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
+  });
+
+  it('selects a registered merchant by name for consultation and clears previous balances', () => {
+    setupSignedIn();
+    const other = '59d0b4c5-4e64-46e1-ac52-ad946d2b4865';
+    mock.state[12] = [
+      { id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' },
+      { id: other, name: 'Loja Teste', role: 'ADMIN' }
+    ];
+    mock.state[7] = { closing_balance: '100.00' };
+    mock.state[8] = { page: 1, page_size: 20, items: [], has_more: false };
+    const selector = find('select', 'Comerciante da consulta');
+    (selector.props.onChange as (e: unknown) => void)({ target: { value: other } });
+    expect(mock.state[3]).toBe(other);
+    expect(mock.state[7]).toBeNull();
+    expect(mock.state[8]).toBeNull();
+  });
+
   it('does not leak merchant data after selection changes', () => {
     setupSignedIn();
     mock.state[7] = { closing_balance: '100.00' };
@@ -472,7 +507,7 @@ describe('CashFlow dashboard and interactions', () => {
     await (consult!.props.onClick as () => Promise<void>)();
     expect(dailyBalance).toHaveBeenCalledOnce();
     expect(transactionHistory).toHaveBeenCalledOnce();
-    expect(nodes.some(n => n.props['aria-label'] === 'ID do comerciante')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Comerciante da consulta')).toBe(false);
   });
 
   it('history displays empty state and disables navigation when there are no transactions', () => {
