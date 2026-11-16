@@ -1,5 +1,5 @@
 /** Browser-only Authorization Code + PKCE. Access tokens are never persisted. */
-export type TokenSet = { accessToken: string; expiresAt: number };
+export type TokenSet = { accessToken: string; refreshToken?: string; expiresAt: number };
 export const issuer = (import.meta.env.VITE_KEYCLOAK_ISSUER || 'http://localhost:8081/realms/cashflow').replace(/\/$/, '');
 export const clientId = 'cashflow-spa';
 const verifierKey = 'cashflow.pkce.verifier';
@@ -70,13 +70,39 @@ export async function finishLogin(url = location.href): Promise<TokenSet> {
     })
   });
   if (!response.ok) throw new Error('Não foi possível concluir o login.');
-  const tokens = await response.json() as { access_token?: string; expires_in?: number };
+  const tokens = await response.json() as { access_token?: string; refresh_token?: string; expires_in?: number };
   if (!tokens.access_token || !tokens.expires_in || tokens.expires_in <= 0)
     throw new Error('Token inválido recebido.');
   const claims = decodeJwtPayload(tokens.access_token);
   const remaining = expiresInSeconds(claims);
   if (remaining <= 0) throw new Error('Token expirado recebido.');
-  return { accessToken: tokens.access_token, expiresAt: Date.now() + Math.min(remaining, tokens.expires_in) * 1000 };
+  return { accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: Date.now() + Math.min(remaining, tokens.expires_in) * 1000 };
+}
+
+/** Refresh tokens also stay in memory. A page reload requires an interactive login. */
+export async function renewSession(previous: TokenSet): Promise<TokenSet> {
+  if (!previous.refreshToken) throw new Error('Sessão expirada. Entre novamente.');
+  const response = await fetch(issuer + '/protocol/openid-connect/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token', client_id: clientId,
+      refresh_token: previous.refreshToken
+    })
+  });
+  if (!response.ok) throw new Error('Sessão expirada. Entre novamente.');
+  const token = await response.json() as {
+    access_token?: string; refresh_token?: string; expires_in?: number
+  };
+  if (!token.access_token || !token.expires_in)
+    throw new Error('Resposta de renovação inválida.');
+  const time = expiresInSeconds(decodeJwtPayload(token.access_token));
+  if (time <= 0) throw new Error('Token renovado expirado.');
+  return {
+    accessToken: token.access_token,
+    refreshToken: token.refresh_token || previous.refreshToken,
+    expiresAt: Date.now() + Math.min(time, token.expires_in) * 1000
+  };
 }
 
 export function logout(): void {
