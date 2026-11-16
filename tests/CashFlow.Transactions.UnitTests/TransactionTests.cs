@@ -1,4 +1,7 @@
-using CashFlow.Transactions.Domain;
+using CashFlow.Transactions.Domain.Entities;
+using CashFlow.Transactions.Domain.Enums;
+using CashFlow.Transactions.Domain.Exceptions;
+using CashFlow.Transactions.Domain.ValueObjects;
 using Xunit;
 
 namespace CashFlow.Transactions.UnitTests;
@@ -26,21 +29,21 @@ public sealed class TransactionTests
         Assert.Equal(Now, result.CreatedAtUtc);
     }
     [Fact] public void PastDateHasNoRetroactiveLimit() => Assert.Equal(new DateOnly(1900, 1, 1), Create(date: new DateOnly(1900, 1, 1)).ReferenceDate);
-    [Fact] public void FutureDateIsRejected() => Assert.Throws<ArgumentOutOfRangeException>(() => Create(date: Today.AddDays(1)));
+    [Fact] public void FutureDateIsRejected() => Assert.Throws<FutureReferenceDateException>(() => Create(date: Today.AddDays(1)));
     [Theory]
     [InlineData(0)] [InlineData(-1)] [InlineData(0.001)] [InlineData(1.999)]
-    public void InvalidAmountsAreRejected(decimal amount) => Assert.Throws<ArgumentOutOfRangeException>(() => Create(amount: amount));
+    public void InvalidAmountsAreRejected(decimal amount) => Assert.Throws<InvalidTransactionAmountException>(() => Create(amount: amount));
     [Theory]
     [InlineData(0.01)] [InlineData(1000000.99)]
     public void ValidAmountsAreAccepted(decimal amount) => Assert.Equal(amount, Create(amount: amount).Amount);
-    [Fact] public void InvalidTypeIsRejected() => Assert.Throws<ArgumentOutOfRangeException>(() => Create((TransactionType)999));
-    [Fact] public void EmptyMerchantIsRejected() => Assert.Throws<ArgumentException>(() => Transaction.Create(Guid.Empty, Actor, TransactionType.Credit, 1m, Today, Today, Now));
-    [Fact] public void EmptyActorIsRejected() => Assert.Throws<ArgumentException>(() => Transaction.Create(Merchant, Guid.Empty, TransactionType.Credit, 1m, Today, Today, Now));
-    [Fact] public void NonUtcTimestampIsRejected() => Assert.Throws<ArgumentException>(() => Transaction.Create(Merchant, Actor, TransactionType.Credit, 1m, Today, Today, Now.ToOffset(TimeSpan.FromHours(-3))));
+    [Fact] public void InvalidTypeIsRejected() => Assert.Throws<InvalidTransactionTypeException>(() => Create((TransactionType)999));
+    [Fact] public void EmptyMerchantIsRejected() => Assert.Throws<InvalidTransactionIdentityException>(() => Transaction.Create(Guid.Empty, Actor, TransactionType.Credit, 1m, Today, Today, Now));
+    [Fact] public void EmptyActorIsRejected() => Assert.Throws<InvalidTransactionIdentityException>(() => Transaction.Create(Merchant, Guid.Empty, TransactionType.Credit, 1m, Today, Today, Now));
+    [Fact] public void NonUtcTimestampIsRejected() => Assert.Throws<InvalidUtcTimestampException>(() => Transaction.Create(Merchant, Actor, TransactionType.Credit, 1m, Today, Today, Now.ToOffset(TimeSpan.FromHours(-3))));
     [Fact] public void SaoPauloCalendarUsesLocalDayRatherThanUtcDay()
     {
         var utc = new DateTimeOffset(2026, 11, 16, 1, 30, 0, TimeSpan.Zero);
         Assert.Equal(new DateOnly(2026, 11, 15), BusinessCalendar.CurrentDate(utc));
     }
-    [Fact] public void SaoPauloCalendarRejectsNonUtcInstant() => Assert.Throws<ArgumentException>(() => BusinessCalendar.CurrentDate(Now.ToOffset(TimeSpan.FromHours(-3))));
+    [Fact] public void SaoPauloCalendarRejectsNonUtcInstant() => Assert.Throws<InvalidUtcTimestampException>(() => BusinessCalendar.CurrentDate(Now.ToOffset(TimeSpan.FromHours(-3))));
 }
