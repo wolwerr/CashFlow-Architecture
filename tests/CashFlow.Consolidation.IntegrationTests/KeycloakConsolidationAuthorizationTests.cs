@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using CashFlow.Consolidation.Infrastructure.Gateways;
+using CashFlow.Security.Keycloak;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -9,7 +10,7 @@ namespace CashFlow.Consolidation.IntegrationTests;
 
 public sealed class KeycloakMerchantAuthorizationTests
 {
-    private static KeycloakConsolidationSettings Settings() => new()
+    private static KeycloakAuthorizationSettings Settings() => new()
     {
         BaseUrl = "http://keycloak:8080",
         Realm = "cashflow",
@@ -151,7 +152,7 @@ public sealed class KeycloakMerchantAuthorizationTests
     public void KeycloakSettingsMustHaveServiceCredentials()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            new KeycloakConsolidationSettings { BaseUrl = "http://localhost:8081" }.Validate(true));
+            new KeycloakAuthorizationSettings { BaseUrl = "http://localhost:8081" }.Validate(true));
         Assert.Throws<InvalidOperationException>(() => Settings().Validate(false));
         Settings().Validate(true);
     }
