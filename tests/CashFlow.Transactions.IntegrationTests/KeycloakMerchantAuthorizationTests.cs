@@ -107,6 +107,47 @@ public sealed class KeycloakMerchantAuthorizationTests
     }
 
     [Fact]
+    public async Task LookupPaginatesAllGroupsBeforeAuthorizing()
+    {
+        var merchant = Guid.NewGuid();
+        var pages = 0;
+        var gateway = Create(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal))
+                return Json("{\"access_token\":\"service-token\",\"expires_in\":300}");
+            pages++;
+            if (pages == 1)
+            {
+                var groups = Enumerable.Range(0, 100)
+                    .Select(n => $@"{{""path"":""/unrelated/{n}""}}");
+                return Json("[" + string.Join(",", groups) + "]");
+            }
+            return Json($@"[{{""path"":""/merchants/{merchant:D}/ADMIN""}}]");
+        });
+        Assert.True(await gateway.CanCreateAsync(Guid.NewGuid(), merchant, default));
+        Assert.Equal(2, pages);
+    }
+
+    [Fact]
+    public async Task BadKeycloakJsonFailsClosed()
+    {
+        var gateway = Create(req => req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal)
+            ? Json("{\"access_token\":\"service-token\",\"expires_in\":300}")
+            : Json("invalid-json"));
+        await Assert.ThrowsAsync<MerchantAuthorizationUnavailableException>(() =>
+            gateway.CanCreateAsync(Guid.NewGuid(), Guid.NewGuid(), default));
+    }
+
+    [Fact]
+    public async Task EmptyGroupListDeniesPermission()
+    {
+        var gateway = Create(req => req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal)
+            ? Json("{\"access_token\":\"service-token\",\"expires_in\":300}")
+            : Json("[]"));
+        Assert.False(await gateway.CanCreateAsync(Guid.NewGuid(), Guid.NewGuid(), default));
+    }
+
+    [Fact]
     public void KeycloakSettingsMustHaveServiceCredentials()
     {
         Assert.Throws<InvalidOperationException>(() =>
