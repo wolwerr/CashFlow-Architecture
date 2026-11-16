@@ -39,7 +39,7 @@ A decisão foi tomada após avaliar o **modelo de operação**, as dependências
 
 A escolha é de **arquitetura e orçamento-base**. Não significa que já exista implantação, que a HA tenha sido testada ou que os custos reais não possam variar.
 
-## Orçamento de referência da Azure Pricing Calculator
+## Sequenciamento de execução decidido após a ADR\n\n**Fase atual do CashFlow: executar exclusivamente em LOCAL usando Docker Compose, sem provisionar Azure.** A decisão de usar AKS como alvo de implantação em DEV/HOM/PROD permanece registrada aqui, mas **essa implantação foi adiada para uma fase futura**. O dimensionamento e os custos citados abaixo são apenas estimativas de planejamento, não recursos ativos nem compromissos de gasto agora. Os testes iniciais de aplicação, resiliência e carga serão locais; não demonstram HA/SLA/capacidade de produção no AKS.\n\n## Orçamento de referência da Azure Pricing Calculator
 
 | Grupo | Mensal (USD) | Configuração de referência |
 | --- | ---: | --- |
