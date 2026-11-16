@@ -312,6 +312,9 @@ jobs:
       - name: Sonar | Verify local backup and restore safety tests (no database changes in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_backup_restore_check.py'
 
+      - name: Sonar | Verify projection SLO probe tests (no financial writes in CI)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_projection_slo.py'
+
       - name: Sonar | Run CI severity policy tests
         run: python3 -m unittest discover -s .github/scripts -p 'test_sonar_severity_gate.py'
 
