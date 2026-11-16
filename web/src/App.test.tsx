@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mock = vi.hoisted(() => ({
   state: [] as unknown[], pointer: 0,
-  references: [] as { current: unknown }[], refPointer: 0
+  references: [] as { current: unknown }[], refPointer: 0,
+  effects: [] as Array<() => void | (() => void)>
 }));
 vi.mock('react', async importOriginal => {
   const actual = await importOriginal<typeof import('react')>();
@@ -14,7 +15,7 @@ vi.mock('react', async importOriginal => {
         mock.state[i] = typeof value === 'function' ? (value as (old: unknown) => unknown)(mock.state[i]) : value;
       }];
     },
-    useEffect: () => undefined,
+    useEffect: (effect: () => void | (() => void)) => { mock.effects.push(effect); },
     useCallback: (callback: unknown) => callback,
     useRef: (initial: unknown) => {
       const i = mock.refPointer++;
@@ -23,7 +24,7 @@ vi.mock('react', async importOriginal => {
   };
 });
 vi.mock('./auth/oidc', () => ({
-  beginLogin: vi.fn(), finishLogin: vi.fn(), getSubject: vi.fn(), logout: vi.fn()
+  beginLogin: vi.fn(), finishLogin: vi.fn(), getSubject: vi.fn(), getUsername: vi.fn(), logout: vi.fn()
 }));
 vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
@@ -33,7 +34,7 @@ vi.mock('./api/cashflow', async importOriginal => {
   };
 });
 import App from './App';
-import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin } from './api/cashflow';
+import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, merchantPermissions } from './api/cashflow';
 import { beginLogin, logout } from './auth/oidc';
 import type { ReactElement } from 'react';
 
@@ -51,6 +52,7 @@ function walk(root: unknown): Node[] {
 function render() {
   mock.pointer = 0;
   mock.refPointer = 0;
+  mock.effects.length = 0;
   return walk(App());
 }
 function find(tag: string, label: string) {
@@ -69,6 +71,7 @@ function setupSignedIn() {
   mock.state[3] = '68a5baac-d97f-45b4-9119-b4c5b9de7c9b';
   mock.state[4] = '2026-11-16';
   mock.state[19] = true;
+  mock.state[20] = 'admin';
 }
 function seedApi() {
   vi.mocked(dailyBalance).mockResolvedValue({
@@ -83,12 +86,85 @@ function seedApi() {
 beforeEach(() => {
   mock.state.length = 0;
   mock.references.length = 0;
+  mock.effects.length = 0;
   mock.pointer = 0;
   vi.clearAllMocks();
   seedApi();
   vi.stubGlobal('crypto', { randomUUID: () => 'unique-key' });
 });
 describe('CashFlow dashboard and interactions', () => {
+  it('resolves a verified administrator profile and shows the correct welcome message', async () => {
+    setupSignedIn();
+    vi.mocked(merchantPermissions).mockResolvedValue({ can_manage_merchants: true });
+    vi.mocked(listMerchants).mockResolvedValue([
+      { id: '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', name: 'Loja Campinas', role: 'ADMIN' }
+    ]);
+    render();
+    const cleanup = mock.effects[2]();
+    await vi.waitFor(() => {
+      expect(mock.state[19]).toBe(true);
+      expect(mock.state[20]).toBe('admin');
+      expect(mock.state[10]).toMatchObject({ isError: false });
+      expect((mock.state[10] as { text: string }).text).toContain('administrador validado');
+    });
+    expect(merchantPermissions).toHaveBeenCalledWith('access-token');
+    expect(listMerchants).toHaveBeenCalledWith('access-token');
+    if (typeof cleanup === 'function') cleanup();
+  });
+  it('resolves the merchant profile without permitting administrative access', async () => {
+    setupSignedIn();
+    vi.mocked(merchantPermissions).mockResolvedValue({ can_manage_merchants: false });
+    vi.mocked(listMerchants).mockResolvedValue([]);
+    render();
+    mock.effects[2]();
+    await vi.waitFor(() => {
+      expect(mock.state[19]).toBe(false);
+      expect(mock.state[20]).toBe('merchant');
+      expect((mock.state[10] as { text: string }).text).toContain('comerciante validado');
+    });
+  });
+  it('fails closed when the permissions endpoint is unavailable', async () => {
+    setupSignedIn();
+    vi.mocked(merchantPermissions).mockRejectedValue(new Error('unavailable'));
+    vi.mocked(listMerchants).mockResolvedValue([]);
+    render();
+    mock.effects[2]();
+    await vi.waitFor(() => {
+      expect(mock.state[19]).toBe(false);
+      expect(mock.state[20]).toBe('error');
+      expect(mock.state[10]).toMatchObject({ isError: true });
+    });
+  });
+  it('preserves a prior API error without hiding it with a welcome message', async () => {
+    setupSignedIn();
+    mock.state[10] = { text: 'Falha prévia', isError: true };
+    vi.mocked(merchantPermissions).mockResolvedValue({ can_manage_merchants: true });
+    vi.mocked(listMerchants).mockResolvedValue([]);
+    render();
+    mock.effects[2]();
+    await vi.waitFor(() => expect(mock.state[20]).toBe('admin'));
+    expect(mock.state[10]).toEqual({ text: 'Falha prévia', isError: true });
+  });
+  it('resets verified privileges when there is no active access token', () => {
+    setupSignedIn();
+    mock.state[0] = null;
+    render();
+    mock.effects[2]();
+    expect(mock.state[19]).toBe(false);
+    expect(mock.state[20]).toBe('loading');
+    expect(mock.state[12]).toEqual([]);
+  });
+  it('ignores asynchronous permission responses after the view is disposed', async () => {
+    setupSignedIn();
+    vi.mocked(merchantPermissions).mockResolvedValue({ can_manage_merchants: true });
+    vi.mocked(listMerchants).mockResolvedValue([]);
+    render();
+    const cleanup = mock.effects[2]();
+    if (typeof cleanup === 'function') cleanup();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mock.state[20]).toBe('loading');
+  });
   it('shows sign-in and no protected transaction form before authentication', () => {
     const nodes = render();
     expect(nodes.some(n => n.type === 'h1')).toBe(true);
@@ -96,6 +172,28 @@ describe('CashFlow dashboard and interactions', () => {
     const login = find('button', 'Entrar com Keycloak');
     (login.props.onClick as () => void)();
     expect(beginLogin).toHaveBeenCalledOnce();
+  });
+  it('does not label an unresolved profile as merchant or expose finance operations', () => {
+    setupSignedIn();
+    mock.state[20] = 'loading';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Verificando perfil')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(false);
+  });
+  it('blocks merchant and admin views when role verification fails', () => {
+    setupSignedIn();
+    mock.state[20] = 'error';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(false);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Gestão de comerciantes')).toBe(false);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(false);
+  });
+  it('distinguishes a verified admin from a merchant in the header', () => {
+    setupSignedIn();
+    mock.state[1] = 'cashflow.admin';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Administrador')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(true);
   });
   it('shows protected form and merchant selection with a session in memory', () => {
     setupSignedIn();
@@ -228,6 +326,7 @@ describe('CashFlow dashboard and interactions', () => {
   it('cannot launch an operation until the administrator links a merchant', async () => {
     setupSignedIn();
     mock.state[19] = false;
+    mock.state[20] = 'merchant';
     mock.state[3] = '';
     mock.state[6] = '100';
     const nodes = render();

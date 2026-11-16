@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ApiError, createTransaction, dailyBalance, transactionHistory, validMerchant,
   listMerchants, createMerchant, addMerchantAdmin, merchantPermissions } from '../../api/cashflow';
 import type { Balance, TransactionPage, Merchant } from '../../api/cashflow';
-import { finishLogin, getSubject, renewSession } from '../../auth/oidc';
+import { finishLogin, getUsername, renewSession } from '../../auth/oidc';
 import type { TokenSet } from '../../auth/oidc';
 import { businessDate } from '../../time';
 import { normalizeBrl } from '../../api/brl';
@@ -36,6 +36,7 @@ export function useCashFlowController() {
   const [merchantUsername, setMerchantUsername] = useState('');
   const [merchantPassword, setMerchantPassword] = useState('');
   const [canManageMerchants, setCanManageMerchants] = useState(false);
+  const [accessStatus, setAccessStatus] = useState<'loading' | 'admin' | 'merchant' | 'error'>('loading');
   const pendingKey = useRef<string | null>(null);
   const authStarted = useRef(false);
   const currentToken = activeAccessToken(session);
@@ -46,9 +47,9 @@ export function useCashFlowController() {
     setAuthPending(true);
     finishLogin().then(tokens => {
       setSession(tokens);
-      setIdentity(getSubject(tokens.accessToken));
+      setIdentity(getUsername(tokens.accessToken));
       window.history.replaceState({}, '', '/');
-      setNotice({ text: 'Login realizado. Selecione ou cadastre um comerciante.', isError: false });
+      setNotice({ text: 'Autenticação realizada. Verificando seu perfil e os comerciantes disponíveis.', isError: false });
     }).catch((error: unknown) => {
       setNotice({ text: (error as Error).message, isError: true });
       window.history.replaceState({}, '', '/');
@@ -75,12 +76,29 @@ export function useCashFlowController() {
   }, [session]);
 
   useEffect(() => {
-    if (!currentToken) { setMerchants([]); setCanManageMerchants(false); return; }
+    if (!currentToken) {
+      setMerchants([]);
+      setCanManageMerchants(false);
+      setAccessStatus('loading');
+      return;
+    }
     let active = true;
+    setAccessStatus('loading');
     merchantPermissions(currentToken).then(permission => {
-      if (active) setCanManageMerchants(permission.can_manage_merchants);
+      if (!active) return;
+      setCanManageMerchants(permission.can_manage_merchants);
+      setAccessStatus(permission.can_manage_merchants ? 'admin' : 'merchant');
+      setNotice(previous => previous?.isError ? previous : {
+        text: permission.can_manage_merchants
+          ? 'Acesso de administrador validado. Você pode cadastrar comerciantes e seus usuários.'
+          : 'Acesso de comerciante validado. Consulte saldos, histórico e registre lançamentos da sua loja.',
+        isError: false
+      });
     }).catch(() => {
-      if (active) setCanManageMerchants(false);
+      if (!active) return;
+      setCanManageMerchants(false);
+      setAccessStatus('error');
+      setNotice({ text: 'Não foi possível verificar seu perfil. Confira a conexão com a API de autorização e entre novamente.', isError: true });
     });
     listMerchants(currentToken).then(items => {
       if (active) {
@@ -224,7 +242,7 @@ export function useCashFlowController() {
     session, identity, authPending, merchant, date, type, amount,
     balance, history, page, notice, busy, merchants, newMerchantName,
     adminUsername, adminPassword, pendingProjection, merchantUsername,
-    merchantPassword, canManageMerchants, currentToken,
+    merchantPassword, canManageMerchants, accessStatus, currentToken,
     setNewMerchantName, setAdminUsername, setAdminPassword,
     setMerchantUsername, setMerchantPassword, setDate, setType,
     changeMerchant, changeInput, clearFinancialData,

@@ -36,6 +36,15 @@ export function getSubject(token: string): string {
   return typeof sub === 'string' ? sub : '';
 }
 
+/** Only for display. Access decisions must come from the authenticated backend. */
+export function getUsername(token: string): string {
+  const payload = decodeJwtPayload(token);
+  return typeof payload.preferred_username === 'string' &&
+    payload.preferred_username.trim()
+    ? payload.preferred_username
+    : getSubject(token);
+}
+
 export async function beginLogin(): Promise<void> {
   const verifier = makeVerifier(crypto.getRandomValues(new Uint8Array(32)));
   const state = makeVerifier(crypto.getRandomValues(new Uint8Array(32)));

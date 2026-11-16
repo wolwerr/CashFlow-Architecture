@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { beginLogin, decodeJwtPayload, expiresInSeconds, finishLogin, getSubject, makeChallenge, makeVerifier, logout, renewSession } from './oidc';
+import { beginLogin, decodeJwtPayload, expiresInSeconds, finishLogin, getSubject, getUsername, makeChallenge, makeVerifier, logout, renewSession } from './oidc';
 afterEach(() => vi.unstubAllGlobals());
 
 const jwt = (payload: object) => ['eyJhbGciOiJSUzI1NiJ9', btoa(JSON.stringify(payload)), 'sig'].join('.');
@@ -30,6 +30,12 @@ describe('OIDC Authorization Code and PKCE', () => {
     expect(expiresInSeconds({ exp: 0 })).toBe(0);
     expect(getSubject(jwt({ sub: 10 }))).toBe('');
     expect(() => decodeJwtPayload('bad')).toThrow();
+  });
+  it('uses preferred_username for display but falls back to the subject', () => {
+    expect(getUsername(jwt({ sub: 'user-1', preferred_username: 'cashflow.admin' })))
+      .toBe('cashflow.admin');
+    expect(getUsername(jwt({ sub: 'user-1', preferred_username: '' }))).toBe('user-1');
+    expect(getUsername(jwt({ sub: 'user-1' }))).toBe('user-1');
   });
   it('starts login with challenge, state and redirect and never persists tokens', async () => {
     const session = storage();
