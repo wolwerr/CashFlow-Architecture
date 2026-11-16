@@ -3,6 +3,7 @@ using CashFlow.Transactions.Application.Exceptions;
 using CashFlow.Transactions.Domain.Enums;
 using CashFlow.Transactions.Domain.Models;
 using CashFlow.Transactions.Infrastructure.Gateways;
+using CashFlow.Transactions.Infrastructure.Exceptions;
 using CashFlow.Transactions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -134,7 +135,7 @@ public sealed class TransactionRegistrationGatewayTests
 
         // Direct gateway call with oversized correlation forces PostgreSQL length violation
         // after idempotency reservation. The transaction must roll back every write.
-        await Assert.ThrowsAsync<DbUpdateException>(() =>
+        await Assert.ThrowsAsync<TransactionPersistenceException>(() =>
             new TransactionRegistrationGateway(db).RegisterAsync(
                 transaction, key, new string('x', 129), default));
 
