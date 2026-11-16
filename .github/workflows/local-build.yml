@@ -78,11 +78,20 @@ jobs:
             /p:CoverletOutputFormat=opencover \
             /p:CoverletOutput=TestResults/sonar/coverage.integration.opencover.xml
 
+      - name: Backend | Generate JWT API OpenCover for Sonar
+        run: |
+          dotnet test tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj \
+            -c Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=TestResults/sonar/coverage.api.opencover.xml
+
       - name: Backend | Assemble OpenCover reports
         run: |
           mkdir -p sonar-reports/backend
           cp tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.unit.opencover.xml sonar-reports/backend/
           cp tests/CashFlow.Transactions.IntegrationTests/TestResults/sonar/coverage.integration.opencover.xml sonar-reports/backend/
+          cp tests/CashFlow.Transactions.ApiTests/TestResults/sonar/coverage.api.opencover.xml sonar-reports/backend/
 
       - name: Backend | Upload OpenCover
         uses: actions/upload-artifact@v4
@@ -163,6 +172,7 @@ jobs:
         run: |
           test -s sonar-reports/backend/coverage.unit.opencover.xml
           test -s sonar-reports/backend/coverage.integration.opencover.xml
+          test -s sonar-reports/backend/coverage.api.opencover.xml
 
       - name: Sonar frontend | Verify coverage report
         run: test -s web/coverage/lcov.info
