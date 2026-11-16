@@ -302,6 +302,65 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(false);
     expect(createMerchant).not.toHaveBeenCalled();
   });
+  it('admin sees merchant creation only after login and requires username and password', () => {
+    setupSignedIn();
+    const nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Comerciante e competência')).toBe(true);
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Cadastrar comerciante e acesso');
+    expect(submit?.props.disabled).toBe(true);
+  });
+
+  it('merchant account registration rejects missing username and short password', async () => {
+    setupSignedIn();
+    mock.state[13] = 'Nova Loja';
+    mock.state[17] = '';
+    mock.state[18] = 'short';
+    const form = render().filter(n => n.type === 'form')[0];
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(createMerchant).not.toHaveBeenCalled();
+    expect(mock.state[11]).toBe(false);
+  });
+
+  it('merchant registration exposes username conflicts without creating a local merchant', async () => {
+    setupSignedIn();
+    mock.state[13] = 'Nova Loja';
+    mock.state[17] = 'loja.existente';
+    mock.state[18] = 'senha-local-segura';
+    vi.mocked(createMerchant).mockRejectedValue(new Error('Username already exists in this realm.'));
+    const form = render().filter(n => n.type === 'form')[0];
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(mock.state[10]).toMatchObject({ isError: true });
+    expect(mock.state[12]).toEqual([]);
+    expect(mock.state[11]).toBe(false);
+  });
+
+  it('merchant financial panel can consult its linked merchant without admin fields', async () => {
+    setupSignedIn();
+    mock.state[19] = false;
+    mock.state[12] = [{
+      id: mock.state[3], name: 'Loja Campinas', role: 'OPERATOR'
+    }];
+    const nodes = render();
+    const consult = nodes.find(n => n.type === 'button' && n.props.children === 'Consultar');
+    expect(consult).toBeDefined();
+    await (consult!.props.onClick as () => Promise<void>)();
+    expect(dailyBalance).toHaveBeenCalledOnce();
+    expect(transactionHistory).toHaveBeenCalledOnce();
+    expect(nodes.some(n => n.props['aria-label'] === 'ID do comerciante')).toBe(false);
+  });
+
+  it('history displays empty state and disables navigation when there are no transactions', () => {
+    setupSignedIn();
+    mock.state[8] = { page: 1, page_size: 20, items: [], has_more: false };
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'p' && n.props.children === 'Nenhum lançamento encontrado.')).toBe(true);
+    const next = nodes.find(n => n.type === 'button' && n.props.children === 'Próxima');
+    expect(next?.props.disabled).toBe(true);
+  });
+
   it('delegates logout and blocks queries after expiry', async () => {
     setupSignedIn();
     const exit = find('button', 'Sair');
