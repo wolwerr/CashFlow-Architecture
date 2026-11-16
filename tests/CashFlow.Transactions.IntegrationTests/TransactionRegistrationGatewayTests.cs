@@ -45,6 +45,14 @@ public sealed class TransactionRegistrationGatewayTests
         Assert.Equal(1, await db.TransactionAudits.AsNoTracking().CountAsync(x => x.TransactionId == result.Id));
         Assert.Equal(1, await db.IdempotencyRecords.AsNoTracking().CountAsync(x => x.TransactionId == result.Id));
 
+        var audit = await db.TransactionAudits.AsNoTracking()
+            .SingleAsync(x => x.TransactionId == result.Id);
+        Assert.Equal(merchant, audit.MerchantId);
+        Assert.Equal(actor, audit.ActorId);
+        Assert.Equal("CREATED", audit.Action);
+        Assert.Equal("trace-1", audit.CorrelationId);
+        Assert.Equal(transaction.CreatedAtUtc, audit.OccurredAtUtc);
+
         var outbox = await db.OutboxMessages.AsNoTracking().SingleAsync(x => x.TransactionId == result.Id);
         Assert.Equal("transaction.recorded", outbox.EventType);
         Assert.Equal("1", outbox.SchemaVersion);

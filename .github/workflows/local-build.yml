@@ -315,6 +315,9 @@ jobs:
       - name: Sonar | Verify projection SLO probe tests (no financial writes in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_projection_slo.py'
 
+      - name: Sonar | Validate read-only audit inventory policy tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_audit_inventory.py'
+
       - name: Sonar | Run CI severity policy tests
         run: python3 -m unittest discover -s .github/scripts -p 'test_sonar_severity_gate.py'
 
