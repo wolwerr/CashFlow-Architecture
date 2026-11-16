@@ -1,5 +1,30 @@
 # Merchant onboarding local: cadastro e administradores no CashFlow
 
+## Primeiro ADMIN da plataforma: bootstrap local (uma única vez)
+
+Há **três conceitos diferentes** no Keycloak e no CashFlow:
+
+| Conta ou grupo | Onde existe | Função |
+| --- | --- | --- |
+| `admin` do realm **master** | Administração do Keycloak | Configurar o IAM e criar o primeiro usuário do CashFlow; **não** é o administrador financeiro |
+| `cashflow.admin` no realm **cashflow** | Usuário do CashFlow criado manualmente no bootstrap inicial | Administrador **da plataforma** no MVP local, autorizado pelo `CASHFLOW_BOOTSTRAP_USERNAME` assinado no token |
+| `/merchants/{uuid}/ADMIN` ou `OPERATOR` | Grupos do realm cashflow | Permissões **dentro de uma loja**, distintas do papel de administrador da plataforma |
+
+**Como criar o primeiro ADMIN em um ambiente novo, sem acesso ADMIN prévio:**
+
+1. Iniciar o Docker Compose local com volumes preservados, acessar `http://localhost:8081/admin/` e fazer login na conta administrativa do realm **master**.
+2. Selecionar o realm **cashflow**, entrar em **Users > Add user** e criar o usuário `cashflow.admin`, com **Enabled** ligado e email verificado quando aplicável. A conta do Keycloak no realm master não é reutilizada como login do CashFlow.
+3. Em **Credentials > Set password**, definir a senha inicial do administrador, evitar as senhas de exemplo em ambientes compartilhados e, para o bootstrap local de teste, ajustar a flag Temporary conforme a política escolhida.
+4. Em `.env`, configurar `CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin`. Esta variável já tem esse valor como padrão em `compose.yaml`, mas deve corresponder exatamente ao username criado.
+5. Configurar uma única vez o `cashflow-management-service`, a sua Service Account e `KEYCLOAK_MGMT_CLIENT_SECRET`, segundo a seção abaixo. Manter o cliente de autorização somente leitura separado.
+6. Recriar apenas Transactions se o `.env` mudar: `docker compose up -d --force-recreate --no-deps transactions`.
+7. Entrar em `http://localhost:8080` com **cashflow.admin**. A interface deve mostrar **Administrador** e o username, com gestão de comerciantes. O endpoint autenticado `GET /api/v1/merchants/permissions` deve retornar `{"can_manage_merchants":true}`.
+8. Daí em diante, cadastrar cada **comerciante** (nome, username exclusivo e senha inicial) pela tela de ADMIN; o Keycloak cria a conta OPERATOR, sem voltar ao painel de administração.
+
+**Por que não há cadastro público do primeiro ADMIN?** Permitir que o primeiro visitante se autodeclare administrador criaria um risco de *privilege escalation*. O bootstrap restrito é proposital. Em produção, substituir a comparação por username por um vínculo administrativo explícito, processo de provisionamento auditável e controles fortes de acesso.
+
+**Se `cashflow.admin` aparecer como COMERCIANTE:** a UI deve mostrar o **username autenticado**. Conferir se a sessão realmente é `cashflow.admin` e se `CASHFLOW_BOOTSTRAP_USERNAME` foi aplicada ao container Transactions. Para verificar o valor configurado sem expor segredos: `docker compose exec transactions printenv KeycloakManagement__BootstrapUsername`. Se estiver correto, verificar no Network o retorno `GET /api/v1/merchants/permissions`. Falhas nessa consulta devem exibir **perfil indisponível**, sem classificar o usuário automaticamente como comerciante.
+
 ## Perfis de acesso do MVP
 
 **ADMIN de plataforma (bootstrap local)**: entra com a conta `cashflow.admin` no Keycloak e acessa gestão de comerciantes, cadastro de contas e as três áreas financeiras (Novo lançamento, Saldo Diário, Histórico). O backend verifica o `preferred_username` assinado contra `CASHFLOW_BOOTSTRAP_USERNAME`, em Development. Não basta escolher ADMIN na interface.
@@ -59,8 +84,8 @@ Depois que o comerciante existe, apenas membros de seu grupo ADMIN podem adicion
 
 | Método | Rota | Resposta |
 | --- | --- | --- |
-| GET | `/api/v1/merchants/` | `200`, lista `[{id,name,role}]` autorizada |
-| POST | `/api/v1/merchants/` | `201`, `{id,name,role}`, com `{name}` no corpo |
+| GET | `/api/v1/merchants/permissions` | `200`, `{can_manage_merchants}`, apenas para usuários autenticados |\n| GET | `/api/v1/merchants/` | `200`, lista `[{id,name,role}]` autorizada |
+| POST | `/api/v1/merchants/` | `201`, `{id,name,role}`, com `{name,username,password}` no corpo |
 | POST | `/api/v1/merchants/{merchantId}/admins` | `204` ao associar usuário existente ou criar com `{username,temporaryPassword}` |
 
 Qualquer endpoint exige JWT do realm cashflow com a audiência `cashflow-transactions-api`. O cadastro exige conta bootstrap permitida, e a associação exige ADMIN no comerciante. Falha de Keycloak retorna `503` e não autoriza a ação.
