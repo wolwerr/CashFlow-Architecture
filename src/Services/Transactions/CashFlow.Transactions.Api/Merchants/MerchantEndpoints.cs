@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 
 namespace CashFlow.Transactions.Api.Merchants;
@@ -9,6 +10,7 @@ public static class MerchantEndpoints
     {
         var routes = app.MapGroup("/api/v1/merchants").RequireAuthorization();
         routes.MapGet("/", ListAsync);
+        routes.MapGet("/permissions", Permissions);
         routes.MapPost("/", CreateAsync);
         routes.MapPost("/{merchantId:guid}/admins", AddAdminAsync);
         return app;
@@ -16,6 +18,18 @@ public static class MerchantEndpoints
 
     private static Guid Actor(HttpContext context) =>
         Guid.TryParse(context.User.FindFirstValue("sub"), out var subject) ? subject : Guid.Empty;
+
+    private static bool IsBootstrap(HttpContext context, KeycloakManagementSettings settings,
+        IWebHostEnvironment environment) =>
+        environment.IsDevelopment() &&
+        !string.IsNullOrWhiteSpace(settings.BootstrapUsername) &&
+        string.Equals(settings.BootstrapUsername,
+            context.User.FindFirstValue("preferred_username"), StringComparison.Ordinal);
+
+    private static IResult Permissions(HttpContext context,
+        IOptions<KeycloakManagementSettings> settings, IWebHostEnvironment environment) =>
+        Results.Ok(new { can_manage_merchants = Actor(context) != Guid.Empty &&
+            IsBootstrap(context, settings.Value, environment) });
 
     private static async Task<IResult> ListAsync(HttpContext context,
         KeycloakMerchantManagement management, CancellationToken ct)
@@ -31,22 +45,27 @@ public static class MerchantEndpoints
         CancellationToken ct)
     {
         if (Actor(context) == Guid.Empty) return Results.Unauthorized();
-        if (request?.Name is null || string.IsNullOrWhiteSpace(request.Name) ||
-            request.Name.Trim().Length > 100)
-            return Results.BadRequest(new { title = "Merchant name must have 1 to 100 characters." });
+        if (request is null || string.IsNullOrWhiteSpace(request.Name) ||
+            request.Name.Trim().Length > 100 ||
+            request.Username is null ||
+            !Regex.IsMatch(request.Username, "^[a-zA-Z][a-zA-Z0-9._-]{2,63}$") ||
+            request.Password is null || request.Password.Length is < 12 or > 128)
+            return Results.BadRequest(new { title = "Merchant name, unique username and password (12-128 characters) are required." });
 
         // First merchant bootstrap is restricted to an explicitly configured local account.
         // Never grant merchant creation to an arbitrary authenticated user.
-        var configured = options.Value.BootstrapUsername;
-        var actorName = context.User.FindFirstValue("preferred_username");
-        if (!environment.IsDevelopment() || string.IsNullOrWhiteSpace(configured) ||
-            !string.Equals(configured, actorName, StringComparison.Ordinal))
+        if (!IsBootstrap(context, options.Value, environment))
             return Results.Forbid();
 
         try
         {
-            var result = await management.CreateAsync(request.Name.Trim(), Actor(context), ct);
+            var result = await management.CreateWithOperatorAsync(request.Name.Trim(),
+                Actor(context), request.Username, request.Password, ct);
             return Results.Created($"/api/v1/merchants/{result.Id:D}", result);
+        }
+        catch (MerchantUsernameConflictException)
+        {
+            return Results.Conflict(new { title = "Username already exists in this realm." });
         }
         catch (HttpRequestException)
         {
@@ -80,5 +99,5 @@ public static class MerchantEndpoints
     }
 }
 
-public sealed record CreateMerchantRequest(string Name);
+public sealed record CreateMerchantRequest(string Name, string? Username, string? Password);
 public sealed record AddMerchantAdminRequest(string Username, string? TemporaryPassword);
