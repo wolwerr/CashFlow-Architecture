@@ -1,4 +1,5 @@
-using CashFlow.Transactions.Api.Authentication;
+using CashFlow.Security.Authentication;
+using CashFlow.Security.Keycloak;
 using CashFlow.Transactions.Api.Endpoints;
 using CashFlow.Transactions.Application.Gateways;
 using CashFlow.Transactions.Application.UseCases.CreateTransaction;
