@@ -24,8 +24,7 @@ export CASHFLOW_LOAD_TOKEN="<access-token-local>"
 python3 .github/scripts/local_load_probe.py \
   --merchant-id "00000000-0000-4000-8000-000000000001" \
   --date "2026-11-16" \
-  --rate 50 --duration 300 --workers 64 \
-  --report reports/load-local.json
+  --rate 50 --duration 300 --workers 64
 unset CASHFLOW_LOAD_TOKEN
 ```
 
