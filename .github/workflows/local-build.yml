@@ -1,34 +1,191 @@
-name: Local build and quality gates (no deployment)
+name: Build, tests and SonarQube Cloud
+
 on:
   push:
     branches: [main, "feat/**"]
   pull_request:
+    types: [opened, synchronize, reopened]
+
 jobs:
-  dotnet:
+  backend:
+    name: Backend | Build and tests
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Restore
+
+      - name: Backend | Restore
         run: dotnet restore CashFlow.slnx
-      - name: Compile
+
+      - name: Backend | Build .NET 10
         run: dotnet build CashFlow.slnx -c Release --no-restore
-      - name: Enforce architecture
+
+      - name: Backend | Architecture tests
         run: dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
-      - name: Unit tests with 80 percent line coverage threshold (Transactions Domain)
+
+      - name: Backend | Transactions Domain (min 80% lines)
         run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
-      - name: Unit tests with 80 percent line coverage threshold (Transactions Application)
+
+      - name: Backend | Transactions Application (min 80% lines)
         run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
+
+      - name: Backend | Generate OpenCover for Sonar
+        run: |
+          dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj \
+            -c Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=TestResults/sonar/coverage.opencover.xml
+
+      - name: Backend | Upload OpenCover
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-opencover
+          path: tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.opencover.xml
+          if-no-files-found: error
+          retention-days: 7
+
   frontend:
+    name: Frontend | Build and tests
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-audit --no-fund
+
+      - name: Frontend | Install packages
         working-directory: web
-      - run: npm run build
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Frontend | Build TypeScript and Vite
         working-directory: web
+        run: npm run build
+
+      - name: Frontend | Vitest and coverage (min 80%)
+        working-directory: web
+        run: npm run test:coverage
+
+      - name: Frontend | Upload LCOV
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-lcov
+          path: web/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
+  sonar:
+    name: Sonar | Backend and frontend
+    permissions:
+      contents: read
+      pull-requests: read
+    needs: [backend, frontend]
+    # GitHub does not pass repository secrets to workflows triggered by fork PRs.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Sonar backend | Download OpenCover
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-opencover
+          path: sonar-reports/backend
+
+      - name: Sonar frontend | Download LCOV
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-lcov
+          path: web/coverage
+
+      - name: Sonar backend | Verify coverage report
+        run: test -s sonar-reports/backend/coverage.opencover.xml
+
+      - name: Sonar frontend | Verify coverage report
+        run: test -s web/coverage/lcov.info
+
+      - name: Sonar frontend | Restore TypeScript dependencies
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Sonar | Validate project credentials
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+        shell: bash
+        run: |
+          for name in SONAR_TOKEN SONAR_PROJECT_KEY SONAR_ORGANIZATION; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Configure GitHub Actions repository secret $name."
+              exit 1
+            fi
+          done
+
+      - name: Sonar | Install .NET scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Sonar backend | Begin C# and TypeScript analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+        shell: bash
+        run: |
+          dotnet sonarscanner begin \
+            /k:"$SONAR_PROJECT_KEY" \
+            /o:"$SONAR_ORGANIZATION" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.scanner.scanAll=true \
+            /d:sonar.cs.opencover.reportsPaths="sonar-reports/backend/coverage.opencover.xml" \
+            /d:sonar.javascript.lcov.reportPaths="web/coverage/lcov.info" \
+            /d:sonar.coverage.exclusions=".github/scripts/**" \
+            /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/coverage/**,**/bin/**,**/obj/**" \
+            /d:sonar.qualitygate.wait=false \
+            /d:sonar.qualitygate.timeout=300
+
+      - name: Sonar backend | Restore .NET
+        run: dotnet restore CashFlow.slnx
+
+      - name: Sonar backend | Build under scanner
+        run: dotnet build CashFlow.slnx -c Release --no-restore
+
+      - name: Sonar frontend | Validate TypeScript analysis sources
+        run: |
+          test -s web/tsconfig.json
+          test -s web/src/App.tsx
+          test -s web/coverage/lcov.info
+
+      - name: Sonar | Publish C# and TypeScript (built-in gate is informational)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: Sonar | Run CI severity policy tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_sonar_severity_gate.py'
+
+      - name: Sonar | Enforce High/Blocker issue policy and quality metrics
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 .github/scripts/sonar_severity_gate.py
