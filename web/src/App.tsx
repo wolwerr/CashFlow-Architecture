@@ -242,7 +242,7 @@ export default function App() {
         <div className="fields">
           <label>ID do comerciante
             <input aria-label="ID do comerciante" placeholder="Selecione um comerciante acima"
-              value={merchant} readOnly />
+              value={merchant} onChange={event => changeMerchant(event.target.value)} />
           </label>
           <label>Data de referência
             <input aria-label="Data de referência" type="date" value={date}
