@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant } from './cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin } from './cashflow';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('CashFlow API contracts', () => {
@@ -49,6 +49,41 @@ describe('CashFlow API contracts', () => {
       ok: false, status: 403, json: async () => ({ title: 'Merchant denied' })
     }));
     await expect(transactionHistory('token', 'm')).rejects.toEqual(new ApiError(403, 'Merchant denied'));
+  });
+  it('lists only merchant records returned from the protected management endpoint', async () => {
+    const items = [{ id: 'merchant', name: 'Loja Campinas', role: 'ADMIN' }];
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => items });
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(listMerchants('access')).resolves.toEqual(items);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/merchants/');
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer access');
+  });
+  it('creates a merchant by name and returns the generated ID', async () => {
+    const created = { id: 'merchant-id', name: 'Loja Campinas', role: 'ADMIN' };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => created });
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await createMerchant('access', 'Loja Campinas')).toEqual(created);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ name: 'Loja Campinas' });
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+  });
+  it('adds a merchant administrator without storing its password', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    vi.stubGlobal('fetch', fetchMock);
+    await addMerchantAdmin('access', 'merchant-id', 'manager', 'temporary-password');
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/v1/merchants/merchant-id/admins');
+    expect(options.method).toBe('POST');
+    expect(options.headers.Authorization).toBe('Bearer access');
+    expect(JSON.parse(options.body)).toEqual({
+      username: 'manager', temporaryPassword: 'temporary-password'
+    });
+  });
+  it('rejects an unauthorized administrator mutation', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, status: 403, json: async () => ({ title: 'Forbidden' })
+    }));
+    await expect(addMerchantAdmin('access', 'merchant-id', 'manager'))
+      .rejects.toEqual(new ApiError(403, 'Forbidden'));
   });
   it('handles invalid JSON problem responses without exposing tokens', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
