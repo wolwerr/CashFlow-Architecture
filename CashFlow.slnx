@@ -14,6 +14,7 @@
     <Project Path="tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj" />
     <Project Path="tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj" />
     <Project Path="tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj" />
+    <Project Path="tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj" />
     <Project Path="tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj" />
   </Folder>
 </Solution>
