@@ -6,11 +6,25 @@ Existe um único workflow GitHub Actions: `.github/workflows/local-build.yml`, c
 
 1. **Backend | Build and tests**: restaura e compila a solução .NET 10, executa testes arquiteturais e xUnit, aplica gates de cobertura de **80% por módulo** (Transactions Domain e Application), gera OpenCover e publica o artifact `backend-opencover`.
 2. **Frontend | Build and tests**: instala dependências Node.js, compila React/TypeScript com Vite, roda Vitest com cobertura mínima de 80% (linhas, instruções, ramos e funções), gera LCOV e publica o artifact `frontend-lcov`.
-3. **Sonar | Backend and frontend**: aguarda ambos os jobs; baixa OpenCover e LCOV; prepara o scanner .NET com as duas fontes; compila .NET novamente **dentro do contexto do scanner**, que exige Begin/Build/End; verifica arquivos e fontes TypeScript; publica análise C# e TS e aguarda o Quality Gate.
+3. **Sonar | Backend and frontend**: aguarda ambos os jobs; baixa OpenCover e LCOV; prepara o scanner .NET com as duas fontes; compila .NET novamente **dentro do contexto do scanner**, que exige Begin/Build/End; verifica arquivos e fontes TypeScript; publica análise C# e TS, aguarda o processamento da análise e aplica a política de severidade do CashFlow no GitHub Actions.
 
 Os três jobs ficam separados no gráfico de execução do GitHub Actions. Os relatórios são transferidos por `upload-artifact` e `download-artifact`. O Sonar fica em um único job porque **um projeto SonarQube Cloud recebe uma análise atômica por execução**. Rodar scanners concorrentes separados para C# e TypeScript com a mesma Project Key poderia produzir análises inconsistentes ou sobrepostas. Para Quality Gates totalmente independentes por linguagem seriam necessários dois projetos Sonar e suas respectivas configurações.
 
 O `sonar.scanner.scanAll=true` analisa JS/TS junto ao .NET. O scanner importa `sonar-reports/backend/coverage.opencover.xml` e `web/coverage/lcov.info`. O Sonar não executa testes; o CI produz os relatórios.
+
+## Política de bloqueio no plano gratuito
+
+O **Sonar way** padrão no SonarQube Cloud continua ativo e apenas informativo para este pipeline. No plano gratuito não é possível editar esse gate; gates customizados pelo painel são exclusivos de Team/Enterprise. O workflow publica a análise normalmente, sem esperar que o `Sonar way` determine o resultado do job.
+
+O script `.github/scripts/sonar_severity_gate.py` aguarda a conclusão da mesma análise no servidor Sonar e decide o check de CI segundo a política CashFlow:
+
+- **Bloquear** por qualquer issue **nova e não resolvida** com impacto `HIGH` ou `BLOCKER` (classificação moderna do Sonar), equivalentes a `CRITICAL` e `BLOCKER` no modelo antigo. Inclui Security, Reliability e Maintainability.
+- **Não bloquear** por issues `MEDIUM`, `LOW` ou `INFO`; elas continuam visíveis no Sonar para tratamento conforme prioridade.
+- **Preservar** as condições não relacionadas à contagem ou rating das issues, sobretudo **cobertura >=80% no novo código**, **duplicação <=3%** e **revisão de security hotspots**, quando essas condições constarem do gate.
+- Falhar fechado se o Sonar não disponibilizar análise, issues ou resultados de métricas corretamente. Testes unitários do script verificam o limiar e a preservação das métricas.
+
+**Atenção:** o painel do Sonar pode exibir `Sonar way: Failed` por uma issue Medium mesmo quando o check GitHub `Sonar | Backend and frontend` passa conforme a política aprovada. Se a proteção da `main` também exigir um check nativo `SonarCloud Code Analysis`/`SonarQube`, ajuste o Ruleset para exigir **os checks dos jobs do nosso workflow**, sem tornar obrigatória a decoração nativa do gate padrão. Isso não desativa a análise nem remove issues; apenas diferencia a condição de bloqueio do GitHub. A alternativa para alterar o gate diretamente no Sonar é um plano Team/Enterprise.
+
 
 ## Segurança das dependências npm
 
