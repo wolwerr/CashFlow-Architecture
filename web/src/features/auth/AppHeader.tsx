@@ -8,7 +8,7 @@ export function AppHeader({ controller }: { controller: CashFlowController }) {
       <div className="auth-controls">
         {currentToken ? <>
           <span className="user" title={identity}>{accessStatus === 'admin' ? 'Administrador' : accessStatus === 'merchant' ? 'Comerciante' : 'Verificando perfil'}</span>
-          <span className="user">{identity}</span>
+          <span className="user">Olá, {identity || "usuário"}</span>
           <button type="button" className="outline" onClick={logout}>Sair</button>
         </> : <button type="button" onClick={() => void beginLogin()} disabled={authPending}>
           {authPending ? 'Autenticando...' : 'Entrar com Keycloak'}
