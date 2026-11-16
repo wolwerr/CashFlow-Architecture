@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CashFlow.Transactions.Application/CashFlow.Transactions.Application.csproj" />
+    <ProjectReference Include="../CashFlow.Transactions.Domain/CashFlow.Transactions.Domain.csproj" />
+  </ItemGroup>
+</Project>
