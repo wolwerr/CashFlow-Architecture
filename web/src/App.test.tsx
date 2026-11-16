@@ -69,6 +69,7 @@ function setupSignedIn() {
   mock.state[3] = '68a5baac-d97f-45b4-9119-b4c5b9de7c9b';
   mock.state[4] = '2026-11-16';
   mock.state[19] = true;
+  mock.state[20] = 'admin';
 }
 function seedApi() {
   vi.mocked(dailyBalance).mockResolvedValue({
@@ -96,6 +97,28 @@ describe('CashFlow dashboard and interactions', () => {
     const login = find('button', 'Entrar com Keycloak');
     (login.props.onClick as () => void)();
     expect(beginLogin).toHaveBeenCalledOnce();
+  });
+  it('does not label an unresolved profile as merchant or expose finance operations', () => {
+    setupSignedIn();
+    mock.state[20] = 'loading';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Verificando perfil')).toBe(true);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(false);
+  });
+  it('blocks merchant and admin views when role verification fails', () => {
+    setupSignedIn();
+    mock.state[20] = 'error';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(false);
+    expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Gestão de comerciantes')).toBe(false);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(false);
+  });
+  it('distinguishes a verified admin from a merchant in the header', () => {
+    setupSignedIn();
+    mock.state[1] = 'cashflow.admin';
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Administrador')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(true);
   });
   it('shows protected form and merchant selection with a session in memory', () => {
     setupSignedIn();
@@ -228,6 +251,7 @@ describe('CashFlow dashboard and interactions', () => {
   it('cannot launch an operation until the administrator links a merchant', async () => {
     setupSignedIn();
     mock.state[19] = false;
+    mock.state[20] = 'merchant';
     mock.state[3] = '';
     mock.state[6] = '100';
     const nodes = render();
