@@ -193,7 +193,7 @@ describe('CashFlow dashboard and interactions', () => {
   it('does not submit invalid amounts', async () => {
     setupSignedIn();
     mock.state[6] = '10,25';
-    const form = render().find(n => n.type === 'form')!;
+    const form = render().filter(n => n.type === 'form').at(-1)!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(createTransaction).not.toHaveBeenCalled();
     expect(mock.state[10]).toMatchObject({ isError: true });
