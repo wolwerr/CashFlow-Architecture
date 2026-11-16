@@ -32,7 +32,7 @@ O CI verifica que os três secrets estão presentes e falha se faltar algum. Em 
 ## Cobertura e gates
 
 - **Backend**: Coverlet produz OpenCover (`**/coverage.opencover.xml`) para Sonar e mantém gates separados de **80% line coverage** para Domain e Application.
-- **Frontend**: Vitest com `@vitest/coverage-v8` produz `web/coverage/lcov.info`. A primeira validação real é um smoke test renderizando a tela atual via ReactDOMServer. O relatório inclui arquivos de `web/src`; não concluir que a cobertura do frontend já é >=80% sem ver o resultado.
+- **Frontend**: Vitest com `@vitest/coverage-v8` produz `web/coverage/lcov.info`. A primeira validação real é um smoke test renderizando a tela atual via ReactDOMServer. O relatório inclui arquivos de `web/src` e o Vitest impõe no mínimo **80%** de linhas, instruções, funções e ramos. O teste inicial exercita a tela e o bootstrap do React. Em CI executado anteriormente, os dois arquivos atingiram 100% de linhas; executar novamente após este gate.
 - **Sonar**: inspeção de issues/code smells/vulnerabilidades/duplicação e ingestão dos dois formatos de cobertura; Quality Gate definido pela política da organização, e `sonar.qualitygate.wait=true` propaga falhas.
 - **Outros serviços**: ao adicionar código testável em Consolidation/Infrastructure, incluir testes e thresholds apropriados na mesma esteira. Não mascarar cobertura ausente com exclusões artificiais.
 
