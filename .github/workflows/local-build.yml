@@ -186,6 +186,7 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="sonar-reports/backend/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="web/coverage/lcov.info" \
             /d:sonar.coverage.exclusions=".github/scripts/**" \
+            /d:sonar.cpd.exclusions="**/Persistence/Migrations/**" \
             /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/coverage/**,**/bin/**,**/obj/**" \
             /d:sonar.qualitygate.wait=false \
             /d:sonar.qualitygate.timeout=300
