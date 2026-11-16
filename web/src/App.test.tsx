@@ -23,7 +23,7 @@ vi.mock('react', async importOriginal => {
   };
 });
 vi.mock('./auth/oidc', () => ({
-  beginLogin: vi.fn(), finishLogin: vi.fn(), getSubject: vi.fn(), logout: vi.fn()
+  beginLogin: vi.fn(), finishLogin: vi.fn(), getSubject: vi.fn(), getUsername: vi.fn(), logout: vi.fn()
 }));
 vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
