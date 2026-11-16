@@ -119,5 +119,5 @@ Decisões aprovadas **não** significam contratos executáveis, schema físico, 
 - [Modelo de dados](data-model.md)
 - [Casos de uso](use-cases.md)
 - [Sequências](sequence-diagrams.md)
-- [Validação 01](requirements-validation.md), [02](sequence-validation.md) e [03](data-model-validation.md)
+- [Validação 01](validations/requirements-validation.md), [02](validations/sequence-validation.md) e [03](validations/data-model-validation.md)
 - [ADR-003](adr/ADR-003-persistence.md), [ADR-005](adr/ADR-005-outbox-consistency-idempotency.md), [ADR-006](adr/ADR-006-identity-and-access.md), [ADR-007](adr/ADR-007-clients-api-gateway.md), [ADR-010](adr/ADR-010-ci-cd-github-actions.md)
