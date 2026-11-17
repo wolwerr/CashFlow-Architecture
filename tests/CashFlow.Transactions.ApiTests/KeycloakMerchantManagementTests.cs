@@ -171,7 +171,7 @@ public sealed class KeycloakMerchantManagementTests
         var fake = new FakeHandler(_ => throw new InvalidOperationException("Should not call Keycloak."));
         var service = Create(fake);
         await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
-            service.RemoveMemberAsync(MerchantId, "cashflow.admin", "cashflow.admin", CancellationToken.None));
+            service.DeactivateMemberAsync(MerchantId, "cashflow.admin", "cashflow.admin", CancellationToken.None));
         await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
             service.ChangeMemberRoleAsync(MerchantId, "cashflow.admin", "OPERATOR",
                 "cashflow.admin", CancellationToken.None));
@@ -213,19 +213,55 @@ public sealed class KeycloakMerchantManagementTests
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
                 return JsonResponse(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
-                return JsonResponse(new[] { Admin(), Operator() });
+                return JsonResponse(new[] { Admin(), Operator(), new {
+                    id = "inactive-id", name = "INACTIVE", path = $"/merchants/{MerchantId:D}/INACTIVE" } });
             if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
                 return JsonResponse(new[] { Operator() });
+            if (request.Method == HttpMethod.Put && path.EndsWith($"/users/{UserId:D}/groups/inactive-id",
+                StringComparison.Ordinal)) return new HttpResponseMessage(HttpStatusCode.NoContent);
             if (request.Method == HttpMethod.Delete &&
                 path.EndsWith($"/users/{UserId:D}/groups/operator-id", StringComparison.Ordinal))
                 return new HttpResponseMessage(HttpStatusCode.NoContent);
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         }));
-        Assert.True(await Create(fake).RemoveMemberAsync(MerchantId,
+        Assert.True(await Create(fake).DeactivateMemberAsync(MerchantId,
             "loja.teste", "cashflow.admin", CancellationToken.None));
         Assert.Contains(fake.Calls, c => c.Method == "DELETE" && c.Path.Contains("operator-id"));
         Assert.DoesNotContain(fake.Calls, c => c.Method == "DELETE" &&
             c.Path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SoftDeletedOperatorCanBeReactivatedWithoutCreatingAnotherUser()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new object[] { Admin(), Operator(), new {
+                    id = "inactive-id", name = "INACTIVE", path = $"/merchants/{MerchantId:D}/INACTIVE" } });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { new {
+                    id = "inactive-id", name = "INACTIVE", path = $"/merchants/{MerchantId:D}/INACTIVE" } });
+            if (path.Contains($"/users/{UserId:D}/groups/", StringComparison.Ordinal) &&
+                (request.Method == HttpMethod.Delete || request.Method == HttpMethod.Put))
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).ChangeMemberRoleAsync(
+            MerchantId, "loja.teste", "OPERATOR", "cashflow.admin", CancellationToken.None));
+        var changes = fake.Calls.Where(c => c.Path.Contains($"/users/{UserId:D}/groups/")).ToList();
+        Assert.Equal("PUT", changes[0].Method);
+        Assert.EndsWith("/operator-id", changes[0].Path);
+        Assert.Equal("DELETE", changes[1].Method);
+        Assert.EndsWith("/inactive-id", changes[1].Path);
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "POST" &&
+            call.Path.EndsWith("/users", StringComparison.Ordinal));
     }
 
     [Fact]
