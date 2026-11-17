@@ -154,7 +154,7 @@ public sealed class KeycloakMerchantManagementTests
         var fake = new FakeHandler(req => TokenOr(req, request =>
         {
             var path = Path(request);
-            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
                 return JsonResponse(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
@@ -184,7 +184,7 @@ public sealed class KeycloakMerchantManagementTests
         var fake = new FakeHandler(req => TokenOr(req, request =>
         {
             var path = Path(request);
-            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
                 return JsonResponse(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-group-id", StringComparison.Ordinal) &&
@@ -209,7 +209,7 @@ public sealed class KeycloakMerchantManagementTests
             var path = Path(request);
             if (path.EndsWith("/users", StringComparison.Ordinal))
                 return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
-            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
                 return JsonResponse(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
@@ -239,7 +239,7 @@ public sealed class KeycloakMerchantManagementTests
             var path = Path(request);
             if (path.EndsWith("/users", StringComparison.Ordinal))
                 return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
-            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
                 return JsonResponse(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
@@ -272,7 +272,7 @@ public sealed class KeycloakMerchantManagementTests
             var path = Path(request);
             if (path.EndsWith("/users", StringComparison.Ordinal))
                 return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
-            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
                 return JsonResponse(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
