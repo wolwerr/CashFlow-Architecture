@@ -148,6 +148,10 @@ public static class MerchantEndpoints
         {
             return Results.Conflict(new { title = "Username already exists." });
         }
+        catch (MerchantUsernameChangeNotAllowedException)
+        {
+            return Results.Conflict(new { title = "Keycloak rejected the username update. Check the realm's Edit username setting." });
+        }
         catch (HttpRequestException) { return Results.Problem(statusCode: 503); }
     }
 
