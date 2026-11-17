@@ -25,7 +25,7 @@ Há **três conceitos diferentes** no Keycloak e no CashFlow:
 
 **Se `cashflow.admin` aparecer como COMERCIANTE:** a UI deve mostrar o **username autenticado**. Conferir se a sessão realmente é `cashflow.admin` e se `CASHFLOW_BOOTSTRAP_USERNAME` foi aplicada ao container Transactions. Para verificar o valor configurado sem expor segredos: `docker compose exec transactions printenv KeycloakManagement__BootstrapUsername`. Se estiver correto, verificar no Network o retorno `GET /api/v1/merchants/permissions`. Falhas nessa consulta devem exibir **perfil indisponível**, sem classificar o usuário automaticamente como comerciante.
 
-## Perfis de acesso do MVP
+> **Como trocar de realm no console Keycloak 26.2:** após fazer login em `http://localhost:8081/admin/`, clique no seletor **Current realm** / **master** no canto superior esquerdo da navegação, escolha **cashflow** e confirme o nome do realm antes de abrir **Users > Add user**. Se o realm não aparecer, confira `docker compose logs --tail=100 keycloak` e a importação do realm. Para as telas e o bootstrap completo, siga o [README da raiz](../../README.md#7-bootstrap-obrigatório-no-keycloak-ambiente-zerado). Não use **Create realm**, pois o realm `cashflow` é importado automaticamente.\n\n## Perfis de acesso do MVP
 
 **ADMIN de plataforma (bootstrap local)**: entra com a conta `cashflow.admin` no Keycloak e acessa gestão de comerciantes, cadastro de contas e as três áreas financeiras (Novo lançamento, Saldo Diário, Histórico). O backend verifica o `preferred_username` assinado contra `CASHFLOW_BOOTSTRAP_USERNAME`, em Development. Não basta escolher ADMIN na interface.
 

@@ -123,7 +123,19 @@ Neste estágio, **somente** `postgres`, `rabbitmq` e `keycloak` precisam estar a
 
 A importação automática de `infra/local/keycloak/cashflow-realm.json` cria o realm `cashflow` e os clientes, **mas não fornece as credenciais e permissões administrativas necessárias**. Complete uma vez:
 
-**A. Criar o administrador CashFlow.** Entre em `http://localhost:8081/admin/` com o administrador do realm **master** (etapa 5). Troque para o realm **cashflow** no seletor, vá a **Users > Add user** e crie `cashflow.admin` com `Enabled` ligado. Em **Credentials > Set password**, defina senha de teste segura, com `Temporary` desligado para este primeiro login local. Esse login é diferente do usuário do realm master.
+**A. Criar o administrador CashFlow no realm correto (Keycloak 26.2).**
+
+1. Acesse **http://localhost:8081/admin/** e faça login com o usuário `admin` e a senha escolhida em `KEYCLOAK_ADMIN_PASSWORD`. Essa é a conta de administração do **realm master**, não um usuário do CashFlow.
+2. No **canto superior esquerdo** do painel de administração, acima do menu lateral (Users, Clients etc.), procure o seletor chamado **Current realm**, que inicialmente exibe **master**. Clique no nome **master** ou na seta do seletor.
+3. Na lista de realms, clique em **cashflow**. **Não use Create realm**: o arquivo `infra/local/keycloak/cashflow-realm.json` já deve ter importado esse realm automaticamente. Após selecioná-lo, confirme que o seletor agora mostra **cashflow**. A URL de administração normalmente terá `/admin/master/console/#/cashflow/`; `master` nesse prefixo representa a sessão de administração e `cashflow` após `#/` indica o realm selecionado.
+4. No menu à esquerda, com **cashflow** selecionado, abra **Users** e clique em **Add user**.
+5. Informe **Username: `cashflow.admin`**. Mantenha **Enabled: ON**. Salve em **Create**; os demais campos de perfil não são obrigatórios para o bootstrap local salvo alguma exigência adicional configurada no realm.
+6. Na página do usuário criado, abra a aba **Credentials** e clique em **Set password**. Defina uma senha forte diferente da senha do admin do `master`, confirme-a, deixe **Temporary: OFF** para permitir o primeiro login local sem troca forçada e salve a alteração.
+7. Confira novamente em **Users** que `cashflow.admin` existe e está **Enabled** dentro do realm **cashflow**. Não atribua a ele papéis de administração do `master`: a capacidade de bootstrap do MVP é reconhecida pela API Transactions apenas em Development, pela configuração `CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin`.
+
+**Se `cashflow` não aparecer no seletor:** verifique `docker compose logs --tail=100 keycloak`, procure `Realm 'cashflow' imported` e aguarde a inicialização. Também é possível conferir a página de configuração OIDC em **http://localhost:8081/realms/cashflow/.well-known/openid-configuration**; ela deve responder JSON quando o realm existir. Não crie outro realm com nome parecido e não apague volumes apenas para tentar corrigir o seletor.
+
+**Importante:** existem duas contas diferentes: `admin` no realm `master` (administra Keycloak) e `cashflow.admin` no realm `cashflow` (usuário da aplicação com bootstrap local). A senha da primeira vem do `.env`; a segunda é criada nesta etapa e fica armazenada no Keycloak.
 
 **B. Cliente de autorização, apenas leitura.** Em **Clients > cashflow-authorization-service > Credentials**, copie o **Client secret**. Em **Service account roles**, atribua no cliente `realm-management` somente **`view-users`** (e acesso de consulta estritamente necessário caso sua versão do Keycloak o exija). Esse cliente não pode gerenciar usuários ou grupos.
 
