@@ -181,6 +181,32 @@ def run_flow(transport, token, other_token, merchant, other_merchant, day,
     ]
 
 
+def validate_local_args(parser, args):
+    try:
+        merchant = str(uuid.UUID(args.merchant_id))
+        other = str(uuid.UUID(args.other_merchant_id))
+        day = dt.date.fromisoformat(args.date)
+    except ValueError:
+        parser.error("Merchant IDs must be UUIDs; date must be YYYY-MM-DD")
+    if merchant == other:
+        parser.error("Use two distinct disposable merchants")
+    if day > dt.datetime.now(dt.timezone(dt.timedelta(hours=-3))).date():
+        parser.error("Date must not be in the future in Sao Paulo")
+    if not 5 <= args.timeout_seconds <= 120:
+        parser.error("Timeout must be between 5 and 120 seconds")
+    return merchant, other, day.isoformat()
+
+
+def local_test_tokens(parser):
+    token = os.getenv("CASHFLOW_E2E_TOKEN")
+    other_token = os.getenv("CASHFLOW_E2E_OTHER_TOKEN")
+    if not token or not other_token:
+        parser.error("Set CASHFLOW_E2E_TOKEN and CASHFLOW_E2E_OTHER_TOKEN locally")
+    if token == other_token:
+        parser.error("Provide different account tokens for isolation checks")
+    return token, other_token
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true",
@@ -190,31 +216,15 @@ def main(argv=None):
     parser.add_argument("--date", required=True, help="Past/current business date YYYY-MM-DD")
     parser.add_argument("--timeout-seconds", type=int, default=30)
     args = parser.parse_args(argv)
-    try:
-        merchant = str(uuid.UUID(args.merchant_id))
-        other = str(uuid.UUID(args.other_merchant_id))
-        day = dt.date.fromisoformat(args.date)
-    except ValueError:
-        parser.error("Merchant IDs must be UUIDs; date must be YYYY-MM-DD")
-    if merchant == other:
-        parser.error("Use two distinct disposable merchants")
-    if day > (dt.datetime.now(dt.timezone(dt.timedelta(hours=-3))).date()):
-        parser.error("Date must not be in the future in Sao Paulo")
-    if not 5 <= args.timeout_seconds <= 120:
-        parser.error("Timeout must be between 5 and 120 seconds")
+    merchant, other, day = validate_local_args(parser, args)
     if not args.execute:
         print(json.dumps({"executed": False, "mode": "preview",
                           "checks": ["JWT", "membership", "cross-merchant 403",
                                      "CREDIT/DEBIT", "idempotency", "history", "consolidation"]}))
         return 0
-    token = os.getenv("CASHFLOW_E2E_TOKEN")
-    other_token = os.getenv("CASHFLOW_E2E_OTHER_TOKEN")
-    if not token or not other_token:
-        parser.error("Set CASHFLOW_E2E_TOKEN and CASHFLOW_E2E_OTHER_TOKEN locally")
-    if token == other_token:
-        parser.error("Provide different account tokens for isolation checks")
+    token, other_token = local_test_tokens(parser)
     try:
-        steps = run_flow(request, token, other_token, merchant, other, day.isoformat(),
+        steps = run_flow(request, token, other_token, merchant, other, day,
                          timeout=args.timeout_seconds)
     except (VerificationError, urllib.error.URLError, TimeoutError, ValueError, KeyError) as error:
         # Avoid logging response bodies, JWTs, UUIDs or exception strings from HTTP libraries.
