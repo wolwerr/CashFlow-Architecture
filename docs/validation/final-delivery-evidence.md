@@ -33,7 +33,7 @@ O PDF explicita que nem todas as premissas de arquitetura precisam estar codific
 
 A [seção 9 do README](../../README.md#9-testes-automatizados-e-evidências-do-desafio) descreve os limites por camada do backend e os percentuais históricos do frontend. A cobertura atual é calculada **a cada execução do GitHub Actions** por [`.github/scripts/ci_coverage_summary.py`](../../.github/scripts/ci_coverage_summary.py) usando os XMLs OpenCover e o LCOV gerados pelos testes.
 
-Os job summaries **Backend .NET Coverage Report** e **Frontend Coverage Report** exibem os números observados nessa execução, além de links para os artifacts com os arquivos originais. Os relatórios do backend podem ter sobreposição e não são somados para declarar uma cobertura global. Os percentuais históricos do README não substituem os resultados medidos na CI mais recente.
+Os job summaries **Backend .NET Coverage Report** e **Frontend Coverage Report** exibem os números observados nessa execução. O backend usa a união de linhas de código instrumentadas nos seis relatórios OpenCover, sem dupla contagem de linhas repetidas entre suítes, e apresenta **um percentual global consolidado**. Os relatórios originais continuam acessíveis como artifacts temporários. Os percentuais históricos do README não substituem os resultados medidos na CI mais recente.
 
 ## Evidências de execução e rastreabilidade
 
