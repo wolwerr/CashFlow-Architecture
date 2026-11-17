@@ -186,8 +186,8 @@ Esse cliente é usado pela API **Transactions** para cadastrar lojas, criar usu�
    | --- | --- |
    | `manage-realm` | Operações administrativas de configuração e gerenciamento de grupos do realm |
    | `manage-users` | Criar e atualizar usuários e administrar seus vínculos |
-   | `view-users` | Consultar usuários existentes |
-   | `query-users` | Pesquisar e localizar usuários |
+   | `view-users`, na segunda tela | Consultar usuários existentes |
+   | `query-users`, na segunda tela | Pesquisar e localizar usuários |
 
 4. Volte à lista **Service account roles** e confirme que as quatro roles estão atribuídas ao cliente correto.
 
