@@ -325,6 +325,9 @@ jobs:
       - name: Sonar | Validate MVP acceptance evidence rules (offline, no live writes)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_mvp_acceptance.py'
 
+      - name: Sonar | Validate manual UI evidence and observability inventory offline
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_manual_ui_and_observability.py'
+
       - name: Sonar | Verify read-only operational snapshot tests (no Docker in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_operational_snapshot.py'
 
