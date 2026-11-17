@@ -95,7 +95,7 @@ Para cada ação relevante, uma trilha de auditoria deve permitir responder:
 
 ## 6. Validação do modelo lógico
 
-As [ADRs de dados](adr/ADR-003-database-and-persistence.md) e de [Outbox/idempotência](adr/ADR-005-outbox-consistency-idempotency.md) fundamentam o modelo; consulte também os [requisitos](../requirements/functional-requirements.md). Permanecem pendentes migrations, índices, performance do acumulado derivado, interface/revogação de autorização e contratos de evento. As escolhas do MVP estão em [Decisões consolidadas](mvp-decisions.md). A revisão do diagrama **não é evidência de migrations executadas ou integridade verificada em banco**.
+As [ADRs de dados](adr/ADR-003-persistence.md) e de [Outbox/idempotência](adr/ADR-005-outbox-consistency-idempotency.md) fundamentam o modelo; consulte também os [requisitos](../requirements/functional-requirements.md). Permanecem pendentes migrations, índices, performance do acumulado derivado, interface/revogação de autorização e contratos de evento. As escolhas do MVP estão em [Decisões consolidadas](mvp-decisions.md). A revisão do diagrama **não é evidência de migrations executadas ou integridade verificada em banco**.
 
 ## 7. Rastreabilidade
 
