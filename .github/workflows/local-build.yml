@@ -214,7 +214,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Validation | Validate local MVP end-to-end smoke contract (offline, no writes)
+      - name: Validation | Verify E2E smoke script contract (offline mock, not live E2E)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_e2e_mvp.py'
 
       - name: Validation | Run local load probe unit tests (no live load in CI)
@@ -240,7 +240,7 @@ jobs:
       - name: Validation | Verify local recovery drill safety tests (no service disruption in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_recovery_drill.py'
 
-      - name: Validation | Verify LOCAL financial resilience probe safety (offline, no Docker writes)
+      - name: Validation | Verify resilience E2E script safety (offline, no Docker writes)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_resilience_e2e.py'
 
       - name: Validation | Verify integrated broker-consumer recovery safety offline
