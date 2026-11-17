@@ -22,39 +22,43 @@ class Result:
 
 class ManualUiTests(unittest.TestCase):
     def test_preview_writes_nothing(self):
-        with tempfile.TemporaryDirectory() as directory, patch.object(manual, "PROJECT_ROOT", Path(directory).resolve()):
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
             path = Path(directory) / "local-acceptance.json"
             path.write_text(json.dumps(acceptance.initial_manifest()), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(0, manual.main(["--manifest", str(path)]))
+                self.assertEqual(0, manual.main(["--manifest", "local-acceptance.json"]))
             self.assertEqual(0, acceptance.report(json.loads(path.read_text()))["counts"]["PASS"])
 
     def test_explicit_confirmation_writes_two_evidences(self):
-        with tempfile.TemporaryDirectory() as directory, patch.object(manual, "PROJECT_ROOT", Path(directory).resolve()):
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
             path = Path(directory) / "local-acceptance.json"
             path.write_text(json.dumps(acceptance.initial_manifest()), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(0, manual.main(
-                    ["--manifest", str(path), "--confirm-seven-checks"]))
+                    ["--manifest", "local-acceptance.json", "--confirm-seven-checks"]))
             result = acceptance.report(json.loads(path.read_text()), path.parent)
             self.assertEqual(2, result["counts"]["PASS"])
             self.assertEqual("NOT_RUN", result["scenarios"]["observability"])
 
     def test_rejects_manifest_outside_workspace(self):
-        with tempfile.TemporaryDirectory() as directory:
-            outside = Path(directory) / "local-acceptance.json"
-            outside.write_text("{}", encoding="utf-8")
-            with patch.object(manual, "PROJECT_ROOT", (Path(directory) / "subdir").resolve()):
-                with self.assertRaises(ValueError):
-                    manual.allowed_manifest(outside)
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
+            Path("local-acceptance.json").write_text("{}", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                manual.validate_manifest_argument("../local-acceptance.json")
 
     def test_rejects_wrong_manifest_filename(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "arbitrary.json"
-            path.write_text("{}", encoding="utf-8")
-            with patch.object(manual, "PROJECT_ROOT", Path(directory).resolve()):
-                with self.assertRaises(ValueError):
-                    manual.allowed_manifest(path)
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
+            Path("local-acceptance.json").write_text("{}", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                manual.validate_manifest_argument("arbitrary.json")
+
+    def test_rejects_symlink_manifest(self):
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
+            original = Path("original.json")
+            original.write_text("{}", encoding="utf-8")
+            Path("local-acceptance.json").symlink_to(original)
+            with self.assertRaises(ValueError):
+                manual.validate_manifest_argument("local-acceptance.json")
 
     def test_observability_preview_has_no_docker_calls(self):
         with patch.object(inventory, "docker") as docker:

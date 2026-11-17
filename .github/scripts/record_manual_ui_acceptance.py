@@ -9,16 +9,19 @@ import datetime as dt
 import json
 from pathlib import Path
 
-PROJECT_ROOT = Path.cwd().resolve()
+MANIFEST_NAME = "local-acceptance.json"
+MANIFEST_FILE = Path(MANIFEST_NAME)
 
-def allowed_manifest(raw):
-    """Restrict operator file writes to the current local project or test workspace."""
-    target = Path(raw).resolve()
-    if target.name != "local-acceptance.json" or not target.is_relative_to(PROJECT_ROOT):
-        raise ValueError("Manifest must be local-acceptance.json inside the workspace")
-    if not target.is_file() or target.is_symlink():
+
+def validate_manifest_argument(raw):
+    """Fail closed: never use a CLI-derived file path for reads or writes."""
+    if str(raw) != MANIFEST_NAME:
+        raise ValueError("Use only local-acceptance.json in the current working directory")
+    if MANIFEST_FILE.is_symlink() or not MANIFEST_FILE.is_file():
         raise ValueError("Expected a regular local acceptance manifest")
-    return target
+    evidence_dir = Path("evidence")
+    if evidence_dir.is_symlink():
+        raise ValueError("Evidence directory must not be a symlink")
 
 
 CHECKS = {
@@ -36,36 +39,51 @@ CHECKS = {
 }
 
 
-def record(manifest_path):
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+def evidence_json(scenario, checks, timestamp):
+    """Generate report content only. No untrusted data determines file destinations."""
+    return json.dumps({
+        "scenario": scenario,
+        "environment": "LOCAL",
+        "confirmed_by": "operator",
+        "confirmation_timestamp_utc": timestamp,
+        "source": "Manual seven-step browser checklist reported passed on 2026-11-17",
+        "checks": {name: True for name in checks},
+        "outcome": "PASS",
+        "independently_automated": False,
+    }, indent=2) + "\n"
+
+
+def record():
+    manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8-sig"))
     from local_mvp_acceptance import validate_metadata
     validate_metadata(manifest)
-    root = manifest_path.parent
     now = dt.datetime.now(dt.timezone.utc).isoformat()
-    for scenario, checks in CHECKS.items():
-        ref = "evidence/" + scenario.replace("_", "-") + "-manual.json"
-        destination = root / ref
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(json.dumps({
-            "scenario": scenario,
-            "environment": "LOCAL",
-            "confirmed_by": "operator",
-            "confirmation_timestamp_utc": now,
-            "source": "Manual seven-step browser checklist reported passed on 2026-11-17",
-            "checks": {name: True for name in checks},
-            "outcome": "PASS",
-            "independently_automated": False,
-        }, indent=2) + "\n", encoding="utf-8")
-        manifest["scenarios"][scenario] = {
-            "status": "PASS", "evidence": [ref], "metrics": {}
-        }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n",
-                             encoding="utf-8")
+    evidence_dir = Path("evidence")
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    browser_file = Path("evidence/browser-oidc-manual.json")
+    merchant_file = Path("evidence/merchant-management-manual.json")
+    if browser_file.is_symlink() or merchant_file.is_symlink():
+        raise ValueError("Evidence files must not be symlinks")
+    browser_file.write_text(
+        evidence_json("browser_oidc", CHECKS["browser_oidc"], now), encoding="utf-8")
+    merchant_file.write_text(
+        evidence_json("merchant_management", CHECKS["merchant_management"], now),
+        encoding="utf-8")
+    manifest["scenarios"]["browser_oidc"] = {
+        "status": "PASS", "evidence": ["evidence/browser-oidc-manual.json"], "metrics": {}
+    }
+    manifest["scenarios"]["merchant_management"] = {
+        "status": "PASS", "evidence": ["evidence/merchant-management-manual.json"],
+        "metrics": {}
+    }
+    with MANIFEST_FILE.open("w", encoding="utf-8") as output:
+        json.dump(manifest, output, indent=2)
+        output.write("\n")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("local-acceptance.json"))
+    parser.add_argument("--manifest", type=Path, default=MANIFEST_FILE)
     parser.add_argument("--confirm-seven-checks", action="store_true",
                         help="Affirm all seven UI checks were actually completed successfully")
     args = parser.parse_args(argv)
@@ -73,10 +91,13 @@ def main(argv=None):
         print("No manifest changes. Use --confirm-seven-checks only after successful manual UI test.")
         return 0
     try:
-        safe_path = allowed_manifest(args.manifest)
+        validate_manifest_argument(args.manifest)
     except ValueError as error:
         parser.error(str(error))
-    record(safe_path)
+    try:
+        record()
+    except ValueError as error:
+        parser.error(str(error))
     print("Recorded two operator-confirmed UI scenarios in local acceptance manifest.")
     return 0
 

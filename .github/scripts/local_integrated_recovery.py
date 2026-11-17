@@ -250,25 +250,23 @@ def record_manifest(report, manifest_path=Path("local-acceptance.json")):
             and report.get("projection_exact_delta") is True,
             "Cannot record incomplete or failed recovery")
     from local_mvp_acceptance import SCENARIOS, validate_metadata
-    from record_manual_ui_acceptance import allowed_manifest
-    manifest_path = allowed_manifest(manifest_path)
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    from record_manual_ui_acceptance import MANIFEST_FILE, validate_manifest_argument
+    validate_manifest_argument(manifest_path)
+    manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8-sig"))
     validate_metadata(manifest)
     for name in ("rabbitmq_recovery", "consumer_recovery", "audit_integrity"):
         require(name in SCENARIOS, "Unexpected acceptance scenario")
     evidence_file = Path("evidence/integrated-recovery.json")
-    evidence_target = (manifest_path.parent / evidence_file).resolve()
-    require(evidence_target.is_relative_to(manifest_path.parent) and
-            not evidence_target.is_symlink(), "Evidence path escaped workspace")
-    evidence_target.parent.mkdir(parents=True, exist_ok=True)
-    evidence_target.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    require(not evidence_file.is_symlink(), "Evidence file must not be a symlink")
+    evidence_file.parent.mkdir(parents=True, exist_ok=True)
+    evidence_file.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     for name in ("rabbitmq_recovery", "consumer_recovery", "audit_integrity"):
         manifest["scenarios"][name] = {
             "status": "PASS",
             "evidence": [evidence_file.as_posix()],
             "metrics": {},
         }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    MANIFEST_FILE.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 def main(argv=None):
