@@ -51,3 +51,9 @@ npm run test:coverage
 ```
 
 No Docker Compose local, depois do merge: `docker compose build transactions web` e `docker compose up -d --force-recreate --no-deps transactions web`. Não usar `docker compose down -v`, para preservar os comerciantes e usuários já criados no Keycloak.
+
+## Seleção de comerciantes
+
+O endpoint autenticado `GET /api/v1/merchants/` fornece a relação de comerciantes acessíveis **à sessão atual**, com `id`, `name` e `role`. Na visão administrativa, a lista apresenta os nomes e o **cargo do usuário autenticado naquele comerciante** (`ADMIN` ou `Comerciante` para o papel interno `OPERATOR`). Não representa o papel da conta do lojista recém-criada. A consulta financeira usa seletor de nomes e transmite o `merchant_id` (UUID) já autorizado apenas internamente. O usuário não precisa copiar nem digitar IDs. Mudanças de seleção limpam saldo e histórico anteriores, sem alterar a autorização que permanece nas APIs.
+
+A lista não deve ser tratada como diretório irrestrito de todos os comerciantes do realm. Ela é filtrada pelo vínculo do usuário no Keycloak. O bootstrap atual está vinculado como ADMIN a cada comerciante que cria.

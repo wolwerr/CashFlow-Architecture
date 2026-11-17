@@ -1,11 +1,11 @@
 import type { CashFlowController } from '../app/useCashFlowController';
 import type { Merchant } from '../../api/cashflow';
 import { validMerchant } from '../../api/cashflow';
+import { MerchantSelector } from './MerchantSelector';
+import { MerchantDirectory } from './MerchantDirectory';
 
 const isMerchantAdmin = (items: Merchant[], id: string) =>
   items.some(item => item.id === id && item.role === 'ADMIN');
-const selectedMerchant = (items: Merchant[], id: string) =>
-  items.some(item => item.id === id) ? id : '';
 
 export function AdminPanel({ controller }: { controller: CashFlowController }) {
   const { merchants, merchant, changeMerchant, newMerchantName, setNewMerchantName,
@@ -17,16 +17,11 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
       <section className="panel">
         <h2>Gestão de comerciantes</h2>
         <div className="fields merchant-fields">
-          <label>Selecione um comerciante
-            <select aria-label="Selecionar comerciante" value={selectedMerchant(merchants, merchant)}
-              onChange={event => changeMerchant(event.target.value)}>
-              <option value="">Selecione...</option>
-              {merchants.map(item => <option key={item.id} value={item.id}>
-                {item.name} ({item.role})
-              </option>)}
-            </select>
-          </label>
+          <MerchantSelector items={merchants} value={merchant}
+            onChange={changeMerchant} label="Selecione um comerciante"
+            ariaLabel="Selecionar comerciante" />
         </div>
+        <MerchantDirectory items={merchants} selectedId={merchant} onSelect={changeMerchant} />
         <form className="merchant-action" onSubmit={registerMerchant}>
           <label>Nome do novo comerciante
             <input aria-label="Nome do comerciante" maxLength={100} placeholder="Ex.: Loja Campinas"
@@ -65,10 +60,9 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
       <section className="panel">
         <h2>Comerciante e competência</h2>
         <div className="fields">
-          <label>ID do comerciante
-            <input aria-label="ID do comerciante" placeholder="Selecione um comerciante acima"
-              value={merchant} onChange={event => changeMerchant(event.target.value)} />
-          </label>
+          <MerchantSelector items={merchants} value={merchant}
+            onChange={changeMerchant} label="Nome do comerciante"
+            ariaLabel="Comerciante da consulta" />
           <label>Data de referência
             <input aria-label="Data de referência" type="date" value={date}
               onChange={event => { setDate(event.target.value); clearFinancialData(); }} />
