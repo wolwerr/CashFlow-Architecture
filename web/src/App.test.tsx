@@ -494,7 +494,7 @@ describe('CashFlow dashboard and interactions', () => {
     const admin = find('input', 'Usuário administrador');
     (admin.props.onChange as (event: unknown) => void)({ target: { value: 'new.admin' } });
     const forms = render().filter(n => n.type === 'form');
-    await (forms[1].props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    await (forms[3].props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(addMerchantAdmin).toHaveBeenCalledWith('access-token',
       '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', 'new.admin', undefined);
   });
