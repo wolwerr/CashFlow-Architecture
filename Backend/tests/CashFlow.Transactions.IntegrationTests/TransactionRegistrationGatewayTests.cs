@@ -73,7 +73,8 @@ public sealed class TransactionRegistrationGatewayTests
     {
         await using var db = new TransactionsDbContext(Options());
         await db.Database.MigrateAsync();
-        using var request = new Activity("cashflow-test-request").Start();
+        using var request = new Activity("cashflow-test-request")
+            .SetIdFormat(ActivityIdFormat.W3C).Start();
         var merchant = Guid.NewGuid();
         var transaction = NewTransaction(merchant, Guid.NewGuid());
         await new TransactionRegistrationGateway(db).RegisterAsync(
