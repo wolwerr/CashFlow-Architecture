@@ -17,7 +17,7 @@ EXPECTED = {"postgres", "rabbitmq", "keycloak", *SERVICES}
 PATTERNS = {
     "correlation_mentions": re.compile(r"correlation.?id|x-correlation-id", re.I),
     "trace_mentions": re.compile(r"trace.?id|traceparent", re.I),
-    "error_mentions": re.compile(r"\\b(error|exception|fatal)\\b", re.I),
+    "error_mentions": re.compile(r"\b(error|exception|fatal)\b", re.I),
 }
 
 
@@ -40,7 +40,7 @@ def inspect(since="10m"):
         if result.returncode:
             raise RuntimeError("Cannot inspect local service logs: " + service)
         # Docker may use stderr for log transport. Never print individual lines.
-        lines = (result.stdout + "\\n" + result.stderr).splitlines()
+        lines = (result.stdout + "\n" + result.stderr).splitlines()
         checks[service] = {
             "running": service in active,
             "log_lines": len([line for line in lines if line.strip()]),
@@ -75,7 +75,7 @@ def main(argv=None):
         return 1
     path = Path("evidence/observability-inventory.json")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(report, indent=2) + "\\n", encoding="utf-8")
+    path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))
     return 0
 
