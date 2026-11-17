@@ -320,6 +320,8 @@ public sealed class KeycloakMerchantManagement(
             users = await UsersAsync(username, ct);
         }
 
+        if (users.Count == 0 && !createdByThisRequest)
+            return false; // Existing ADMIN flow may intentionally omit a new password.
         if (users.Count != 1 ||
             !string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase) ||
             !Guid.TryParse(users[0].Id, out var userId))
