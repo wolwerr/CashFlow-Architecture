@@ -68,6 +68,12 @@ export function listMerchants(token: string): Promise<Merchant[]> {
   return call('/api/v1/merchants/', token);
 }
 
+export type MerchantMember = { username: string; role: 'ADMIN' | 'OPERATOR' };
+
+export function listMerchantMembers(token: string, merchantId: string): Promise<MerchantMember[]> {
+  return call('/api/v1/merchants/' + encodeURIComponent(merchantId) + '/members', token);
+}
+
 export function merchantPermissions(token: string): Promise<{can_manage_merchants: boolean}> {
   return call('/api/v1/merchants/permissions', token);
 }
