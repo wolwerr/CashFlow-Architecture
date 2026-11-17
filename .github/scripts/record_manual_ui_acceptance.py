@@ -50,7 +50,7 @@ def evidence_json(scenario, checks, timestamp):
         "checks": {name: True for name in checks},
         "outcome": "PASS",
         "independently_automated": False,
-    }, indent=2) + "\\n"
+    }, indent=2) + "\n"
 
 
 def record():
@@ -76,7 +76,7 @@ def record():
         "status": "PASS", "evidence": ["evidence/merchant-management-manual.json"],
         "metrics": {}
     }
-    MANIFEST_FILE.write_text(json.dumps(manifest, indent=2) + "\\n",
+    MANIFEST_FILE.write_text(json.dumps(manifest, indent=2) + "\n",
                              encoding="utf-8")
 
 
