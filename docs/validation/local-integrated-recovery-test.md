@@ -55,3 +55,25 @@ Relatório: `reports/integrated-recovery-local.json`, sem credenciais ou IDs fin
 **Limites:** não injeta uma entrega duplicada real do broker nem prova redelivery sob todos os modos de falha. Não demonstra garantia absoluta de exactly-once, RPO/RTO formal, retenção legal validada ou disponibilidade em produção. O inventário comprova consistência das relações de auditoria verificadas, não sua imutabilidade histórica ou completude de todos os campos.
 
 Testes offline, sem Docker: `python -m unittest discover -s .github/scripts -p 'test_local_integrated_recovery.py'`.
+
+## Evidência da execução local, 17/11/2026
+
+**PASS, código de saída 0**, segundo saída do terminal compartilhada pelo operador. Execução após merge da PR #75 com `--execute --record-manifest` em comerciante local descartável. Captura UTC: `2026-11-17T17:48:38.369738+00:00`.
+
+| Verificação | Resultado informado |
+| --- | --- |
+| Período solicitado de indisponibilidade de cada serviço | 15 segundos |
+| RabbitMQ restaurado | true |
+| Consolidation/consumer restaurado | true |
+| Transactions aceitou operação durante queda do broker | true |
+| Transactions aceitou operação durante parada do consumidor | true |
+| Histórico financeiro único | true |
+| Variação exata da projeção de saldo | true |
+| Replay idempotente e conflito de chave | true |
+| Integridade do inventário de auditoria | true |
+| Registros de auditoria inspecionados | 31 |
+| Resultado global / saída | PASS / 0 |
+
+O parâmetro `--record-manifest` deve registrar `rabbitmq_recovery`, `consumer_recovery` e `audit_integrity` como PASS no manifesto local, **desde que a gravação local tenha sido concluída**. Isso precisa ser confirmado pelo validador de manifesto; a documentação versionada não substitui o JSON de evidência local.
+
+O relatório local original é `reports/integrated-recovery-local.json` e a evidência sanitizada é `evidence/integrated-recovery.json`. Ambos devem permanecer fora do repositório. Não publicar tokens ou identificadores dos comerciantes. Resultado não representa ensaio em Azure nem comprova todos os modos possíveis de falha e reentrega duplicada.
