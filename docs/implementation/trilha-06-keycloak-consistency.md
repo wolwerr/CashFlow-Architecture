@@ -8,7 +8,7 @@
 2. **Concorrência no username:** HTTP 409 na criação de usuário retorna conflito controlado, sem associar a conta criada por outro processo. A verificação prévia ainda não é uma reserva transacional do username.
 3. **Compensação de novo usuário:** se a API criar uma identidade e a atribuição ao grupo falhar com erro HTTP, tenta removê-la usando o UUID resolvido e um timeout independente de 10 segundos. Não exclui usuários já existentes. Falha de compensação retorna erro e exige reconciliação manual.
 4. **Conflitos de grupos:** múltiplos grupos `ADMIN`, `OPERATOR` ou `INACTIVE` para o mesmo merchant não são considerados uma única associação válida. Gestão de cargos retorna erro, permissão de administrador é negada e listagem não concede permissões ambíguas.
-5. **Proteção pré-existente:** usuário bootstrap não pode ser desativado ou rebaixado; revogação e reativação continuam consultando Keycloak sem cache positivo, e associações não são deletadas fisicamente no soft delete.
+5. **Autorização financeira compartilhada:** Transactions e Consolidation agora percorrem todas as páginas de grupos atuais do Keycloak antes de autorizar. Um vínculo `INACTIVE`, ou `ADMIN + OPERATOR` simultâneos, nega acesso mesmo quando outra página contém papel ativo.\n6. **Proteção pré-existente:** usuário bootstrap não pode ser desativado ou rebaixado; revogação e reativação continuam consultando Keycloak sem cache positivo, e associações não são deletadas fisicamente no soft delete.
 
 ## Limitações e riscos residuais
 
