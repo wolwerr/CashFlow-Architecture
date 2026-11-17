@@ -5,6 +5,13 @@ import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
 import { merchantRoleLabel } from './merchantPresentation';
 
+function mutationMessage(action: MerchantAction): string {
+  if (action === 'remove') {
+    return 'Usuário desativado nesta loja. É possível reativar sem perder o histórico.';
+  }
+  return action === 'restore' ? 'Comerciante reativado nesta loja.' : 'Alteração realizada.';
+}
+
 type MerchantDirectoryProps = {
   items: Merchant[];
   selectedId: string;
@@ -70,9 +77,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
       if (action === 'rename') setEditedName('');
       await onRefresh();
       setRevision(previous => previous + 1);
-      setMessage(action === 'remove'
-        ? 'Usuário desativado nesta loja. É possível reativar sem perder o histórico.'
-        : action === 'restore' ? 'Comerciante reativado nesta loja.' : 'Alteração realizada.');
+      setMessage(mutationMessage(action));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Falha ao atualizar a loja.');
     } finally {
