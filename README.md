@@ -281,9 +281,46 @@ Para configurar o Keycloak do zero e diagnosticar falhas de permissões, siga as
 
 Para homologar, teste dois usuários de lojas diferentes, confirme o isolamento de dados e registre os resultados. Os requisitos estão na [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md).
 
-## 9. Testes automatizados e evidência de requisitos não funcionais
+## 9. Testes automatizados e evidências do desafio
 
-**CI:** [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions) executa build, testes e Sonar. Para executar o teste offline do aceite, com Python 3 instalado:
+### 9.1. Resultado automático da CI
+
+[![Build, testes e SonarQube Cloud](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml/badge.svg?branch=main)](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml)
+
+O selo acima reflete o **estado atual da pipeline da branch `main`**, não um resultado de teste manual. Clique nele para abrir o GitHub Actions, selecione a execução mais recente e confira os jobs **Backend | Build and tests**, **Frontend | Build and tests** e **Sonar | Backend and frontend**. É possível verificar cada passo, os testes executados e a geração dos relatórios de cobertura. Um selo verde indica sucesso da execução, mas não comprova sozinho os cenários de falha e carga descritos abaixo.
+
+**Para incluir uma captura real dos testes no README:** abra [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml), selecione um run com os três jobs aprovados, capture a tela exibindo o status e salve a imagem como `docs/architecture/images/tests-github-actions.png`. Adicione o arquivo ao Git e substitua este parágrafo pelo Markdown:
+
+```markdown
+![Execução real dos testes de Backend, Frontend e Sonar no GitHub Actions](docs/architecture/images/tests-github-actions.png)
+```
+
+**Não adicione uma captura de execução antiga ou uma imagem gerada artificialmente para representar testes atuais.** O link para o GitHub Actions deve permanecer para que o avaliador confirme a execução.
+
+### 9.2. Rodar os testes automatizados localmente
+
+Para executar os testes .NET, com o SDK .NET 10 instalado e os serviços de integração necessários disponíveis:
+
+```powershell
+dotnet restore Backend/CashFlow.slnx
+dotnet build Backend/CashFlow.slnx -c Release
+dotnet test Backend/CashFlow.slnx -c Release --no-build
+```
+
+Para executar os testes de frontend, com Node.js 22 e npm instalados:
+
+```powershell
+cd Frontend
+npm ci
+npm run test:coverage
+cd ..
+```
+
+**Alternativa sem SDK .NET e Node.js instalados localmente:** acompanhe o build, os testes, a cobertura e os Docker builds pelo [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml). O Docker Compose serve para executar o sistema, não substitui automaticamente os testes da CI. Testes de integração podem exigir PostgreSQL e RabbitMQ, que são provisionados especificamente no workflow de CI.
+
+### 9.3. Aceite funcional, falha e desempenho
+
+Para preparar o manifesto dos **14 cenários de homologação** (com Python 3 instalado):
 
 ```powershell
 python .github/scripts/local_mvp_acceptance.py --init local-acceptance.json
