@@ -28,6 +28,7 @@ public sealed class TransactionsPostgresMigrationTests
         await db.Database.MigrateAsync();
         var applied = await db.Database.GetAppliedMigrationsAsync();
         Assert.Contains("202611160001_InitialTransactionsPersistence", applied);
+        Assert.Contains("202611170001_AddOutboxTraceParent", applied);
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
 
         var merchant = Guid.NewGuid();

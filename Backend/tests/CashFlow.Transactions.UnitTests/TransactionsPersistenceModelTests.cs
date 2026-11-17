@@ -59,6 +59,7 @@ public sealed class TransactionsPersistenceModelTests
         var entity = context.Model.FindEntityType(typeof(OutboxMessageEntity))!;
         Assert.Equal("jsonb", entity.FindProperty(nameof(OutboxMessageEntity.Payload))!.GetColumnType());
         Assert.Equal(128, entity.FindProperty(nameof(OutboxMessageEntity.CorrelationId))!.GetMaxLength());
+        Assert.Equal(55, entity.FindProperty(nameof(OutboxMessageEntity.TraceParent))!.GetMaxLength());
         Assert.Contains(entity.GetIndexes(), i => i.Properties.Select(p => p.Name).SequenceEqual(
             [nameof(OutboxMessageEntity.PublishedAtUtc), nameof(OutboxMessageEntity.CreatedAtUtc)]));
         Assert.Contains(context.GetService<IDesignTimeModel>().Model.FindEntityType(entity.ClrType)!.GetCheckConstraints(), c => c.Name == "ck_outbox_attempts");

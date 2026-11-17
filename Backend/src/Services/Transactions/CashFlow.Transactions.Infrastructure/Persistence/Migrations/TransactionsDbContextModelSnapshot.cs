@@ -43,6 +43,7 @@ public sealed class TransactionsDbContextModelSnapshot : ModelSnapshot
             entity.Property(x => x.EventType).HasColumnName("event_type").HasMaxLength(128).IsRequired();
             entity.Property(x => x.SchemaVersion).HasColumnName("schema_version").HasMaxLength(16).IsRequired();
             entity.Property(x => x.CorrelationId).HasColumnName("correlation_id").HasMaxLength(128).IsRequired();
+            entity.Property(x => x.TraceParent).HasColumnName("trace_parent").HasMaxLength(55);
             entity.Property(x => x.Payload).HasColumnName("payload").HasColumnType("jsonb").IsRequired();
             entity.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").HasColumnType("timestamp with time zone");
             entity.Property(x => x.PublishedAtUtc).HasColumnName("published_at_utc").HasColumnType("timestamp with time zone");

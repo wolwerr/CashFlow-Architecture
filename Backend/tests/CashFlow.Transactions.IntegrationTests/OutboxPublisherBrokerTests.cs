@@ -23,6 +23,7 @@ public sealed class OutboxPublisherBrokerTests
         var connection = Environment.GetEnvironmentVariable("CASHFLOW_TEST_POSTGRES")!;
         var options = new DbContextOptionsBuilder<TransactionsDbContext>().UseNpgsql(connection).Options;
         var id = Guid.NewGuid();
+        const string parent = "00-11111111111111111111111111111111-2222222222222222-01";
         await using (var setup = new TransactionsDbContext(options))
         {
             await setup.Database.MigrateAsync();
@@ -30,7 +31,7 @@ public sealed class OutboxPublisherBrokerTests
             {
                 EventId = id, MerchantId = Guid.NewGuid(), TransactionId = Guid.NewGuid(),
                 EventType = "transaction.recorded", SchemaVersion = "1",
-                CorrelationId = "broker-integration", Payload = "{}",
+                CorrelationId = "broker-integration", TraceParent = parent, Payload = "{}",
                 CreatedAtUtc = DateTimeOffset.UtcNow, AttemptCount = 0
             });
             await setup.SaveChangesAsync();
@@ -73,6 +74,8 @@ public sealed class OutboxPublisherBrokerTests
         Assert.True(confirmed, "Outbox row must become published after RabbitMQ publisher confirm.");
         Assert.Contains(spans, span => span.DisplayName == "rabbitmq publish transaction.recorded"
             && span.Kind == ActivityKind.Producer
-            && Equals(span.GetTagItem("messaging.system"), "rabbitmq"));
+            && Equals(span.GetTagItem("messaging.system"), "rabbitmq")
+            && span.TraceId.ToString() == "11111111111111111111111111111111"
+            && span.ParentSpanId.ToString() == "2222222222222222");
     }
 }
