@@ -56,7 +56,9 @@ public sealed class KeycloakMerchantManagementEdgeTests
             var path = Path(request);
             if (request.Method == HttpMethod.Get && path.EndsWith("/users",
                 StringComparison.Ordinal))
-                return Json(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+                return request.RequestUri!.Query.Contains("loja.nova", StringComparison.Ordinal)
+                    ? Json(Array.Empty<object>())
+                    : Json(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
             if (request.Method == HttpMethod.Get &&
                 path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
                 return Json(new[] { Role(role) });
