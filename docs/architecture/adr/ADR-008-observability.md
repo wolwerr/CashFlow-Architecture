@@ -159,6 +159,6 @@ Esta ADR continua **decidida**, mas não deve ser confundida com infraestrutura 
 
 ## Implementação opcional para validação, 17/11/2026
 
-Nova proposta de implementação na branch de observabilidade: [compose.observability.yaml](../../../compose.observability.yaml), Collector, Prometheus, Loki, Tempo, Grafana, instrumentação opt-in nas duas APIs e [procedimento de verificação](../../validation/local-observability-stack.md).
+Nova implementação no [compose.yaml principal](../../../compose.yaml): Collector, Prometheus, Loki, Tempo, Grafana, instrumentação habilitada por padrão localmente nas duas APIs e [procedimento de verificação](../../validation/local-observability-stack.md).
 
 **Não homologado:** a presença de arquivos versionados não demonstra que todos os containers iniciam, que cada datasource recebe dados ou que existe trace distribuído até o consumidor. Propagação RabbitMQ/Outbox, métricas de workers e o teste com Collector indisponível ainda requerem execução/implementação. Manter `observability` como `NOT_RUN` até evidência real completa.
