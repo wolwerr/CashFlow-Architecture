@@ -10,6 +10,12 @@
 4. **Conflitos de grupos:** múltiplos grupos `ADMIN`, `OPERATOR` ou `INACTIVE` para o mesmo merchant não são considerados uma única associação válida. Gestão de cargos retorna erro, permissão de administrador é negada e listagem não concede permissões ambíguas.
 5. **Autorização financeira compartilhada:** Transactions e Consolidation agora percorrem todas as páginas de grupos atuais do Keycloak antes de autorizar. Um vínculo `INACTIVE`, ou `ADMIN + OPERATOR` simultâneos, nega acesso mesmo quando outra página contém papel ativo.\n6. **Proteção pré-existente:** usuário bootstrap não pode ser desativado ou rebaixado; revogação e reativação continuam consultando Keycloak sem cache positivo, e associações não são deletadas fisicamente no soft delete.
 
+## Gestão de usuários na interface
+
+A listagem administrativa apresenta **uma linha por usuário vinculado**, com o cargo atual e os botões associados somente àquela conta. Duas pessoas na mesma loja não representam dois cargos da mesma pessoa.
+
+A opção **Editar usuário** permite atualizar o `username` (login) de um membro existente pelo endpoint autenticado `PUT /api/v1/merchants/members/username`, com `X-Merchant-ID` e corpo `{ "username": "...", "newUsername": "..." }`. Somente ADMIN da loja pode chamar o endpoint. A API exige usernames válidos e únicos no realm, bloqueia a conta bootstrap e retorna 409 em conflito. O UUID do usuário Keycloak, a senha, os grupos, o histórico e as transações não são recriados. Se o usuário renomeado estiver autenticado, recomenda-se encerrar a sessão e entrar novamente usando o novo username.
+
 ## Limitações e riscos residuais
 
 Keycloak não fornece transação atômica multi-recurso para criação de grupo + identidade + vínculos. A compensação é *best effort* e depende de confirmação de UUID. Se o processo cair, a rede ficar indisponível durante o rollback ou uma criação composta falhar antes da identificação de usuário, pode haver objetos parciais. Não é seguro apagar automaticamente um usuário preexistente ou um grupo que possa conter vínculos concorrentes. **Esses casos exigem inspeção e reconciliação auditável**, não limpeza cega.
