@@ -67,7 +67,7 @@ def snapshot():
         "captured_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "services_running": status,
         **totals,
-        "outcome": "OBSERVED" if all(status.values()) else "DEGRADED",
+        "outcome": "OBSERVED" if all(status.values()) and totals["queue_count"] > 0 else "DEGRADED",
         "limits": "Container running does not prove readiness; queue depth does not prove financial consistency."
     }
 
