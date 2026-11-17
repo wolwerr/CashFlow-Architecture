@@ -30,11 +30,11 @@ vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
   return {
     ...original, createTransaction: vi.fn(), dailyBalance: vi.fn(),
-    transactionHistory: vi.fn(), listMerchants: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
+    transactionHistory: vi.fn(), listMerchants: vi.fn(), listMerchantMembers: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
   };
 });
 import App from './App';
-import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, merchantPermissions } from './api/cashflow';
+import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, listMerchantMembers, merchantPermissions } from './api/cashflow';
 import { beginLogin, logout } from './auth/oidc';
 import type { ReactElement } from 'react';
 
@@ -255,6 +255,56 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo do usuário')).toBe(true);
     expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
     expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
+  });
+
+  it('loads actual Keycloak members and their ADMIN or OPERATOR roles', async () => {
+    setupSignedIn();
+    mock.state[12] = [
+      { id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }
+    ];
+    vi.mocked(listMerchantMembers).mockResolvedValue([
+      { username: 'cashflow.admin', role: 'ADMIN' },
+      { username: 'loja.campinas', role: 'OPERATOR' }
+    ]);
+    render();
+    const cleanup = mock.effects[3]();
+    await vi.waitFor(() => {
+      const map = mock.state[21] as Record<string, Array<{username: string; role: string}>>;
+      expect(map[mock.state[3] as string]).toHaveLength(2);
+      expect(map[mock.state[3] as string][1].role).toBe('OPERATOR');
+    });
+    expect(listMerchantMembers).toHaveBeenCalledWith('access-token', mock.state[3]);
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'loja.campinas')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
+    if (typeof cleanup === 'function') cleanup();
+  });
+
+  it('marks a failed member query unavailable, never assumes ADMIN', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    vi.mocked(listMerchantMembers).mockRejectedValue(new Error('Keycloak unavailable'));
+    render();
+    mock.effects[3]();
+    await vi.waitFor(() => {
+      const map = mock.state[21] as Record<string, unknown>;
+      expect(map[mock.state[3] as string]).toBeNull();
+      expect(mock.state[22]).toBe(true);
+    });
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Indisponível')).toBe(true);
+  });
+
+  it('does not expose a late directory response after the view is unmounted', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    vi.mocked(listMerchantMembers).mockResolvedValue([{ username: 'loja.campinas', role: 'OPERATOR' }]);
+    render();
+    const cleanup = mock.effects[3]();
+    if (typeof cleanup === 'function') cleanup();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mock.state[21]).toEqual({});
   });
 
   it('selects a registered merchant by name for consultation and clears previous balances', () => {
