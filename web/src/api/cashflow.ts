@@ -68,7 +68,7 @@ export function listMerchants(token: string): Promise<Merchant[]> {
   return call('/api/v1/merchants/', token);
 }
 
-export type MerchantMember = { username: string; role: 'ADMIN' | 'OPERATOR' };
+export type MerchantMember = { username: string; role: 'ADMIN' | 'OPERATOR' | 'INACTIVE' };
 
 export function listMerchantMembers(token: string, merchantId: string): Promise<MerchantMember[]> {
   // The request target is a constant same-origin path. Never interpolate a
