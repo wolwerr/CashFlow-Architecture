@@ -18,6 +18,7 @@ describe('merchant directory rows', () => {
     expect(rows).toHaveLength(2);
     expect(rows.map(row => row.member?.username)).toEqual(['teste', 'teste3']);
     expect(rows.map(row => row.first)).toEqual([true, false]);
+    expect(rows.map(row => row.span)).toEqual([2, 2]);
     expect(rows.every(row => row.merchant.id === merchants[0].id)).toBe(true);
   });
 
