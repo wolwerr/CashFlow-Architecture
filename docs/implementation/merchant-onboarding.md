@@ -12,12 +12,12 @@ Há **três conceitos diferentes** no Keycloak e no CashFlow:
 
 **Como criar o primeiro ADMIN em um ambiente novo, sem acesso ADMIN prévio:**
 
-1. Iniciar o Docker Compose local com volumes preservados, acessar `http://localhost:8081/admin/` e fazer login na conta administrativa do realm **master**.
+1. Em um ambiente do zero, iniciar **somente** `docker compose up -d postgres rabbitmq keycloak` (não executar `docker compose up -d --build` ainda). Acessar `http://localhost:8081/admin/` e fazer login na conta administrativa do realm **master**. O motivo é que Transactions e Consolidation exigem `KEYCLOAK_AUTHZ_CLIENT_SECRET` já configurado para iniciar.
 2. Selecionar o realm **cashflow**, entrar em **Users > Add user** e criar o usuário `cashflow.admin`, com **Enabled** ligado e email verificado quando aplicável. A conta do Keycloak no realm master não é reutilizada como login do CashFlow.
 3. Em **Credentials > Set password**, definir a senha inicial do administrador, evitar as senhas de exemplo em ambientes compartilhados e, para o bootstrap local de teste, ajustar a flag Temporary conforme a política escolhida.
 4. Em `.env`, configurar `CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin`. Esta variável já tem esse valor como padrão em `compose.yaml`, mas deve corresponder exatamente ao username criado.
 5. Configurar uma única vez o `cashflow-management-service`, a sua Service Account e `KEYCLOAK_MGMT_CLIENT_SECRET`, segundo a seção abaixo. Manter o cliente de autorização somente leitura separado.
-6. Recriar apenas Transactions se o `.env` mudar: `docker compose up -d --force-recreate --no-deps transactions`.
+6. Na primeira inicialização após configurar os dois secrets, executar `docker compose up -d --build transactions consolidation web`. Em atualizações posteriores do `.env`, recriar Transactions e Consolidation com `docker compose up -d --force-recreate --no-deps transactions consolidation`.
 7. Entrar em `http://localhost:8080` com **cashflow.admin**. A interface deve mostrar **Administrador** e o username, com gestão de comerciantes. O endpoint autenticado `GET /api/v1/merchants/permissions` deve retornar `{"can_manage_merchants":true}`.
 8. Daí em diante, cadastrar cada **comerciante** (nome, username exclusivo e senha inicial) pela tela de ADMIN; o Keycloak cria a conta OPERATOR, sem voltar ao painel de administração.
 
