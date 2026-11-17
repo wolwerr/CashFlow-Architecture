@@ -62,7 +62,7 @@ public sealed class ConsolidationConsumerWorker(
                 await channel.BasicQosAsync(0, 1, global: false, cancellationToken: stoppingToken);
 
                 var consumer = new AsyncEventingBasicConsumer(channel);
-                consumer.ReceivedAsync += async (_, delivery) =>
+                consumer.ReceivedAsync += async (sender, delivery) =>
                 {
                     string? parentId = null;
                     if (delivery.BasicProperties.Headers?.TryGetValue("traceparent", out var header) == true)
