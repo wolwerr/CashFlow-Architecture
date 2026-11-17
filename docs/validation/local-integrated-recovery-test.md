@@ -28,7 +28,7 @@ $env:CASHFLOW_RECOVERY_REFRESH_TOKEN = Read-Host "Refresh token" -MaskInput
 try {
     python .github/scripts/local_integrated_recovery.py `
       --merchant-id $merchantId --date $day `
-      --outage-seconds 15 --recovery-timeout 120 --execute
+      --outage-seconds 15 --recovery-timeout 120 --execute --record-manifest
     Write-Host "Codigo de saida: $LASTEXITCODE"
 } finally {
     Remove-Item Env:CASHFLOW_RECOVERY_TOKEN -ErrorAction SilentlyContinue
