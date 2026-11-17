@@ -82,7 +82,7 @@ export function listMerchantMembers(token: string, merchantId: string): Promise<
 }
 
 async function mutateMerchant(token: string, merchantId: string, method: 'POST' | 'PUT' | 'DELETE',
-  path: '/api/v1/merchants/members' | '/api/v1/merchants/details', data: object): Promise<void> {
+  path: '/api/v1/merchants/members' | '/api/v1/merchants/members/username' | '/api/v1/merchants/details', data: object): Promise<void> {
   if (!validMerchant(merchantId)) throw new ApiError(400, 'Identificador de comerciante inválido.');
   const response = await fetch(path, {
     method, cache: 'no-store',
@@ -108,6 +108,12 @@ export function updateMerchantMember(token: string, merchantId: string,
   username: string, role: 'ADMIN' | 'OPERATOR'): Promise<void> {
   return mutateMerchant(token, merchantId, 'PUT', '/api/v1/merchants/members',
     { username, role });
+}
+
+export function renameMerchantMember(token: string, merchantId: string,
+  username: string, newUsername: string): Promise<void> {
+  return mutateMerchant(token, merchantId, 'PUT', '/api/v1/merchants/members/username',
+    { username, newUsername });
 }
 
 export function removeMerchantMember(token: string, merchantId: string, username: string): Promise<void> {
