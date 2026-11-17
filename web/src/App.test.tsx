@@ -234,13 +234,25 @@ describe('CashFlow dashboard and interactions', () => {
       { id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' },
       { id: '59d0b4c5-4e64-46e1-ac52-ad946d2b4865', name: 'Loja Teste', role: 'OPERATOR' }
     ];
+    mock.state[21] = {
+      [mock.state[3] as string]: [
+        { username: 'cashflow.admin', role: 'ADMIN' },
+        { username: 'loja.campinas', role: 'OPERATOR' }
+      ],
+      '59d0b4c5-4e64-46e1-ac52-ad946d2b4865': [
+        { username: 'loja.teste', role: 'OPERATOR' }
+      ]
+    };
     const nodes = render();
     const labels = nodes.filter(n => n.type === 'option').map(n => n.props.children);
     expect(labels).toContain('Loja Campinas (ADMIN)');
     expect(labels).toContain('Loja Teste (Comerciante)');
     expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
-    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'ADMIN')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'loja.teste')).toBe(true);
+    expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo do usuário')).toBe(true);
     expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
     expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
   });
