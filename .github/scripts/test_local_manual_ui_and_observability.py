@@ -30,7 +30,7 @@ class ManualUiTests(unittest.TestCase):
             self.assertEqual(0, acceptance.report(json.loads(path.read_text()))["counts"]["PASS"])
 
     def test_explicit_confirmation_writes_two_evidences(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory, patch.object(manual, "PROJECT_ROOT", Path(directory).resolve()):
             path = Path(directory) / "local-acceptance.json"
             path.write_text(json.dumps(acceptance.initial_manifest()), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
