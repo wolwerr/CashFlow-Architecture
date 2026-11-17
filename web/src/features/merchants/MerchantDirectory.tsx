@@ -11,7 +11,7 @@ type MerchantDirectoryProps = {
 };
 
 export function MerchantDirectory({ items, selectedId, token, onSelect }: MerchantDirectoryProps) {
-  const [members, setMembers] = useState<Record<string, MerchantMember[]>>({});
+  const [members, setMembers] = useState<Record<string, MerchantMember[] | null>>({});
   const [failed, setFailed] = useState(false);
   const merchantIds = items.map(item => item.id).join(',');
 
@@ -31,8 +31,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect }: Mercha
     })).then(results => {
       if (!active) return;
       setFailed(results.some(result => result.accounts === null));
-      setMembers(Object.fromEntries(results.filter(result => result.accounts !== null)
-        .map(result => [result.id, result.accounts as MerchantMember[]])));
+      setMembers(Object.fromEntries(results.map(result => [result.id, result.accounts])));
     });
     return () => { active = false; };
   }, [merchantIds, token]);
@@ -52,11 +51,11 @@ export function MerchantDirectory({ items, selectedId, token, onSelect }: Mercha
               return <tr key={item.id}>
                 <td>{item.name}</td>
                 <td>{accounts === undefined ? 'Carregando usuários...' :
-                  accounts.length === 0 ? 'Nenhum usuário vinculado' :
+                  accounts === null ? 'Indisponível' : accounts.length === 0 ? 'Nenhum usuário vinculado' :
                     <div className="merchant-accounts">
                       {accounts.map(account => <span key={account.username + account.role}>{account.username}</span>)}
                     </div>}</td>
-                <td>{accounts === undefined ? '...' :
+                <td>{accounts === undefined ? '...' : accounts === null ? 'Indisponível' :
                   <div className="merchant-accounts">
                     {accounts.map(account => <span key={account.username + account.role}>
                       {merchantRoleLabel(account.role)}
