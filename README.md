@@ -7,6 +7,34 @@ Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débit
 > **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. O Compose inclui os seis serviços principais e cinco serviços de observabilidade. O teste funcional de observabilidade foi confirmado pelo operador localmente, sem SHA contemporâneo registrado.
 
 
+## Índice
+
+- [Entrega para avaliação](#entrega-para-avaliação)
+- [1. Arquitetura em poucas palavras](#1-arquitetura-em-poucas-palavras)
+- [2. Pré-requisitos](#2-pré-requisitos)
+- [3. Clonar ou atualizar](#3-clonar-ou-atualizar)
+- [4. Instalação absolutamente limpa](#4-instalação-absolutamente-limpa-opcional-destrutiva)
+- [5. Configurar variáveis locais](#5-configurar-variáveis-locais)
+- [6. Inicializar PostgreSQL, RabbitMQ e Keycloak](#6-inicializar-primeiro-postgresql-rabbitmq-e-keycloak)
+- [7. Bootstrap no Keycloak](#7-bootstrap-obrigatório-no-keycloak-ambiente-zerado)
+- [8. Roteiro de uso e demonstração](#8-roteiro-de-uso-e-demonstração)
+- [9. Testes automatizados e evidências](#9-testes-automatizados-e-evidências-do-desafio)
+- [10. Documentação do desafio](#10-documentação-do-desafio)
+  - [Capacidades e domínios](docs/domain/business-capabilities-and-context-map.md)
+  - [Requisitos funcionais](docs/requirements/functional-requirements.md)
+  - [Requisitos não funcionais](docs/requirements/non-functional-requirements.md)
+  - [Matriz de atendimento ao desafio](docs/requirements/challenge-compliance-matrix.md)
+  - [Arquitetura e diagramas C4](docs/architecture/building-block-view.md)
+  - [Diagramas de sequência](docs/architecture/sequence-diagrams.md)
+  - [Implantação e ambientes](docs/architecture/deployment-view.md)
+  - [Decisões arquiteturais (ADRs)](docs/architecture/adr/README.md)
+  - [Estimativa de custos Azure](docs/architecture/four-environment-total-cost-plan.md)
+  - [Auditoria e evidências da entrega](docs/validation/final-delivery-evidence.md)
+  - [Observabilidade local](docs/validation/local-observability-stack.md)
+  - [Roteiro de apresentação](docs/validation/demo-presentation.md)
+- [11. Parar, atualizar e reiniciar](#11-parar-atualizar-e-reiniciar)
+- [12. Tecnologias e versões](#12-tecnologias-e-versões)
+
 ## Entrega para avaliação
 
 **Enunciado revisado e checklist:** [Auditoria final e evidências](docs/validation/final-delivery-evidence.md) · [Matriz de requisitos](docs/requirements/challenge-compliance-matrix.md) · [Roteiro de apresentação](docs/validation/demo-presentation.md).
@@ -463,4 +491,38 @@ docker compose logs --tail=100 transactions consolidation
 
 Para **apagar novamente toda a instalação local**, consulte a etapa 4 e confirme que não precisa dos dados. Não use `docker compose down --volumes` como rotina de atualização. Nunca publique o `.env` ou senhas de teste.
 
+## 12. Tecnologias e versões
 
+As versões abaixo foram conferidas nos arquivos de configuração do repositório em **17/11/2026**. Em dependências npm, `^` e `~` representam **faixas declaradas** no `Frontend/package.json`; a versão exata instalada é determinada pelo `package-lock.json`. Imagens Docker identificadas por tags são as versões configuradas no `compose.yaml` e nos Dockerfiles, não garantias de versões atualizadas automaticamente.
+
+| Camada / uso | Tecnologia | Versão configurada | Fonte |
+| --- | --- | --- | --- |
+| Backend e APIs REST | C# / ASP.NET Core / .NET | **10.0** (`net10.0`) | Projetos `Backend/**/*.csproj`; Docker SDK/runtime `10.0` |
+| ORM e driver PostgreSQL | EF Core via `Npgsql.EntityFrameworkCore.PostgreSQL` | **10.0.3** | Projetos Infrastructure |
+| Integração RabbitMQ | `RabbitMQ.Client` | **7.2.2** | Projetos Infrastructure |
+| Autenticação JWT no backend | `Microsoft.AspNetCore.Authentication.JwtBearer` | **10.0.15** | Projeto `CashFlow.Security` |
+| Telemetria .NET | OpenTelemetry SDK, OTLP, ASP.NET Core e HTTP Instrumentation | **1.20.1** | Projeto `CashFlow.Security` |
+| Testes backend | xUnit / xUnit Runner | **2.9.3 / 3.1.5** | Projetos de testes .NET |
+| Coleta de cobertura .NET | Coverlet MSBuild | **10.1.0** | Projetos de testes .NET |
+| Regras arquiteturais .NET | NetArchTest.Rules | **1.3.2** | `CashFlow.ArchitectureTests.csproj` |
+| Aplicação web | React / React DOM | **^19.0.0** | `Frontend/package.json` |
+| Linguagem frontend | TypeScript | **~5.7.3** | `Frontend/package.json` |
+| Build frontend | Vite | **^6.4.6** | `Frontend/package.json` |
+| Testes frontend | Vitest / `@vitest/coverage-v8` | **^5.1.0** | `Frontend/package.json` |
+| Build JavaScript | Node.js | **22 Alpine** | `Frontend/Dockerfile`; GitHub Actions Node 22 |
+| Proxy e distribuição web | NGINX | **1.27 Alpine** | `Frontend/Dockerfile` |
+| Banco de dados | PostgreSQL | **17 Alpine** | `compose.yaml` |
+| Mensageria | RabbitMQ Management | **4 Alpine** | `compose.yaml` |
+| IAM / OpenID Connect | Keycloak | **26.2** | `compose.yaml` |
+| Coletor OTLP | OpenTelemetry Collector Contrib | **0.131.0** | `compose.yaml` |
+| Métricas | Prometheus | **3.5.0** | `compose.yaml` |
+| Logs | Grafana Loki | **3.5.3** | `compose.yaml` |
+| Rastreamento distribuído | Grafana Tempo | **2.8.2** | `compose.yaml` |
+| Painéis e consulta | Grafana | **12.1.1** | `compose.yaml` |
+| Orquestração local | Docker Compose | **v2** (versão de execução não fixada) | Pré-requisitos e `compose.yaml` |
+| Scripts de homologação | Python | **3** (versão menor não fixada) | `.github/scripts/` e pré-requisitos |
+| CI/CD | GitHub Actions | **ubuntu-24.04**; ações em versões declaradas no workflow | `.github/workflows/local-build.yml` |
+| Análise estática | SonarQube Cloud / .NET SonarScanner | **Versão do scanner não fixada** | `.github/workflows/local-build.yml` |
+| Infraestrutura cloud planejada | Azure Kubernetes Service (AKS) | **Futura, não provisionada** | [Plano de implantação](docs/architecture/deployment-view.md) |
+
+**Referências de configuração:** [Compose](compose.yaml), [dependências frontend](Frontend/package.json), [lockfile frontend](Frontend/package-lock.json), [workflow de CI](.github/workflows/local-build.yml), [backend Transactions](Backend/src/Services/Transactions/CashFlow.Transactions.Infrastructure/CashFlow.Transactions.Infrastructure.csproj), [segurança/telemetria](Backend/src/Shared/CashFlow.Security/CashFlow.Security.csproj). Essas versões descrevem o projeto documentado, não uma recomendação de atualização automática.
