@@ -20,6 +20,7 @@ import urllib.request
 import uuid
 
 from local_load_probe import Tokens
+from local_audit_inventory import audit_inventory
 
 BASE = "http://127.0.0.1:8080"
 SERVICES = {"postgres", "rabbitmq", "keycloak", "transactions", "consolidation", "web"}
@@ -182,7 +183,8 @@ def execute(tokens, merchant, day, outage_seconds=15, timeout=120,
         "transactions_during_broker_outage": False,
         "transactions_during_consumer_outage": False,
         "unique_financial_history": False, "projection_exact_delta": False,
-        "idempotency_replay_and_conflict": False, "outcome": "FAIL"
+        "idempotency_replay_and_conflict": False,
+        "audit_integrity": False, "outcome": "FAIL"
     }
     try:
         # One credit while broker is unavailable: Transactions should persist via Outbox.
@@ -219,6 +221,11 @@ def execute(tokens, merchant, day, outage_seconds=15, timeout=120,
                     report["projection_exact_delta"] = expected_projection(
                         before, balance(tokens, merchant, day, request))
                     if report["projection_exact_delta"]:
+                        audit = audit_inventory(execute=True)
+                        report["audit_integrity"] = audit["status"] == "INTEGRITY_CHECK_PASSED"
+                        report["audit_records_checked"] = audit.get("audit_total")
+                        require(report["audit_integrity"],
+                                "Audit inventory incomplete or inconsistent")
                         report["outcome"] = "PASS"
                         break
             except (VerificationError, urllib.error.URLError, TimeoutError, ValueError, KeyError):
@@ -255,7 +262,8 @@ def main(argv=None):
                           "checks": ["Transactions HTTP 201 while RabbitMQ down",
                                      "Transactions HTTP 201 while consumer down",
                                      "idempotent replay and conflict",
-                                     "unique history", "exact final projection"]}, indent=2))
+                                     "unique history", "exact final projection",
+                                     "audit counts and correlation integrity"]}, indent=2))
         return 0
     token = os.getenv("CASHFLOW_RECOVERY_TOKEN")
     if not token:
