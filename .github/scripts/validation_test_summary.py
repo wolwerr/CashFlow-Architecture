@@ -70,6 +70,10 @@ def one_suite(label, filename, runner=subprocess.run):
     # A suite is successful only when unittest explicitly prints OK and exits 0.
     succeeded = execution.returncode == 0 and re.search(r"(?m)^OK(?: \\(skipped=\\d+\\))?\\s*$", final)
     status = "PASS" if succeeded else "FAIL"
+    if not succeeded:
+        # Offline test traceback stays in CI logs, not the sanitized summary artifact.
+        print(f"Validation failure in {filename}:\\n{execution.stderr[-10000:]}",
+              file=sys.stderr)
     return dict(label=label, status=status, total=total,
                 passed=max(0, total-failures-skipped), failed=failures,
                 skipped=skipped, seconds=duration,
