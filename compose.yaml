@@ -39,7 +39,7 @@ services:
       - ./infra/local/keycloak:/opt/keycloak/data/import:ro
     ports: ["127.0.0.1:8081:8080"]
   transactions:
-    build: {context: ., dockerfile: src/Services/Transactions/Dockerfile}
+    build: {context: ., dockerfile: Backend/src/Services/Transactions/Dockerfile}
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Authentication__Authority: http://localhost:8081/realms/cashflow
@@ -65,7 +65,7 @@ services:
       keycloak: {condition: service_started}
       rabbitmq: {condition: service_started}
   consolidation:
-    build: {context: ., dockerfile: src/Services/Consolidation/Dockerfile}
+    build: {context: ., dockerfile: Backend/src/Services/Consolidation/Dockerfile}
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Consolidation: Host=postgres;Database=cashflow_consolidation;Username=cashflow;Password=${POSTGRES_PASSWORD:-cashflow_local_only}
@@ -87,7 +87,7 @@ services:
       keycloak: {condition: service_started}
       rabbitmq: {condition: service_started}
   web:
-    build: {context: ., dockerfile: web/Dockerfile}
+    build: {context: ., dockerfile: Frontend/Dockerfile}
     environment:
       TRANSACTIONS_UPSTREAM: transactions:8080
       CONSOLIDATION_UPSTREAM: consolidation:8080

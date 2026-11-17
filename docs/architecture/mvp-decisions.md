@@ -5,7 +5,7 @@
 > **Escopo:** complementar RN-02/03/04/07/09 e as ADR-001 a ADR-010 sem substituir a arquitetura aprovada  
 > **Evidência:** esta página é o registro de decisões; implementações e testes ainda precisam ser produzidos
 
-> **Leitura de estado (Trilha 09):** este documento é o registro histórico das decisões aprovadas. A frase original sobre implementações pendentes refere-se ao momento da decisão, não ao estado de código após as Trilhas 01–08. Para o estado atual e as evidências ainda ausentes, consultar o [relatório de fechamento](../implementation/trilha-09-mvp-closeout.md) e o [manifesto de aceite](../implementation/trilha-08-local-acceptance.md). A decisão vigente de autorização é **Keycloak Groups sem quarto banco lógico**, conforme ADR-006; referências antigas ao banco de autorização foram substituídas.
+> **Leitura de estado (Trilha 09):** este documento é o registro histórico das decisões aprovadas. A frase original sobre implementações pendentes refere-se ao momento da decisão, não ao estado de código após as Trilhas 01–08. Para os critérios do desafio e as evidências ainda necessárias, consulte a [matriz de atendimento](../requirements/challenge-compliance-matrix.md) e o [README de execução local](../../README.md). A decisão vigente de autorização é **Keycloak Groups sem quarto banco lógico**, conforme ADR-006; referências antigas ao banco de autorização foram substituídas.
 
 ## Baseline já aprovado
 
@@ -121,5 +121,5 @@ Decisões aprovadas **não** significam contratos executáveis, schema físico, 
 - [Modelo de dados](data-model.md)
 - [Casos de uso](use-cases.md)
 - [Sequências](sequence-diagrams.md)
-- [Validação 01](validations/requirements-validation.md), [02](validations/sequence-validation.md) e [03](validations/data-model-validation.md)
+- [Requisitos funcionais](../requirements/functional-requirements.md), [diagramas de sequência](sequence-diagrams.md) e [modelo de dados](data-model.md)
 - [ADR-003](adr/ADR-003-persistence.md), [ADR-005](adr/ADR-005-outbox-consistency-idempotency.md), [ADR-006](adr/ADR-006-identity-and-access.md), [ADR-007](adr/ADR-007-clients-api-gateway.md), [ADR-010](adr/ADR-010-ci-cd-github-actions.md)

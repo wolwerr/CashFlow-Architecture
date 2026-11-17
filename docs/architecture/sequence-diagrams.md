@@ -1,8 +1,8 @@
 # Diagramas de Sequência
 
-> **Issue #6 · Milestone M2** | Interações da arquitetura-alvo, revisadas na [Validação 02](validations/sequence-validation.md)
+> **Escopo:** interações da arquitetura-alvo, alinhadas às ADRs e aos requisitos do desafio.
 
-Este documento reúne os **diagramas de sequência**. Eles detalham em que ordem os participantes interagem. Complementam os [Casos de Uso](use-cases.md), mostrando como os serviços interagem. A semântica dos fluxos foi revisada conforme as ADRs na [Validação 02](validations/sequence-validation.md). Retentativas limitadas, backoff, DLQ e reprocessamento controlado estão aprovados; parâmetros e operação ainda exigem detalhamento.
+Este documento reúne os **diagramas de sequência**. Eles detalham em que ordem os participantes interagem. Complementam os [Casos de Uso](use-cases.md), mostrando como os serviços interagem. A semântica dos fluxos está detalhada nas ADRs e no [desenho arquitetural](building-block-view.md). Retentativas limitadas, backoff, DLQ e reprocessamento controlado estão aprovados; parâmetros e operação ainda exigem detalhamento.
 
 ## Autenticação e autorização por comerciante
 
@@ -38,6 +38,6 @@ A aplicação React consulta o consolidado por meio do NGINX, que encaminha a ch
 
 **Renderização pendente:** as quatro fontes foram atualizadas após a Validação 02 e os PNGs ainda precisam ser regenerados e inspecionados. Regenerar `sequence-auth.png`, `sequence-register.png`, `sequence-failure.png` e `sequence-query.png`. Nos desenhos, NGINX faz parte do **fluxo Web adotado para o MVP**; acesso direto às APIs fica restrito a testes internos, quando necessário. O API Gateway dedicado fica para evolução futura.
 
-**Nota:** as ADRs de comunicação, autenticação e consistência foram decididas. **Os prefixos de rota são referências do template NGINX**, não contratos OpenAPI concluídos; status de sucesso, regra do saldo e tratamento de eventual atraso ainda exigem definição. [Leia a matriz de inconsistências e pendências da Validação 02](validations/sequence-validation.md).
+**Nota:** as ADRs de comunicação, autenticação e consistência foram decididas. **Os prefixos de rota são referências do template NGINX**, não contratos OpenAPI concluídos; status de sucesso, regra do saldo e tratamento de eventual atraso ainda exigem definição. Consulte a [matriz de atendimento do desafio](../requirements/challenge-compliance-matrix.md) para os critérios obrigatórios e as evidências pendentes.
 
 **Complemento aprovado para MVP em 15/11/2026:** rotas `/api/v1/transactions` e `/api/v1/consolidation` via NGINX, 201 após commit, tokens SPA em memória, RBAC ADMIN/OPERATOR, histórico paginado e auditoria básica. Estorno fica fora do MVP. As fontes PlantUML foram atualizadas e os **PNGs devem ser novamente renderizados**. Veja [Decisões consolidadas](mvp-decisions.md).

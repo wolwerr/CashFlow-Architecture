@@ -50,7 +50,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Backend | Restore
-        run: dotnet restore CashFlow.slnx
+        run: dotnet restore Backend/CashFlow.slnx
 
       - name: Backend | Prepare isolated Consolidation test database
         env:
@@ -58,50 +58,50 @@ jobs:
         run: psql -h localhost -p 5432 -U cashflow -d postgres -c "CREATE DATABASE cashflow_consolidation_test;"
 
       - name: Backend | Build .NET 10
-        run: dotnet build CashFlow.slnx -c Release --no-restore
+        run: dotnet build Backend/CashFlow.slnx -c Release --no-restore
 
       - name: Backend | Verify Transactions Docker image build
-        run: docker build -f src/Services/Transactions/Dockerfile -t cashflow-transactions:ci .
+        run: docker build -f Backend/src/Services/Transactions/Dockerfile -t cashflow-transactions:ci .
 
       - name: Backend | Verify Consolidation Docker image build
-        run: docker build -f src/Services/Consolidation/Dockerfile -t cashflow-consolidation:ci .
+        run: docker build -f Backend/src/Services/Consolidation/Dockerfile -t cashflow-consolidation:ci .
 
       - name: Backend | Architecture tests
-        run: dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
 
       - name: Backend | Transactions Domain (min 80% lines)
-        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
 
       - name: Backend | Transactions Application (min 80% lines)
-        run: dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
 
       - name: Backend | JWT authentication API tests
-        run: dotnet test tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj -c Release --no-build
 
       - name: Backend | PostgreSQL integration and Infrastructure coverage (min 80% lines)
         env:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
           CASHFLOW_TEST_RABBITMQ: "true"
-        run: dotnet test tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Infrastructure]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Infrastructure]*' /p:CoverletOutputFormat=cobertura
 
       - name: Backend | Consolidation unit tests and Domain coverage (min 80%)
-        run: dotnet test tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Domain]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Domain]*' /p:CoverletOutputFormat=cobertura
 
       - name: Backend | Consolidation Application coverage (min 80%)
-        run: dotnet test tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Application]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Application]*' /p:CoverletOutputFormat=cobertura
 
       - name: Backend | Consolidation PostgreSQL integration tests
         env:
           CASHFLOW_TEST_CONSOLIDATION: Host=localhost;Port=5432;Database=cashflow_consolidation_test;Username=cashflow;Password=local_ci_only
           CASHFLOW_TEST_RABBITMQ: "true"
-        run: dotnet test tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj -c Release --no-build
 
       - name: Backend | Consolidation HTTP API tests
-        run: dotnet test tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj -c Release --no-build
 
       - name: Backend | Generate OpenCover for Sonar
         run: |
-          dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj \
+          dotnet test Backend/tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj \
             -c Release --no-build \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
@@ -112,7 +112,7 @@ jobs:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
           CASHFLOW_TEST_RABBITMQ: "true"
         run: |
-          dotnet test tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj \
+          dotnet test Backend/tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj \
             -c Release --no-build \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
@@ -120,7 +120,7 @@ jobs:
 
       - name: Backend | Generate JWT API OpenCover for Sonar
         run: |
-          dotnet test tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj \
+          dotnet test Backend/tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj \
             -c Release --no-build \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
@@ -128,7 +128,7 @@ jobs:
 
       - name: Backend | Generate Consolidation unit OpenCover for Sonar
         run: |
-          dotnet test tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj \
+          dotnet test Backend/tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj \
             -c Release --no-build \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
@@ -139,7 +139,7 @@ jobs:
           CASHFLOW_TEST_CONSOLIDATION: Host=localhost;Port=5432;Database=cashflow_consolidation_test;Username=cashflow;Password=local_ci_only
           CASHFLOW_TEST_RABBITMQ: "true"
         run: |
-          dotnet test tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj \
+          dotnet test Backend/tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj \
             -c Release --no-build \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
@@ -147,7 +147,7 @@ jobs:
 
       - name: Backend | Generate Consolidation HTTP OpenCover for Sonar
         run: |
-          dotnet test tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj \
+          dotnet test Backend/tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj \
             -c Release --no-build \
             /p:CollectCoverage=true \
             /p:CoverletOutputFormat=opencover \
@@ -156,12 +156,12 @@ jobs:
       - name: Backend | Assemble OpenCover reports
         run: |
           mkdir -p sonar-reports/backend
-          cp tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.unit.opencover.xml sonar-reports/backend/
-          cp tests/CashFlow.Transactions.IntegrationTests/TestResults/sonar/coverage.integration.opencover.xml sonar-reports/backend/
-          cp tests/CashFlow.Transactions.ApiTests/TestResults/sonar/coverage.api.opencover.xml sonar-reports/backend/
-          cp tests/CashFlow.Consolidation.UnitTests/TestResults/sonar/coverage.consolidation-unit.opencover.xml sonar-reports/backend/
-          cp tests/CashFlow.Consolidation.IntegrationTests/TestResults/sonar/coverage.consolidation-integration.opencover.xml sonar-reports/backend/
-          cp tests/CashFlow.Consolidation.ApiTests/TestResults/sonar/coverage.consolidation-api.opencover.xml sonar-reports/backend/
+          cp Backend/tests/CashFlow.Transactions.UnitTests/TestResults/sonar/coverage.unit.opencover.xml sonar-reports/backend/
+          cp Backend/tests/CashFlow.Transactions.IntegrationTests/TestResults/sonar/coverage.integration.opencover.xml sonar-reports/backend/
+          cp Backend/tests/CashFlow.Transactions.ApiTests/TestResults/sonar/coverage.api.opencover.xml sonar-reports/backend/
+          cp Backend/tests/CashFlow.Consolidation.UnitTests/TestResults/sonar/coverage.consolidation-unit.opencover.xml sonar-reports/backend/
+          cp Backend/tests/CashFlow.Consolidation.IntegrationTests/TestResults/sonar/coverage.consolidation-integration.opencover.xml sonar-reports/backend/
+          cp Backend/tests/CashFlow.Consolidation.ApiTests/TestResults/sonar/coverage.consolidation-api.opencover.xml sonar-reports/backend/
 
       - name: Backend | Upload OpenCover
         uses: actions/upload-artifact@v6
@@ -183,22 +183,22 @@ jobs:
           node-version: '22'
 
       - name: Frontend | Install packages
-        working-directory: web
+        working-directory: Frontend
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Frontend | Build TypeScript and Vite
-        working-directory: web
+        working-directory: Frontend
         run: npm run build
 
       - name: Frontend | Vitest and coverage (min 80%)
-        working-directory: web
+        working-directory: Frontend
         run: npm run test:coverage
 
       - name: Frontend | Upload LCOV
         uses: actions/upload-artifact@v6
         with:
           name: frontend-lcov
-          path: web/coverage/lcov.info
+          path: Frontend/coverage/lcov.info
           if-no-files-found: error
           retention-days: 7
 
@@ -236,7 +236,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: frontend-lcov
-          path: web/coverage
+          path: Frontend/coverage
 
       - name: Sonar backend | Verify both coverage reports
         run: |
@@ -248,10 +248,10 @@ jobs:
           test -s sonar-reports/backend/coverage.consolidation-api.opencover.xml
 
       - name: Sonar frontend | Verify coverage report
-        run: test -s web/coverage/lcov.info
+        run: test -s Frontend/coverage/lcov.info
 
       - name: Sonar frontend | Restore TypeScript dependencies
-        working-directory: web
+        working-directory: Frontend
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Sonar | Validate project credentials
@@ -285,7 +285,7 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.scanner.scanAll=true \
             /d:sonar.cs.opencover.reportsPaths="sonar-reports/backend/coverage.*.opencover.xml" \
-            /d:sonar.javascript.lcov.reportPaths="web/coverage/lcov.info" \
+            /d:sonar.javascript.lcov.reportPaths="Frontend/coverage/lcov.info" \
             /d:sonar.coverage.exclusions=".github/scripts/**" \
             /d:sonar.cpd.exclusions="**/Persistence/Migrations/**" \
             /d:sonar.exclusions="**/node_modules/**,**/dist/**,**/coverage/**,**/bin/**,**/obj/**" \
@@ -293,16 +293,16 @@ jobs:
             /d:sonar.qualitygate.timeout=300
 
       - name: Sonar backend | Restore .NET
-        run: dotnet restore CashFlow.slnx
+        run: dotnet restore Backend/CashFlow.slnx
 
       - name: Sonar backend | Build under scanner
-        run: dotnet build CashFlow.slnx -c Release --no-restore
+        run: dotnet build Backend/CashFlow.slnx -c Release --no-restore
 
       - name: Sonar frontend | Validate TypeScript analysis sources
         run: |
-          test -s web/tsconfig.json
-          test -s web/src/App.tsx
-          test -s web/coverage/lcov.info
+          test -s Frontend/tsconfig.json
+          test -s Frontend/src/App.tsx
+          test -s Frontend/coverage/lcov.info
 
       - name: Sonar | Publish C# and TypeScript (built-in gate is informational)
         env:

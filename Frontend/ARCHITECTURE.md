@@ -3,7 +3,7 @@
 **Padrão:** React + TypeScript, arquitetura modular por funcionalidades (*feature-based*) com separação entre apresentação, orquestração e integrações. O objetivo é permitir alterações em uma funcionalidade sem editar um único componente de centenas de linhas.
 
 ```text
-web/src/
+Frontend/src/
 ├── App.tsx                             # Composition root, somente monta a tela
 ├── features/
 │   ├── app/
@@ -44,7 +44,7 @@ web/src/
 ## Executar
 
 ```powershell
-cd web
+cd Frontend
 npm ci
 npm run build
 npm run test:coverage

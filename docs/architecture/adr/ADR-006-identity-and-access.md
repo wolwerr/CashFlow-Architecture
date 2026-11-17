@@ -50,7 +50,7 @@ As comparações tratam de **soluções de identidade**, não de desempenho comp
 - Apenas em Development e para o `preferred_username` assinado que corresponde ao valor de `CASHFLOW_BOOTSTRAP_USERNAME` o cadastro inicial é permitido. Não há autoatribuição irrestrita nem disponibilização pública dessa capacidade para produção.
 - Um ADMIN do comerciante pode vincular outros usuários como ADMIN ou solicitar criação com senha temporária no Keycloak. Somente o backend guarda as credenciais do cliente de gestão; nenhum segredo administrativo é exposto à SPA.
 - O nome da loja é armazenado como `displayName` no grupo do comerciante, apenas para facilitar a seleção. Continua **sem banco de autorização próprio**. Novos requisitos fiscais/comerciais poderão exigir modelo de domínio distinto.
-- Contrato e procedimento de bootstrap local em [merchant-onboarding.md](../../implementation/merchant-onboarding.md). Atribuição de permissões à Service Account de gestão é uma configuração inicial restrita, não uma tarefa por comerciante.
+- Contrato e procedimento de bootstrap local em [README, bootstrap do Keycloak](../../../README.md#7-bootstrap-obrigatório-no-keycloak-ambiente-zerado). Atribuição de permissões à Service Account de gestão é uma configuração inicial restrita, não uma tarefa por comerciante.
 - **Limite conhecido:** a criação dos grupos/vínculos não é uma transação distribuída. Provisionamento parcial, auditoria administrativa e política de produção devem ser endurecidos antes do deployment externo.
 
 ### Perfis ADMIN da plataforma e COMERCIANTE (MVP local)
@@ -60,7 +60,7 @@ As comparações tratam de **soluções de identidade**, não de desempenho comp
 - O bootstrap permanece com ADMIN do grupo da loja para consultas e manutenção. A criação da nova conta OPERATOR não a torna ADMIN e não autoriza outros comerciantes.
 - Credenciais são controladas somente pelo Keycloak. Username tem unicidade em todo o realm; o serviço não reutiliza automaticamente usuário preexistente como operador de nova loja. Senha inicial de 12 a 128 caracteres é restrição mínima local, **não política de produção**.
 - **Evoluções obrigatórias antes de produção**: senhas mais fortes, verificação de comprometimento, MFA, recuperação, convite, auditoria e unificação das regras de unicidade/idempotência de provisionamento em concorrência. Cadastro comercial ampliado (CNPJ, razão social, contatos, endereço) fica para uma fase posterior. Não colocar dados comerciais em JWT.
-- Fluxos e limitações estão em [merchant-onboarding.md](../../implementation/merchant-onboarding.md). Todos os cenários financeiros exigem testes unitários e E2E, sobretudo crédito/débito e projeção assíncrona.
+- Fluxos e limitações estão em [README, bootstrap do Keycloak](../../../README.md#7-bootstrap-obrigatório-no-keycloak-ambiente-zerado). Todos os cenários financeiros exigem testes unitários e E2E, sobretudo crédito/débito e projeção assíncrona.
 
 ### Integração, validade e revogação
 

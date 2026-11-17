@@ -2,13 +2,12 @@
 
 > **Issue #6 · Milestone M2** | Arquitetura proposta para revisão
 
-A documentação foi dividida por objetivo para facilitar a leitura sem duplicar informações. **Fase atual: implementação e testes somente LOCAL com Docker Compose.** Azure AKS/DEV/HOM/PROD e seus custos são planejamento futuro. As [validações documentais](validations/README.md) já realizadas não substituem testes do código.
+A documentação foi dividida por objetivo para facilitar a leitura sem duplicar informações. **Fase atual: implementação e testes somente LOCAL com Docker Compose.** Azure AKS/DEV/HOM/PROD e seus custos são planejamento futuro. As decisões e os diagramas devem ser confrontados com a [matriz de requisitos do desafio](../requirements/challenge-compliance-matrix.md); testes de execução são documentados separadamente.
 
 | Documento | O que apresenta |
 | --- | --- |
 | **[Decisões consolidadas do MVP](mvp-decisions.md)** | 24 decisões aprovadas para regras financeiras, escopo, IAM, contratos, qualidade e operação; distinção entre decisão e comprovação. |
-| **[Checklist de implementação e testes do MVP](mvp-implementation-checklist.md)** | Ações pendentes de OpenAPI, modelo físico, desenvolvimento, qualidade, operações e evidências antes de PROD. |
-| **[Validações da arquitetura](validations/README.md)** | Revisões documentais 01 a 04 agrupadas, com testes de execução separados. |
+| **[Requisitos e atendimento do desafio](../requirements/challenge-compliance-matrix.md)** | Rastreabilidade dos requisitos, decisões, implementação e evidências ainda necessárias. |
 | **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | **C4 Níveis 1, 2 e 3 em uma página**, com diagramas, responsabilidades, protocolos, portas, componentes e justificativas técnicas. |
 | **[Deployment View](deployment-view.md)** | Implantação de LOCAL, DEV, HOM, PROD e SHARED; visão Azure e capacidades equivalentes em AWS/GCP. |
 | **[Diagramas de Sequência](sequence-diagrams.md)** | Interações detalhadas para registro, falha do consolidado e consulta. |
