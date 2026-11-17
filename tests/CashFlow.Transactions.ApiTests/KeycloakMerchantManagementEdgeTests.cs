@@ -120,6 +120,41 @@ public sealed class KeycloakMerchantManagementEdgeTests
     }
 
     [Fact]
+    public async Task RenamingUserToSameUsernameDoesNotWriteToKeycloak()
+    {
+        var fake = WithMember("OPERATOR");
+        Assert.True(await Service(fake).RenameMemberAsync(
+            MerchantId, "loja.teste", "loja.teste", "cashflow.admin", CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method is "PUT" or "DELETE");
+    }
+
+    [Fact]
+    public async Task RenameUserRejectsKeycloakConflictEvenAfterAvailabilityCheck()
+    {
+        var fake = WithMember("OPERATOR", request =>
+            request.Method == HttpMethod.Put &&
+            Path(request).EndsWith($"/users/{UserId:D}", StringComparison.Ordinal)
+                ? new HttpResponseMessage(HttpStatusCode.Conflict)
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+        await Assert.ThrowsAsync<MerchantUsernameConflictException>(() =>
+            Service(fake).RenameMemberAsync(MerchantId, "loja.teste", "loja.nova",
+                "cashflow.admin", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RenameUserRequiresCurrentMerchantMembership()
+    {
+        var fake = new FakeHandler(request =>
+            request.Method == HttpMethod.Get && Path(request).EndsWith("/users",
+                StringComparison.Ordinal)
+                ? Json(Array.Empty<object>())
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+        Assert.False(await Service(fake).RenameMemberAsync(
+            MerchantId, "missing", "new.name", "cashflow.admin", CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method is "PUT" or "DELETE");
+    }
+
+    [Fact]
     public async Task ChangingRoleRollsBackNewMembershipIfOldGroupRemovalFails()
     {
         var emptyMembership = new FakeHandler(request =>
