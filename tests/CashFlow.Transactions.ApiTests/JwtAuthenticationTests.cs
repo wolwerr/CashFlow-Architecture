@@ -501,37 +501,46 @@ public sealed class JwtAuthenticationTests : IDisposable
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.AbsolutePath;
-            var isGet = request.Method == HttpMethod.Get;
             if (path.EndsWith("/protocol/openid-connect/token", StringComparison.Ordinal))
                 return Task.FromResult(Json(new { access_token = "service-token" }));
-
             ReceivedManagementRequest = true;
-            if (isGet && path.EndsWith("/users", StringComparison.Ordinal))
-                return Task.FromResult(UserLookup(request.RequestUri.Query));
-            if (isGet && path.EndsWith("/groups", StringComparison.Ordinal) &&
+            return Task.FromResult(request.Method == HttpMethod.Get
+                ? Read(path, request.RequestUri.Query) : Write(path, request.Method));
+        }
+
+        private HttpResponseMessage Read(string path, string query)
+        {
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return UserLookup(query);
+            if (path.EndsWith("/groups", StringComparison.Ordinal) &&
                 path.Contains("/users/", StringComparison.Ordinal))
-                return Task.FromResult(Json(path.Contains($"/users/{member:D}/", StringComparison.Ordinal)
+                return Json(path.Contains($"/users/{member:D}/", StringComparison.Ordinal)
                     ? new[] { Role("operator-id", "OPERATOR", merchant) }
-                    : new[] { Role("admin-id", "ADMIN", merchant) }));
-            if (isGet && path.EndsWith("/groups", StringComparison.Ordinal))
-                return Task.FromResult(Json(new[] { new { id = "root-id", name = "merchants", path = "/merchants" } }));
-            if (isGet && path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
-                return Task.FromResult(Json(new[] { new { id = "merchant-id", name = merchant.ToString("D"),
-                    path = $"/merchants/{merchant:D}" } }));
-            if (isGet && path.EndsWith("/groups/merchant-id/children", StringComparison.Ordinal))
-                return Task.FromResult(Json(new[] { Role("admin-id", "ADMIN", merchant),
-                    Role("operator-id", "OPERATOR", merchant), Role("inactive-id", "INACTIVE", merchant) }));
-            if (request.Method == HttpMethod.Post && path.EndsWith("/users", StringComparison.Ordinal))
+                    : new[] { Role("admin-id", "ADMIN", merchant) });
+            if (path.EndsWith("/groups", StringComparison.Ordinal))
+                return Json(new[] { new { id = "root-id", name = "merchants", path = "/merchants" } });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return Json(new[] { new { id = "merchant-id", name = merchant.ToString("D"),
+                    path = $"/merchants/{merchant:D}" } });
+            if (path.EndsWith("/groups/merchant-id/children", StringComparison.Ordinal))
+                return Json(new[] { Role("admin-id", "ADMIN", merchant),
+                    Role("operator-id", "OPERATOR", merchant), Role("inactive-id", "INACTIVE", merchant) });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }
+
+        private HttpResponseMessage Write(string path, HttpMethod method)
+        {
+            if (method == HttpMethod.Post && path.EndsWith("/users", StringComparison.Ordinal))
             {
                 created = true;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Created));
+                return new HttpResponseMessage(HttpStatusCode.Created);
             }
-            if (request.Method == HttpMethod.Put && path.EndsWith($"/users/{member:D}", StringComparison.Ordinal)
+            if (method == HttpMethod.Put && path.EndsWith($"/users/{member:D}", StringComparison.Ordinal)
                 && denyRename)
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest));
-            if (request.Method is { } method && (method == HttpMethod.Put || method == HttpMethod.Delete))
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+                return new HttpResponseMessage(HttpStatusCode.BadRequest);
+            if (method == HttpMethod.Put || method == HttpMethod.Delete)
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
         }
 
         private HttpResponseMessage UserLookup(string query)
