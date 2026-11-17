@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddCashFlowTelemetry("cashflow-consolidation");
 builder.Services.AddHealthChecks();
 builder.Services.AddCashFlowAuthentication(builder.Configuration, builder.Environment);
 

@@ -52,6 +52,8 @@ services:
       KeycloakManagement__ClientId: cashflow-management-service
       KeycloakManagement__ClientSecret: ${KEYCLOAK_MGMT_CLIENT_SECRET:-}
       KeycloakManagement__BootstrapUsername: ${CASHFLOW_BOOTSTRAP_USERNAME:-cashflow.admin}
+      CashFlowTelemetry__Enabled: ${CASHFLOW_OTEL_ENABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       Transactions__ApplyMigrationsOnStartup: "true"
       Transactions__EnableOutboxPublisher: "true"
       RabbitMq__Host: rabbitmq
@@ -64,6 +66,7 @@ services:
       postgres: {condition: service_healthy}
       keycloak: {condition: service_started}
       rabbitmq: {condition: service_started}
+      otel-collector: {condition: service_started}
   consolidation:
     build: {context: ., dockerfile: Backend/src/Services/Consolidation/Dockerfile}
     environment:
@@ -76,6 +79,8 @@ services:
       KeycloakAuthorization__Realm: cashflow
       KeycloakAuthorization__ClientId: cashflow-authorization-service
       KeycloakAuthorization__ClientSecret: ${KEYCLOAK_AUTHZ_CLIENT_SECRET:-}
+      CashFlowTelemetry__Enabled: ${CASHFLOW_OTEL_ENABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       Consolidation__ApplyMigrationsOnStartup: "true"
       Consolidation__EnableConsumer: "true"
       RabbitMq__Host: rabbitmq
@@ -86,6 +91,7 @@ services:
       postgres: {condition: service_healthy}
       keycloak: {condition: service_started}
       rabbitmq: {condition: service_started}
+      otel-collector: {condition: service_started}
   web:
     build: {context: ., dockerfile: Frontend/Dockerfile}
     environment:
@@ -93,6 +99,53 @@ services:
       CONSOLIDATION_UPSTREAM: consolidation:8080
     ports: ["127.0.0.1:8080:8080"]
     depends_on: [transactions, consolidation]
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.131.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./infra/local/observability/collector.yaml:/etc/otelcol/config.yaml:ro
+    depends_on: [loki, tempo]
+    restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
+    volumes:
+      - ./infra/local/observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on: [otel-collector]
+    restart: unless-stopped
+  loki:
+    image: grafana/loki:3.5.3
+    command: ["-config.file=/etc/loki/local.yaml"]
+    volumes:
+      - ./infra/local/observability/loki.yaml:/etc/loki/local.yaml:ro
+      - loki-data:/loki
+    restart: unless-stopped
+  tempo:
+    image: grafana/tempo:2.8.2
+    command: ["-config.file=/etc/tempo/local.yaml"]
+    volumes:
+      - ./infra/local/observability/tempo.yaml:/etc/tempo/local.yaml:ro
+      - tempo-data:/var/tempo
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana:12.1.1
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${CASHFLOW_GRAFANA_PASSWORD:?Set a unique local Grafana password}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/local/observability/datasources.yaml:/etc/grafana/provisioning/datasources/cashflow.yaml:ro
+    depends_on: [prometheus, loki, tempo]
+    restart: unless-stopped
 volumes:
   pgdata:
   rabbitdata:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:

@@ -93,7 +93,7 @@ class IntegratedRecoveryTests(unittest.TestCase):
             calls.append(args)
             return 503, None
         with self.assertRaises(probe.VerificationError):
-            probe.create(None, "merchant", "2026-01-01", "CREDIT", request)
+            probe.create(Token(), "merchant", "2026-01-01", "CREDIT", request)
         self.assertEqual(len(calls), 1)
 
 

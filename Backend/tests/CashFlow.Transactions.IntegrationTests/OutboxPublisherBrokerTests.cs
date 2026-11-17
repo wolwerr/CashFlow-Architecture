@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using CashFlow.Transactions.Infrastructure.Entities;
 using CashFlow.Transactions.Infrastructure.Messaging;
 using CashFlow.Transactions.Infrastructure.Persistence;
@@ -43,6 +45,16 @@ public sealed class OutboxPublisherBrokerTests
             Host = "localhost", Port = 5672, User = "cashflow",
             Password = "local_ci_only"
         });
+        var spans = new ConcurrentBag<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "CashFlow.Transactions.Outbox",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => spans.Add(activity)
+        };
+        ActivitySource.AddActivityListener(listener);
+
         using var worker = new OutboxPublisherWorker(
             services.GetRequiredService<IServiceScopeFactory>(), rabbit,
             NullLogger<OutboxPublisherWorker>.Instance);
@@ -59,5 +71,8 @@ public sealed class OutboxPublisherBrokerTests
         }
         await worker.StopAsync(CancellationToken.None);
         Assert.True(confirmed, "Outbox row must become published after RabbitMQ publisher confirm.");
+        Assert.Contains(spans, span => span.DisplayName == "rabbitmq publish transaction.recorded"
+            && span.Kind == ActivityKind.Producer
+            && Equals(span.GetTagItem("messaging.system"), "rabbitmq"));
     }
 }

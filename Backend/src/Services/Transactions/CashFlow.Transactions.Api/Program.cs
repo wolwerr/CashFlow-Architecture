@@ -11,6 +11,7 @@ using CashFlow.Transactions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddCashFlowTelemetry("cashflow-transactions");
 builder.Services.AddHealthChecks();
 builder.Services.AddCashFlowAuthentication(builder.Configuration, builder.Environment);
 

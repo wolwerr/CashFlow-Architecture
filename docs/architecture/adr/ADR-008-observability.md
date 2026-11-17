@@ -156,3 +156,9 @@ Esta ADR continua **decidida**, mas não deve ser confundida com infraestrutura 
 **Resultado do cenário `observability`: NOT_RUN/BLOCKED para a stack completa da ADR-008**, até comprovação real dos itens pendentes. O script `.github/scripts/local_observability_inventory.py --execute` produz inventário sanitizado e **não** altera o manifesto nem afirma PASS. Este inventário não valida propagação de trace, pipeline OTLP, dashboards, exporters ou alertas.
 
 **Plano necessário antes do aceite completo da ADR:** instrumentar ambos os serviços e os workers com propagação W3C; configurar Collector e backends locais de métricas, logs e traces, dashboards e retenção; coletar evidência de um lançamento atravessando API, Outbox, RabbitMQ e Consolidation; verificar degradação segura do pipeline; medir backlog, consumo de recursos e latência. Caso a banca aceite apenas a arquitetura documentada como diferencial, essa dispensa precisa ser decidida expressamente no escopo do aceite, sem fingir que foi implementada.
+
+## Implementação opcional para validação, 17/11/2026
+
+Nova implementação no [compose.yaml principal](../../../compose.yaml): Collector, Prometheus, Loki, Tempo, Grafana, instrumentação habilitada por padrão localmente nas duas APIs e [procedimento de verificação](../../validation/local-observability-stack.md).
+
+**Não homologado:** a presença de arquivos versionados não demonstra que todos os containers iniciam, que cada datasource recebe dados ou que existe trace distribuído até o consumidor. Propagação RabbitMQ/Outbox, métricas de workers e o teste com Collector indisponível ainda requerem execução/implementação. Manter `observability` como `NOT_RUN` até evidência real completa.

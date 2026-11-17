@@ -4,7 +4,14 @@
 
 Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débitos** e consulta do **saldo diário consolidado**. Este repositório contém código, testes, decisões, diagramas e procedimentos locais. O desafio exige independência entre lançamentos e consolidado, além de **50 consultas/segundo** com **no máximo 5% de falhas**. A conformidade operacional desses limites ainda depende de evidências de homologação, não apenas da CI.
 
-> **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. Recursos opcionais de observabilidade estão decididos na arquitetura, mas não fazem parte dos seis serviços do Compose abaixo.
+> **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. Além dos seis serviços financeiros/de infraestrutura originais, o Compose principal inclui cinco serviços de observabilidade: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A instrumentação OTLP é habilitada por padrão no Compose local. Evidência operacional desta stack ainda depende da homologação.
+
+
+### Grafana e observabilidade integrada
+
+Antes de executar **qualquer** `docker compose up` no Compose unificado, configure uma senha forte para o Grafana na variável `CASHFLOW_GRAFANA_PASSWORD` ou no `.env` local (ignorado pelo Git). Em PowerShell: `$env:CASHFLOW_GRAFANA_PASSWORD = Read-Host "Senha local do Grafana" -MaskInput`. Sem essa variável o Compose recusará a inicialização, em vez de criar um painel com senha padrão.
+
+O comando usual `docker compose up -d --build` sobe os **11 serviços**, sem arquivo override. Acesse o Grafana em `http://localhost:3000`, usuário `admin`, e confira as três fontes de dados. Ver [runbook da observabilidade](docs/validation/local-observability-stack.md). No bootstrap inicial, o preparo dos segredos Keycloak continua obrigatório antes das APIs. Não apagar volumes para atualizar o ambiente.
 
 ## 1. Arquitetura em poucas palavras
 
@@ -39,7 +46,7 @@ docs/                  # Requisitos, domínios, diagramas e ADRs
 compose.yaml           # Inicialização local do sistema completo
 ```
 
-Os caminhos do código foram reorganizados, mas os **nomes dos serviços Docker Compose continuam** `postgres`, `rabbitmq`, `keycloak`, `transactions`, `consolidation` e `web`. Portanto, os comandos `docker compose up -d ... web` permanecem válidos. Para executar os testes fora do Docker, use `dotnet test Backend/CashFlow.slnx` e, no frontend, `cd Frontend` seguido de `npm ci` e `npm run test:coverage`.
+Os caminhos do código foram reorganizados, mas os seis **nomes originais dos serviços Docker Compose continuam** `postgres`, `rabbitmq`, `keycloak`, `transactions`, `consolidation` e `web`. Os novos serviços `otel-collector`, `prometheus`, `loki`, `tempo` e `grafana` também são iniciados com o mesmo `docker compose up -d --build`. Portanto, os comandos `docker compose up -d ... web` permanecem válidos. Para executar os testes fora do Docker, use `dotnet test Backend/CashFlow.slnx` e, no frontend, `cd Frontend` seguido de `npm ci` e `npm run test:coverage`.
 
 ## 2. Pré-requisitos
 

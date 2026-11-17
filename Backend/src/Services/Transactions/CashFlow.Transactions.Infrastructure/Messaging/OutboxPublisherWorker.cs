@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using CashFlow.Transactions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,8 @@ public sealed class OutboxPublisherWorker(
     IServiceScopeFactory scopes, IOptions<RabbitMqConnectionSettings> config,
     ILogger<OutboxPublisherWorker> logger) : BackgroundService
 {
+    private static readonly ActivitySource Traces = new("CashFlow.Transactions.Outbox");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var settings = config.Value;
@@ -101,13 +104,22 @@ public sealed class OutboxPublisherWorker(
         // Use publisher confirmation tracking plus mandatory routing. Ack or return is awaited.
         try
         {
+            using var activity = Traces.StartActivity("rabbitmq publish transaction.recorded", ActivityKind.Producer);
+            activity?.SetTag("messaging.system", "rabbitmq");
+            activity?.SetTag("messaging.destination.name", settings.Exchange);
             await channel.BasicPublishAsync(settings.Exchange, "transaction.recorded",
                 mandatory: true,
                 basicProperties: new BasicProperties
                 {
                     Persistent = true, ContentType = "application/json",
                     MessageId = row.EventId.ToString("D"), Type = row.EventType,
-                    CorrelationId = row.CorrelationId
+                    CorrelationId = row.CorrelationId,
+                    Headers = activity?.Id is { } traceparent
+                        ? new Dictionary<string, object?>
+                        {
+                            ["traceparent"] = Encoding.UTF8.GetBytes(traceparent)
+                        }
+                        : null
                 },
                 body: Encoding.UTF8.GetBytes(row.Payload), cancellationToken: cancellationToken);
 
@@ -115,6 +127,9 @@ public sealed class OutboxPublisherWorker(
             row.AttemptCount++;
             await db.SaveChangesAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);
+            if (Guid.TryParse(row.CorrelationId, out var safeCorrelationId))
+                logger.LogInformation("Outbox event published correlation_id={CorrelationId}",
+                    safeCorrelationId);
             return true;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

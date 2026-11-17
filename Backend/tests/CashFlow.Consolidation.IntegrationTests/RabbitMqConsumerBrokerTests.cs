@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using CashFlow.Consolidation.Application.Gateways;
 using CashFlow.Consolidation.Application.UseCases.ProcessTransaction;
@@ -35,6 +37,16 @@ public sealed class RabbitMqConsumerBrokerTests
         {
             Host = "localhost", User = "cashflow", Password = "local_ci_only"
         };
+        var spans = new ConcurrentBag<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "CashFlow.Consolidation.Consumer",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => spans.Add(activity)
+        };
+        ActivitySource.AddActivityListener(listener);
+
         using var worker = new ConsolidationConsumerWorker(
             provider.GetRequiredService<IServiceScopeFactory>(), Options.Create(settings),
             NullLogger<ConsolidationConsumerWorker>.Instance);
@@ -72,8 +84,17 @@ public sealed class RabbitMqConsumerBrokerTests
               }
             }
             """;
+        const string parent = "00-11111111111111111111111111111111-2222222222222222-01";
         await channel.BasicPublishAsync(settings.Exchange, "transaction.recorded", mandatory: true,
-            basicProperties: new BasicProperties { Persistent = true, MessageId = id.ToString("D") },
+            basicProperties: new BasicProperties
+            {
+                Persistent = true, MessageId = id.ToString("D"),
+                CorrelationId = id.ToString("D"),
+                Headers = new Dictionary<string, object?>
+                {
+                    ["traceparent"] = Encoding.UTF8.GetBytes(parent)
+                }
+            },
             body: Encoding.UTF8.GetBytes(payload));
         var projected = false;
         for (var attempt = 0; attempt < 100; attempt++)
@@ -89,5 +110,10 @@ public sealed class RabbitMqConsumerBrokerTests
         var daily = await new ConsolidationGateway(verify).GetDailyAsync(
             merchant, new DateOnly(2026, 11, 14), default);
         Assert.Equal(42.15m, daily.Closing);
+        Assert.Contains(spans, span =>
+            span.DisplayName == "rabbitmq consume transaction.recorded"
+            && span.Kind == ActivityKind.Consumer
+            && span.TraceId.ToString() == "11111111111111111111111111111111"
+            && span.ParentSpanId.ToString() == "2222222222222222");
     }
 }
