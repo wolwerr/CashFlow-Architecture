@@ -7,16 +7,18 @@ namespace CashFlow.Transactions.Api.Merchants;
 
 public static class MerchantEndpoints
 {
+    private const string MembersRoute = "/members";
+    private static readonly TimeSpan UsernameRegexTimeout = TimeSpan.FromMilliseconds(100);
     public static IEndpointRouteBuilder MapMerchantManagement(this IEndpointRouteBuilder app)
     {
         var routes = app.MapGroup("/api/v1/merchants").RequireAuthorization();
         routes.MapGet("/", ListAsync);
         routes.MapGet("/permissions", Permissions);
-        routes.MapGet("/members", MembersAsync);
-        routes.MapPost("/members", AddOperatorAsync);
-        routes.MapPut("/members", UpdateMemberAsync);
+        routes.MapGet(MembersRoute, MembersAsync);
+        routes.MapPost(MembersRoute, AddOperatorAsync);
+        routes.MapPut(MembersRoute, UpdateMemberAsync);
         routes.MapPut("/members/username", RenameMemberAsync);
-        routes.MapDelete("/members", DeleteMemberAsync);
+        routes.MapDelete(MembersRoute, DeleteMemberAsync);
         routes.MapPut("/details", RenameAsync);
         routes.MapPost("/", CreateAsync);
         routes.MapPost("/{merchantId:guid}/admins", AddAdminAsync);
@@ -66,7 +68,7 @@ public static class MerchantEndpoints
     }
 
     private static bool ValidUsername(string? username) => username is not null &&
-        Regex.IsMatch(username, "^[a-zA-Z][a-zA-Z0-9._-]{2,63}$");
+        Regex.IsMatch(username, "^[a-zA-Z][a-zA-Z0-9._-]{2,63}$", RegexOptions.CultureInvariant, UsernameRegexTimeout);
 
     private static async Task<IResult> RenameAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
         RenameMerchantRequest? request, HttpContext context, KeycloakMerchantManagement management,
@@ -97,7 +99,7 @@ public static class MerchantEndpoints
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
                 return Results.Forbid();
-            return await management.AddOperatorAsync(merchantId, request!.Username!, request.Password, ct)
+            return await management.AddOperatorAsync(merchantId, request.Username!, request.Password, ct)
                 ? Results.NoContent() : Results.NotFound();
         }
         catch (MerchantUsernameConflictException) { return Results.Conflict(new { title = "Username already exists." }); }
@@ -115,7 +117,7 @@ public static class MerchantEndpoints
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
                 return Results.Forbid();
-            return await management.ChangeMemberRoleAsync(merchantId, request!.Username!,
+            return await management.ChangeMemberRoleAsync(merchantId, request.Username!,
                 request.Role, settings.Value.BootstrapUsername, ct)
                 ? Results.NoContent() : Results.NotFound();
         }
@@ -134,7 +136,7 @@ public static class MerchantEndpoints
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
                 return Results.Forbid();
-            return await management.RenameMemberAsync(merchantId, request!.Username!,
+            return await management.RenameMemberAsync(merchantId, request.Username!,
                 request.NewUsername!, settings.Value.BootstrapUsername, ct)
                 ? Results.NoContent() : Results.NotFound();
         }
@@ -159,7 +161,7 @@ public static class MerchantEndpoints
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
                 return Results.Forbid();
-            return await management.DeactivateMemberAsync(merchantId, request!.Username!,
+            return await management.DeactivateMemberAsync(merchantId, request.Username!,
                 settings.Value.BootstrapUsername, ct)
                 ? Results.NoContent() : Results.NotFound();
         }
@@ -182,7 +184,7 @@ public static class MerchantEndpoints
         if (!IsBootstrap(context, options.Value, environment))
             return Results.Forbid();
         if (request.Username is null ||
-            !Regex.IsMatch(request.Username, "^[a-zA-Z][a-zA-Z0-9._-]{2,63}$") ||
+            !ValidUsername(request.Username) ||
             request.Password is null || request.Password.Length is < 12 or > 128)
             return Results.BadRequest(new { title = "Unique merchant username and password (12-128 characters) are required." });
 
