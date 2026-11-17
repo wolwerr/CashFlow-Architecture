@@ -27,43 +27,57 @@ class FakeLocalApi:
         self.requests = []
         self.replays = 0
 
+    def merchant_directory(self, token):
+        accounts = {
+            "owner": [{"id": M1, "name": "Loja 1", "role": "OPERATOR"}],
+            "other": [{"id": M2, "name": "Loja 2", "role": "OPERATOR"}],
+        }
+        return (200, accounts[token]) if token in accounts else (404, None)
+
+    def balance(self):
+        credit = sum(100 for row in self.rows if row["type"] == "CREDIT") if self.project else 0
+        debit = sum(25 for row in self.rows if row["type"] == "DEBIT") if self.project else 0
+        return 200, {
+            "credit_total": f"{credit}.00",
+            "debit_total": f"{debit}.00",
+            "net_amount": f"{credit-debit}.00",
+            "closing_balance": f"{credit-debit}.00",
+        }
+
+    def create_transaction(self, body, headers):
+        key = headers["Idempotency-Key"]
+        if key in self.created:
+            prior_body, prior_record = self.created[key]
+            if body != prior_body:
+                return 409, None
+            self.replays += 1
+            return 201, prior_record
+        record = {**body, "id": f"txn-{len(self.rows)+1}"}
+        self.rows.append(record)
+        self.created[key] = (dict(body), record)
+        self.posts.append(record)
+        return 201, record
+
     def __call__(self, method, path, token=None, body=None, headers=None):
         route = urlsplit(path)
-        params = parse_qs(route.query)
         self.requests.append((method, route.path, token))
         if not token:
             return 401, None
-        if route.path == "/api/v1/merchants/":
-            if token == "owner":
-                return 200, [{"id": M1, "name": "Loja 1", "role": "OPERATOR"}]
-            if token == "other":
-                return 200, [{"id": M2, "name": "Loja 2", "role": "OPERATOR"}]
-        merchant = body["merchant_id"] if body else params.get("merchant_id", [None])[0]
+        if route.path == probe.MERCHANTS_PATH:
+            return self.merchant_directory(token)
+
+        merchant = body["merchant_id"] if body else parse_qs(route.query).get("merchant_id", [None])[0]
         if token == "other" and merchant == M1 and self.deny_isolation:
             return 403, None
         if route.path == "/api/v1/consolidation/daily":
-            credit = sum(100 for row in self.rows if row["type"] == "CREDIT") if self.project else 0
-            debit = sum(25 for row in self.rows if row["type"] == "DEBIT") if self.project else 0
-            return 200, {"credit_total": f"{credit}.00", "debit_total": f"{debit}.00",
-                         "net_amount": f"{credit-debit}.00",
-                         "closing_balance": f"{credit-debit}.00"}
-        if route.path == "/api/v1/transactions" and method == "GET":
-            return 200, {"items": list(self.rows), "page": 1, "page_size": 100, "has_more": False}
-        if route.path == "/api/v1/transactions" and method == "POST":
-            key = headers["Idempotency-Key"]
-            if key in self.created:
-                prior_body, prior_record = self.created[key]
-                if body != prior_body:
-                    return 409, None
-                self.replays += 1
-                return 201, prior_record
-            record = {**body, "id": f"txn-{len(self.rows)+1}"}
-            self.rows.append(record)
-            self.created[key] = (dict(body), record)
-            self.posts.append(record)
-            return 201, record
+            return self.balance()
+        if route.path == probe.TRANSACTIONS_PATH:
+            if method == "GET":
+                return 200, {"items": list(self.rows), "page": 1,
+                             "page_size": 100, "has_more": False}
+            if method == "POST":
+                return self.create_transaction(body, headers)
         return 404, None
-
 
 class LocalMvpTests(unittest.TestCase):
     def test_full_merchant_isolation_idempotency_and_projection(self):
