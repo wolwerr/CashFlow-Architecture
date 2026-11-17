@@ -70,6 +70,12 @@ class OperationalSnapshotTests(unittest.TestCase):
         self.assertFalse(result["services_running"]["consolidation"])
         self.assertEqual("DEGRADED", result["outcome"])
 
+    def test_no_declared_queues_is_not_reported_as_healthy(self):
+        names = sorted(ops.EXPECTED)
+        with patch.object(ops, "checked_lines", side_effect=[names, names, []]):
+            result = ops.snapshot()
+        self.assertEqual("DEGRADED", result["outcome"])
+
     def test_rabbitmq_down_refuses_queue_lookup(self):
         names = sorted(ops.EXPECTED)
         with patch.object(ops, "checked_lines",
