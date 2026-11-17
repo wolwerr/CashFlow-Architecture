@@ -85,24 +85,28 @@ Defina senhas próprias para `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD`, `KEYCLOAK
 
 **Não confunda:** `KEYCLOAK_ADMIN` é o administrador técnico do realm `master`; `cashflow.admin` é o usuário da plataforma no realm `cashflow`.
 
-## 6. Subir infraestrutura nova
+## 6. Inicializar PRIMEIRO PostgreSQL, RabbitMQ e Keycloak
+
+**Não execute `docker compose up -d --build` neste momento.** Em um ambiente recém-criado, `KEYCLOAK_AUTHZ_CLIENT_SECRET` e `KEYCLOAK_MGMT_CLIENT_SECRET` ainda estão vazios. Transactions e Consolidation validam as credenciais **na inicialização** e encerram imediatamente se faltarem. O bootstrap do Keycloak precisa acontecer **antes** de subir as APIs.
+
+Inicie somente as dependências, na raiz do repositório:
 
 ```powershell
-docker compose up -d --build
-docker compose ps
-docker compose logs --tail=80 postgres keycloak transactions consolidation rabbitmq web
+docker compose up -d postgres rabbitmq keycloak
+docker compose ps -a
+docker compose logs --tail=60 keycloak
 ```
 
-Serviços: `postgres`, `rabbitmq`, `keycloak`, `transactions`, `consolidation`, `web`. Primeiro startup pode exigir tempo para build, migrações e inicialização. Se houver falha, rode `docker compose ps` e `docker compose logs --tail=120 <nome-do-servico>` antes de recriar qualquer coisa. Não precisa apagar volumes para repetir um build.
+Aguarde o Keycloak concluir a inicialização e importar o realm `cashflow`. Um retorno normal registra `Realm 'cashflow' imported` e `Keycloak ... started`. Acesse **http://localhost:8081/admin/**, usando `KEYCLOAK_ADMIN` e `KEYCLOAK_ADMIN_PASSWORD` do `.env`. Se o realm ainda não aparecer, confira os logs e aguarde sua inicialização em vez de recriar volumes.
 
-Acesse as interfaces:
+Neste estágio, **somente** `postgres`, `rabbitmq` e `keycloak` precisam estar ativos. O CashFlow em http://localhost:8080 ainda não estará disponível. Configure a identidade na etapa 7 antes de iniciar o restante da aplicação.
 
-| Aplicação | URL | Observação |
+| Aplicação | URL | Disponível nesta etapa? |
 | --- | --- | --- |
-| CashFlow | http://localhost:8080 | Login apenas após concluir bootstrap |
-| Keycloak Admin | http://localhost:8081/admin/ | Login com `KEYCLOAK_ADMIN` e senha definida |
-| RabbitMQ | http://localhost:15672 | Credenciais `cashflow` e `RABBITMQ_PASSWORD` |
-| PostgreSQL | localhost:5432 | Acesso local com usuário `cashflow` e `POSTGRES_PASSWORD` |
+| Keycloak Admin | http://localhost:8081/admin/ | Sim, após inicialização |
+| RabbitMQ Management | http://localhost:15672 | Sim; usuário `cashflow` e senha `RABBITMQ_PASSWORD` |
+| PostgreSQL | localhost:5432 | Sim; usuário `cashflow` e senha `POSTGRES_PASSWORD` |
+| CashFlow/NGINX | http://localhost:8080 | **Ainda não**, só depois da etapa 7 |
 
 ## 7. Bootstrap obrigatório no Keycloak, ambiente zerado
 
@@ -122,14 +126,32 @@ KEYCLOAK_MGMT_CLIENT_SECRET=<secret_do_cliente_de_gestao>
 CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin
 ```
 
-Recrie os consumidores das variáveis, preservando Keycloak e dados:
+**Dica:** as duas variáveis `KEYCLOAK_AUTHZ_CLIENT_SECRET` e `KEYCLOAK_MGMT_CLIENT_SECRET` devem estar preenchidas antes de iniciar as APIs. Como os clientes de serviço são confidenciais, obtenha cada segredo em **Clients > [cliente] > Credentials**. Não altere o valor do `Client ID` nem use o segredo de outro cliente.
+
+**E. Subir os serviços da aplicação somente agora:**
+
+```powershell
+docker compose up -d --build transactions consolidation web
+docker compose ps -a
+docker compose logs --tail=80 transactions consolidation web
+```
+
+Os seis serviços devem aparecer ativos. O NGINX é iniciado junto com as APIs. Confirme as verificações HTTP pelo PowerShell:
+
+```powershell
+curl.exe -i http://localhost:8080/nginx-health
+docker compose exec transactions printenv KeycloakManagement__BootstrapUsername
+```
+
+Se uma API encerrar com `Keycloak authorization service credentials and realm are required`, confira se salvou `.env` na raiz e se `KEYCLOAK_AUTHZ_CLIENT_SECRET` contém o segredo do cliente de autorização. **Não publique seu `.env` nem imprima os segredos no terminal**. Após corrigir, recrie apenas as APIs:
 
 ```powershell
 docker compose up -d --force-recreate --no-deps transactions consolidation
-docker compose ps
 ```
 
-**E. Validar o login.** Abra `http://localhost:8080` em janela anônima, autentique como `cashflow.admin` do realm `cashflow` e confirme a área administrativa. Se não aparecer, use `docker compose logs --tail=100 transactions` e confira `GET /api/v1/merchants/permissions` no DevTools, sem expor tokens. Se o login exigir configuração de usuário, confira Enabled, senha, ações obrigatórias e realm selecionado.
+Se a API iniciar, mas retornar `503` em operações autorizadas, confira as **Service account roles** dos dois clientes no Keycloak; segredo presente não garante permissão de consulta.
+
+**F. Validar o login.** Abra `http://localhost:8080` em janela anônima, autentique como `cashflow.admin` do realm `cashflow` e confirme a área administrativa. Se não aparecer, use `docker compose logs --tail=100 transactions` e confira `GET /api/v1/merchants/permissions` no DevTools, sem expor tokens. Se o login exigir configuração de usuário, confira Enabled, senha, ações obrigatórias e realm selecionado.
 
 A opção **Edit username** do realm novo está habilitada no JSON de importação. Em realms já existentes, o import não sobrescreve essa preferência; altere manualmente nas configurações de Login do realm.
 
