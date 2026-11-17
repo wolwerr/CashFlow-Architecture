@@ -4,8 +4,16 @@
 
 Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débitos** e consulta do **saldo diário consolidado**. Este repositório contém código, testes, decisões, diagramas e procedimentos locais. O desafio exige independência entre lançamentos e consolidado, além de **50 consultas/segundo** com **no máximo 5% de falhas**. A conformidade operacional desses limites ainda depende de evidências de homologação, não apenas da CI.
 
-> **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. Além dos seis serviços financeiros/de infraestrutura originais, o Compose principal inclui cinco serviços de observabilidade: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A instrumentação OTLP é habilitada por padrão no Compose local. Evidência operacional desta stack ainda depende da homologação.
+> **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. Além dos seis serviços financeiros/de infraestrutura originais, o Compose principal inclui cinco serviços de observabilidade: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A instrumentação OTLP é habilitada por padrão no Compose local. A coleta OTLP e propagação de trace foram validadas funcionalmente pelo operador no ambiente local, sem SHA contemporâneo registrado.
 
+
+## Entrega para avaliação
+
+**Enunciado revisado e checklist:** [Auditoria final e evidências](docs/validation/final-delivery-evidence.md) · [Matriz de requisitos](docs/requirements/challenge-compliance-matrix.md) · [Roteiro de apresentação](docs/validation/demo-presentation.md).
+
+**Resultado informado da homologação local de 17/11/2026:** 14/14 cenários `PASS` (sem falhas), incluindo independência de Transactions, 50 RPS por cinco minutos e trace distribuído HTTP → Outbox → Consolidation. **Limite de rastreabilidade:** o manifesto local contém `commit: NOT_RECORDED` e portanto seu estado formal ainda é `NOT_ACCEPTED`; não associar os testes históricos a um SHA posterior. A [CI #577](https://github.com/wolwerr/CashFlow-Architecture/actions/runs/44163593607) aprovou Backend, Frontend, Validation e Sonar para a revisão da PR #82.
+
+**Implantação:** o MVP roda **apenas localmente**. Azure/AKS, HA de produção e preços são arquitetura e estimativas, não serviços provisionados.
 
 ### Grafana e observabilidade integrada
 
@@ -239,7 +247,7 @@ docker compose ps -a
 docker compose logs --tail=80 transactions consolidation web
 ```
 
-Os seis serviços devem aparecer ativos. O NGINX é iniciado junto com as APIs. Confirme as verificações HTTP pelo PowerShell:
+Os seis serviços financeiros e de infraestrutura devem aparecer ativos; a stack completa contém 11 serviços e os demais podem estar ativos no mesmo Compose. O NGINX é iniciado junto com as APIs. Confirme as verificações HTTP pelo PowerShell:
 
 ```powershell
 curl.exe -i http://localhost:8080/nginx-health
@@ -441,4 +449,4 @@ Para **apagar novamente toda a instalação local**, consulte a etapa 4 e confir
 
 ## Status do projeto
 
-**Código e documentação entregues**, com homologação final dos requisitos do desafio **pendente de execução real local**, sobretudo falha de Consolidation, pico de 50 RPS, recuperação e integridade. Veja a [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md) para distinguir decisão arquitetural, implementação e evidência comprovada.
+**MVP local implementado e demonstrações funcionais concluídas:** 14/14 cenários reportados PASS, incluindo falha do Consolidation, carga de 50 RPS, recuperação, integridade e observabilidade. **Aceite formal do manifesto permanece NOT_ACCEPTED** por falta do SHA contemporâneo das execuções históricas. [Auditoria de entrega e limitações](docs/validation/final-delivery-evidence.md).
