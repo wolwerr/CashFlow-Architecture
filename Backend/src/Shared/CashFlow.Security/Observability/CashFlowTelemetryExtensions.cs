@@ -34,7 +34,6 @@ public static class CashFlowTelemetryExtensions
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddRuntimeInstrumentation()
                 .AddOtlpExporter());
 
         builder.Logging.AddOpenTelemetry(options =>
