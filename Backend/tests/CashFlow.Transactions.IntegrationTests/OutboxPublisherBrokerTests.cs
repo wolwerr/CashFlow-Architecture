@@ -73,6 +73,6 @@ public sealed class OutboxPublisherBrokerTests
         Assert.True(confirmed, "Outbox row must become published after RabbitMQ publisher confirm.");
         Assert.Contains(spans, span => span.DisplayName == "rabbitmq publish transaction.recorded"
             && span.Kind == ActivityKind.Producer
-            && span.GetTagItem("messaging.system") as string == "rabbitmq");
+            && Equals(span.GetTagItem("messaging.system"), "rabbitmq"));
     }
 }
