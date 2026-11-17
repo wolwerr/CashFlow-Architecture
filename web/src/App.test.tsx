@@ -311,8 +311,8 @@ describe('CashFlow dashboard and interactions', () => {
   it('adds an operator to an existing selected shop without creating another merchant', async () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
-    mock.state[27] = 'novo.operador';
-    mock.state[28] = 'senha-operador-nova';
+    mock.state[28] = 'novo.operador';
+    mock.state[29] = 'senha-operador-nova';
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
     const form = render().filter(n => n.type === 'form')
       .find(n => walk(n).some(child => child.props['aria-label'] === 'Novo usuário da loja'))!;
@@ -320,8 +320,8 @@ describe('CashFlow dashboard and interactions', () => {
     await vi.waitFor(() => expect(addMerchantOperator).toHaveBeenCalledWith('access-token', mock.state[3],
       'novo.operador', 'senha-operador-nova'));
     expect(createMerchant).not.toHaveBeenCalled();
-    expect(mock.state[27]).toBe('');
     expect(mock.state[28]).toBe('');
+    expect(mock.state[30]).toBe('');
     await vi.waitFor(() => expect(mock.state[23]).toBe(1));
   });
 
@@ -335,14 +335,14 @@ describe('CashFlow dashboard and interactions', () => {
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
     const edit = find('button', 'Editar cargo');
     (edit.props.onClick as () => void)();
-    expect(mock.state[30]).toBe('loja.campinas');
+    expect(mock.state[31]).toBe('loja.campinas');
     const role = find('select', 'Novo cargo de loja.campinas');
     (role.props.onChange as (event: unknown) => void)({ target: { value: 'ADMIN' } });
     const save = find('button', 'Salvar cargo');
     await (save.props.onClick as () => Promise<void>)();
     expect(updateMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
       'loja.campinas', 'ADMIN');
-    await vi.waitFor(() => expect(mock.state[30]).toBe(''));
+    await vi.waitFor(() => expect(mock.state[31]).toBe(''));
   });
 
   it('requires confirmation and removes only the member link, never the bootstrap account', async () => {
@@ -388,7 +388,7 @@ describe('CashFlow dashboard and interactions', () => {
   it('renames a shop without replacing its merchant UUID or transactions', async () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
-    mock.state[29] = 'Loja Campinas Atualizada';
+    mock.state[30] = 'Loja Campinas Atualizada';
     vi.mocked(listMerchants).mockResolvedValue([
       { id: mock.state[3] as string, name: 'Loja Campinas Atualizada', role: 'ADMIN' }
     ]);
