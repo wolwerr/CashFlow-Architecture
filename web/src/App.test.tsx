@@ -301,6 +301,26 @@ describe('CashFlow dashboard and interactions', () => {
     expect(addMerchantOperator).not.toHaveBeenCalled();
   });
 
+  it('orders store options alphabetically in management and consultation selectors', () => {
+    setupSignedIn();
+    mock.state[12] = [
+      { id: '59d0b4c5-4e64-46e1-ac52-ad946d2b4865', name: 'Loja Z', role: 'ADMIN' },
+      { id: mock.state[3], name: 'Loja B', role: 'ADMIN' },
+      { id: '72d0b4c5-4e64-46e1-ac52-ad946d2b4865', name: 'Loja A', role: 'ADMIN' }
+    ];
+    const nodes = render();
+    const selectors = nodes.filter(n => n.type === 'select' &&
+      (n.props['aria-label'] === 'Selecionar loja' ||
+        n.props['aria-label'] === 'Comerciante da consulta'));
+    expect(selectors).toHaveLength(2);
+    for (const selector of selectors) {
+      expect(walk(selector).filter(n => n.type === 'option').map(n => n.props.children).slice(1))
+        .toEqual(['Loja A', 'Loja B', 'Loja Z']);
+    }
+    expect(nodes.filter(n => n.type === 'strong').map(n => n.props.children))
+      .toEqual(['Loja A', 'Loja B', 'Loja Z']);
+  });
+
   it('loads actual Keycloak members and their ADMIN or OPERATOR roles', async () => {
     setupSignedIn();
     mock.state[12] = [
