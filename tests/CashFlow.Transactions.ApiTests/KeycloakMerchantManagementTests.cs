@@ -166,6 +166,98 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task BootstrapAdministratorCannotBeRemovedOrDemoted()
+    {
+        var fake = new FakeHandler(_ => throw new InvalidOperationException("Should not call Keycloak."));
+        var service = Create(fake);
+        await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
+            service.RemoveMemberAsync(MerchantId, "cashflow.admin", "cashflow.admin", CancellationToken.None));
+        await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
+            service.ChangeMemberRoleAsync(MerchantId, "cashflow.admin", "OPERATOR",
+                "cashflow.admin", CancellationToken.None));
+        Assert.Empty(fake.Calls);
+    }
+
+    [Fact]
+    public async Task RenamingMerchantPreservesExistingAttributesAndUuid()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id", StringComparison.Ordinal) &&
+                request.Method == HttpMethod.Put)
+            {
+                using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
+                Assert.Equal(MerchantId.ToString("D"), body.RootElement.GetProperty("name").GetString());
+                Assert.Equal("Loja Nova", body.RootElement.GetProperty("attributes")
+                    .GetProperty("displayName")[0].GetString());
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).RenameMerchantAsync(MerchantId, "Loja Nova", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RemovingOperatorOnlyRevokesMerchantGroupMembership()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Operator() });
+            if (request.Method == HttpMethod.Delete &&
+                path.EndsWith($"/users/{UserId:D}/groups/operator-id", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).RemoveMemberAsync(MerchantId,
+            "loja.teste", "cashflow.admin", CancellationToken.None));
+        Assert.Contains(fake.Calls, c => c.Method == "DELETE" && c.Path.Contains("operator-id"));
+        Assert.DoesNotContain(fake.Calls, c => c.Method == "DELETE" &&
+            c.Path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task UpdateRoleAssignsNewRoleBeforeRemovingOldRole()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups/admin-id", StringComparison.Ordinal) ||
+                path.EndsWith($"/users/{UserId:D}/groups/operator-id", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).ChangeMemberRoleAsync(
+            MerchantId, "loja.teste", "ADMIN", "cashflow.admin", CancellationToken.None));
+        var changes = fake.Calls.Where(c => c.Path.Contains($"/users/{UserId:D}/groups/")).ToList();
+        Assert.Equal("PUT", changes[0].Method);
+        Assert.EndsWith("/admin-id", changes[0].Path);
+        Assert.Equal("DELETE", changes[1].Method);
+        Assert.EndsWith("/operator-id", changes[1].Path);
+    }
+
+    [Fact]
     public async Task CreatesMerchantHierarchyAssignsOwnerAndStoresDisplayName()
     {
         string? createdMerchantId = null;
