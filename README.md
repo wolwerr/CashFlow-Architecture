@@ -109,7 +109,7 @@ notepad .env
 
 No `.env`, defina `CASHFLOW_GRAFANA_PASSWORD` com uma **senha forte própria**, substituindo o marcador de `.env.example`. Sem essa variável válida, o Compose não inicializa. Em instalações existentes, **adicione apenas a variável que falta**, sem substituir o `.env` e as senhas dos demais serviços.
 
-Após concluir o bootstrap do Keycloak na [seção 7](#7-bootstrap-obrigatório-no-keycloak-ambiente-zerado), o Compose completo inicia **11 serviços**, inclusive OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. **URL do Grafana (local): [http://localhost:3000](http://localhost:3000)**. Acesse com usuário `admin` e a senha definida em `CASHFLOW_GRAFANA_PASSWORD`; as fontes Prometheus, Loki e Tempo são provisionadas automaticamente. **Esse endereço só funciona no computador que está executando o Docker Compose, não é um painel público acessível pela banca.** Consultas e verificações detalhadas estão no [runbook de observabilidade](docs/validation/local-observability-stack.md). **Não apague volumes para atualizar os contêineres.**
+Após concluir o bootstrap do Keycloak na [seção 7](#7-bootstrap-obrigatório-no-keycloak-ambiente-zerado), o Compose completo inicia **11 serviços**, inclusive OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. O endereço do Grafana, o usuário e a disponibilidade estão na [tabela de serviços da seção 6](#6-inicializar-primeiro-postgresql-rabbitmq-e-keycloak). As fontes Prometheus, Loki e Tempo são provisionadas automaticamente. O acesso é **somente local**, não um painel público para a banca. Consultas e verificações detalhadas estão no [runbook de observabilidade](docs/validation/local-observability-stack.md). **Não apague volumes para atualizar os contêineres.**
 
 **Passo obrigatório ANTES de subir o Keycloak:** `.env.example` é um **modelo**, não um arquivo de credenciais funcionais. Os valores como `DEFINA_AQUI_SUA_SENHA_INICIAL_FORTE` são apenas marcadores e precisam ser trocados no `.env` local. Defina senhas próprias para `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD` e `KEYCLOAK_ADMIN_PASSWORD`. A conta técnica inicial do Keycloak usa `KEYCLOAK_ADMIN=admin` como username no realm `master` e **a senha que você escolher** em `KEYCLOAK_ADMIN_PASSWORD`.
 
@@ -148,6 +148,7 @@ Neste estágio, **somente** `postgres`, `rabbitmq` e `keycloak` precisam estar a
 | RabbitMQ Management | http://localhost:15672 | Sim; usuário `cashflow` e senha `RABBITMQ_PASSWORD` |
 | PostgreSQL | localhost:5432 | Sim; usuário `cashflow` e senha `POSTGRES_PASSWORD` |
 | CashFlow/NGINX | http://localhost:8080 | **Ainda não**, só depois da etapa 7 |
+| Grafana | [http://localhost:3000](http://localhost:3000) | **Ainda não**; após a etapa 7 e inicialização do Compose completo, login `admin` com `CASHFLOW_GRAFANA_PASSWORD` |
 
 ## 7. Bootstrap obrigatório no Keycloak, ambiente zerado
 
