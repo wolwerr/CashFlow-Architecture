@@ -4,6 +4,7 @@ import { executeMerchantMutation } from './merchantMutations';
 import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
 import { merchantRoleLabel } from './merchantPresentation';
+import { merchantDirectoryRows } from './merchantDirectoryRows';
 
 function mutationMessage(action: MerchantAction): string {
   if (action === 'remove') {
@@ -100,18 +101,14 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
         <table>
           <thead><tr><th>Comerciante</th><th>Usuário da loja</th><th>Cargo</th><th>Ações</th></tr></thead>
           <tbody>
-            {items.flatMap(item => {
-              const accounts = members[item.id];
-              const visible = accounts?.filter(account =>
-                account.username.toLowerCase() !== 'cashflow.admin') ?? [];
-              const rows: Array<MerchantMember | null> = visible.length ? visible : [null];
-              return rows.map((account, index) => <tr key={item.id + ':' + (account?.username ?? 'empty')}>
-                <td>{index === 0 ? item.name : ''}</td>
-                <td>{account?.username ?? (accounts === undefined ? 'Carregando usuários...' :
-                  accounts === null ? 'Indisponível' : 'Sem usuário da loja')}</td>
+            {merchantDirectoryRows(items, members).map(({ merchant: item, member: account, first, loading, unavailable }) =>
+              <tr key={item.id + ':' + (account?.username ?? 'empty')}>
+                <td>{first ? item.name : ''}</td>
+                <td>{account?.username ?? (loading ? 'Carregando usuários...' :
+                  unavailable ? 'Indisponível' : 'Sem usuário da loja')}</td>
                 <td>{account ? merchantRoleLabel(account.role) : '-'}</td>
                 <td><div className="merchant-row-actions">
-                  {index === 0 && <button type="button" className="outline"
+                  {first && <button type="button" className="outline"
                     disabled={item.id === selectedId || working}
                     onClick={() => { onSelect(item.id); setError(''); setMessage(''); }}>
                     {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
@@ -156,8 +153,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
                         </>}
                   </>}
                 </div></td>
-              </tr>);
-            })}
+              </tr>)}
           </tbody>
         </table>
       </div>}
