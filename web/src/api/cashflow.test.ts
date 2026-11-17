@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions, listMerchantMembers } from './cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions, listMerchantMembers, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant } from './cashflow';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('CashFlow API contracts', () => {
@@ -86,6 +86,53 @@ describe('CashFlow API contracts', () => {
     await expect(listMerchantMembers('operator', '68a5baac-d97f-45b4-9119-b4c5b9de7c9b'))
       .rejects.toMatchObject({ status: 403 });
   });
+  it.each([
+    ['add operator', 'POST', '/api/v1/merchants/members'],
+    ['update role', 'PUT', '/api/v1/merchants/members'],
+    ['remove access', 'DELETE', '/api/v1/merchants/members'],
+    ['rename shop', 'PUT', '/api/v1/merchants/details']
+  ])('uses a fixed URL for %s', async (_label, method, url) => {
+    const id = '68a5baac-d97f-45b4-9119-b4c5b9de7c9b';
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    vi.stubGlobal('fetch', fetchMock);
+    if (_label === 'add operator')
+      await addMerchantOperator('token', id, 'user1', 'password-long');
+    if (_label === 'update role')
+      await updateMerchantMember('token', id, 'user1', 'ADMIN');
+    if (_label === 'remove access')
+      await removeMerchantMember('token', id, 'user1');
+    if (_label === 'rename shop')
+      await renameMerchant('token', id, 'Loja Nova');
+    const [path, req] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe(url);
+    expect(req.method).toBe(method);
+    expect((req.headers as Record<string, string>)['X-Merchant-ID']).toBe(id);
+    expect((req.headers as Record<string, string>).Authorization).toBe('Bearer token');
+  });
+
+  it.each(['../admin', 'not-a-uuid', '68a5baac-d97f-45b4-9119-b4c5b9de7c9b?foo=bar'])(
+    'refuses dangerous merchant IDs in every mutation: %s', async invalid => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(addMerchantOperator('token', invalid, 'user1', 'valid-password')).rejects
+        .toMatchObject({ status: 400 });
+      await expect(updateMerchantMember('token', invalid, 'user1', 'ADMIN')).rejects
+        .toMatchObject({ status: 400 });
+      await expect(removeMerchantMember('token', invalid, 'user1')).rejects
+        .toMatchObject({ status: 400 });
+      await expect(renameMerchant('token', invalid, 'Loja')).rejects
+        .toMatchObject({ status: 400 });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+  it('reports a rejected role update without pretending it succeeded', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, status: 403, json: async () => ({ title: 'Forbidden' })
+    }));
+    await expect(updateMerchantMember('operator', '68a5baac-d97f-45b4-9119-b4c5b9de7c9b',
+      'user1', 'ADMIN')).rejects.toMatchObject({ status: 403 });
+  });
+
   it('queries platform administration permission from the protected API', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true, json: async () => ({ can_manage_merchants: false })
