@@ -127,13 +127,16 @@ def execute(tokens, merchant, day, credits, debits, workers, timeout, call=trans
     jobs = [(kind, str(uuid.uuid4())) for kind, count in
             (("CREDIT", credits), ("DEBIT", debits)) for _ in range(count)]
     results = []
+    by_key = {}
     start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(write, tokens, merchant, day, kind, key, call)
-                   for kind, key in jobs]
+        futures = {pool.submit(write, tokens, merchant, day, kind, key, call): key
+                   for kind, key in jobs}
         for future in as_completed(futures):
             try:
-                results.append(future.result())
+                response = future.result()
+                results.append(response)
+                by_key[futures[future]] = response
             except (OSError, ValueError, KeyError):
                 raise VerificationError("Ambiguous POST: stop and inspect history; never retry automatically") from None
     elapsed = time.perf_counter() - start
@@ -146,12 +149,10 @@ def execute(tokens, merchant, day, credits, debits, workers, timeout, call=trans
     require(set(ids).isdisjoint(old_ids), "Generated transaction overlaps baseline")
     # Exercise idempotent replay using only confirmed 201 operations.
     replay_kind, replay_key = jobs[0]
-    # Map submitted idempotency keys to the corresponding responses via a separate
-    # deterministic phase, since futures finish out of order: check the original
-    # result by reusing keys and looking for a known ID.
+    original_id = by_key[replay_key][1]["id"]
     replay_status, replay_body, _ = write(tokens, merchant, day, replay_kind, replay_key, call)
     require(replay_status == 201 and isinstance(replay_body, dict)
-            and replay_body.get("id") in ids,
+            and replay_body.get("id") == original_id,
             "Idempotency replay did not return an existing ID")
     conflict_kind = "DEBIT" if replay_kind == "CREDIT" else "CREDIT"
     conflict_status, _, _ = write(tokens, merchant, day, conflict_kind, replay_key, call)
