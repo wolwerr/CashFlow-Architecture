@@ -104,7 +104,11 @@ public sealed class OutboxPublisherWorker(
         // Use publisher confirmation tracking plus mandatory routing. Ack or return is awaited.
         try
         {
-            using var activity = Traces.StartActivity("rabbitmq publish transaction.recorded", ActivityKind.Producer);
+            var parent = row.TraceParent;
+            // Legacy rows without trace context still publish with a fresh trace.
+            using var activity = parent is not null && ActivityContext.TryParse(parent, null, out _)
+                ? Traces.StartActivity("rabbitmq publish transaction.recorded", ActivityKind.Producer, parent)
+                : Traces.StartActivity("rabbitmq publish transaction.recorded", ActivityKind.Producer);
             activity?.SetTag("messaging.system", "rabbitmq");
             activity?.SetTag("messaging.destination.name", settings.Exchange);
             await channel.BasicPublishAsync(settings.Exchange, "transaction.recorded",
