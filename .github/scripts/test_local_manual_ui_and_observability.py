@@ -26,7 +26,7 @@ class ManualUiTests(unittest.TestCase):
             path = Path(directory) / "local-acceptance.json"
             path.write_text(json.dumps(acceptance.initial_manifest()), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(0, manual.main(["--manifest", "local-acceptance.json"]))
+                self.assertIsNone(manual.main(["--manifest", "local-acceptance.json"]))
             self.assertEqual(0, acceptance.report(json.loads(path.read_text()))["counts"]["PASS"])
 
     def test_explicit_confirmation_writes_two_evidences(self):
@@ -34,7 +34,7 @@ class ManualUiTests(unittest.TestCase):
             path = Path(directory) / "local-acceptance.json"
             path.write_text(json.dumps(acceptance.initial_manifest()), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(0, manual.main(
+                self.assertIsNone(manual.main(
                     ["--manifest", "local-acceptance.json", "--confirm-seven-checks"]))
             result = acceptance.report(json.loads(path.read_text()), path.parent)
             self.assertEqual(2, result["counts"]["PASS"])
