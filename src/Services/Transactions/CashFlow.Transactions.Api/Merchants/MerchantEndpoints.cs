@@ -132,7 +132,7 @@ public static class MerchantEndpoints
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
                 return Results.Forbid();
-            return await management.RemoveMemberAsync(merchantId, request!.Username!,
+            return await management.DeactivateMemberAsync(merchantId, request!.Username!,
                 settings.Value.BootstrapUsername, ct)
                 ? Results.NoContent() : Results.NotFound();
         }
