@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using CashFlow.Transactions.Application.Exceptions;
 using CashFlow.Transactions.Domain.Enums;
@@ -65,6 +66,22 @@ public sealed class TransactionRegistrationGatewayTests
         Assert.Equal("10.25", payload.RootElement.GetProperty("data").GetProperty("amount").GetString());
         Assert.Equal("CREDIT", payload.RootElement.GetProperty("data").GetProperty("type").GetString());
         Assert.Equal("2026-11-16", payload.RootElement.GetProperty("data").GetProperty("reference_date").GetString());
+    }
+
+    [Fact]
+    public async Task RegistrationStoresRequestTraceParentInDurableOutbox()
+    {
+        await using var db = new TransactionsDbContext(Options());
+        await db.Database.MigrateAsync();
+        using var request = new Activity("cashflow-test-request").Start();
+        var merchant = Guid.NewGuid();
+        var transaction = NewTransaction(merchant, Guid.NewGuid());
+        await new TransactionRegistrationGateway(db).RegisterAsync(
+            transaction, "trace-" + Guid.NewGuid(), Guid.NewGuid().ToString("D"), default);
+
+        var outbox = await db.OutboxMessages.AsNoTracking()
+            .SingleAsync(x => x.TransactionId == transaction.Id);
+        Assert.Equal(request.Id, outbox.TraceParent);
     }
 
     [Fact]
