@@ -238,6 +238,30 @@ def execute(tokens, merchant, day, outage_seconds=15, timeout=120,
         write_report(report)
 
 
+def record_manifest(report, manifest_path=Path("local-acceptance.json")):
+    """Only a verified PASS may update this private local manifest and evidence."""
+    require(report.get("outcome") == "PASS" and report.get("audit_integrity") is True
+            and report.get("unique_financial_history") is True
+            and report.get("projection_exact_delta") is True,
+            "Cannot record incomplete or failed recovery")
+    from local_mvp_acceptance import SCENARIOS, validate_metadata
+    require(manifest_path.is_file(), "Local acceptance manifest missing")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    validate_metadata(manifest)
+    for name in ("rabbitmq_recovery", "consumer_recovery", "audit_integrity"):
+        require(name in SCENARIOS, "Unexpected acceptance scenario")
+    evidence_file = Path("evidence/integrated-recovery.json")
+    evidence_file.parent.mkdir(parents=True, exist_ok=True)
+    evidence_file.write_text(json.dumps(report, indent=2) + "\\n", encoding="utf-8")
+    for name in ("rabbitmq_recovery", "consumer_recovery", "audit_integrity"):
+        manifest["scenarios"][name] = {
+            "status": "PASS",
+            "evidence": [str(evidence_file).replace("\\\\", "/")],
+            "metrics": {},
+        }
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\\n", encoding="utf-8")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--merchant-id", required=True)
@@ -245,6 +269,8 @@ def main(argv=None):
     parser.add_argument("--outage-seconds", type=int, default=15)
     parser.add_argument("--recovery-timeout", type=int, default=120)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--record-manifest", action="store_true",
+                        help="After PASS only, update the local acceptance manifest and sanitized evidence")
     args = parser.parse_args(argv)
     try:
         merchant = str(uuid.UUID(args.merchant_id))
@@ -255,6 +281,8 @@ def main(argv=None):
         parser.error("Date cannot be future in Sao Paulo")
     if not 1 <= args.outage_seconds <= 120 or not 10 <= args.recovery_timeout <= 300:
         parser.error("Outage 1..120s and recovery 10..300s")
+    if args.record_manifest and not args.execute:
+        parser.error("--record-manifest requires --execute")
     if not args.execute:
         print(json.dumps({"executed": False, "mode": "preview",
                           "disrupts": ["rabbitmq", "consolidation"],
@@ -274,6 +302,8 @@ def main(argv=None):
             parser.error("Token validity insufficient; provide refresh token")
         result = execute(tokens, merchant, day.isoformat(),
                          args.outage_seconds, args.recovery_timeout)
+        if args.record_manifest:
+            record_manifest(result)
         print(json.dumps(result, indent=2))
         return 0
     except (VerificationError, subprocess.TimeoutExpired, OSError, ValueError,
