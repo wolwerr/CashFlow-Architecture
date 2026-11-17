@@ -304,9 +304,18 @@ O selo acima reflete o **estado atual da pipeline da branch `main`**, não um re
 
 ### Cobertura de código, evidência por execução
 
+**Resultados medidos na CI, execução [#593](https://github.com/wolwerr/CashFlow-Architecture/actions/runs/44182465089), em 17/11/2026:**
+
+| Aplicação | Cobertura de linhas | Linhas cobertas / instrumentadas |
+| --- | ---: | ---: |
+| **Backend .NET (consolidado)** | **87,21%** | 1.289 / 1.478 |
+| **Frontend React** | **88,30%** | 400 / 453 |
+
+Esses percentuais são extraídos dos relatórios **OpenCover** (.NET) e **LCOV** (Vitest) gerados na própria execução, não são números configurados manualmente na pipeline. Para consultar medições posteriores, abra os resumos dos jobs no [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml).
+
 A pipeline apresenta **um único percentual consolidado de cobertura de linhas para todo o backend .NET**, unindo os seis relatórios OpenCover (testes unitários, de integração e de API de Transactions e Consolidation). O cálculo considera cada linha instrumentada uma única vez por assembly/arquivo e a marca como coberta se **qualquer** suíte a executou. Não é média de percentuais.
 
-O resumo do job **Backend | Build and tests** exibe esse percentual global, junto da quantidade de linhas cobertas e instrumentadas. O job **Frontend | Build and tests** também exibe **uma cobertura de linhas** calculada do LCOV do Vitest.
+Os jobs **Backend | Build and tests** e **Frontend | Build and tests** apresentam os percentuais consolidados reais de cada execução.
 
 **Onde consultar o valor atualizado:** abra [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml), selecione a execução e consulte os resumos de **Backend .NET Coverage Report** e **Frontend Coverage Report**. Os relatórios originais continuam disponíveis como artifacts temporários.
 
