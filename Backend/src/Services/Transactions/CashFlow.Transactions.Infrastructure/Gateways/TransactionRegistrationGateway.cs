@@ -81,7 +81,8 @@ public sealed class TransactionRegistrationGateway(TransactionsDbContext db)
                 EventType = "transaction.recorded",
                 SchemaVersion = "1",
                 CorrelationId = correlationId,
-                TraceParent = Activity.Current?.Id,
+                TraceParent = Activity.Current is { IdFormat: ActivityIdFormat.W3C } request
+                    ? request.Id : null,
                 Payload = JsonSerializer.Serialize(payload, EventJsonOptions),
                 CreatedAtUtc = transaction.CreatedAtUtc,
                 AttemptCount = 0
