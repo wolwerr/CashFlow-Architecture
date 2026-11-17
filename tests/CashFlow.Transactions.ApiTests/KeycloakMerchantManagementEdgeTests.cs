@@ -57,6 +57,9 @@ public sealed class KeycloakMerchantManagementEdgeTests
             if (request.Method == HttpMethod.Get && path.EndsWith("/users",
                 StringComparison.Ordinal))
                 return Json(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (request.Method == HttpMethod.Get &&
+                path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return Json(new[] { Role(role) });
             if (request.Method == HttpMethod.Get && path.EndsWith("/groups",
                 StringComparison.Ordinal))
                 return Json(new[] { Root() });
@@ -66,9 +69,6 @@ public sealed class KeycloakMerchantManagementEdgeTests
             if (request.Method == HttpMethod.Get && path.EndsWith("/groups/merchant-id/children",
                 StringComparison.Ordinal))
                 return Json(new[] { Role("ADMIN"), Role("OPERATOR"), Role("INACTIVE") });
-            if (request.Method == HttpMethod.Get &&
-                path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
-                return Json(new[] { Role(role) });
             return mutation?.Invoke(request) ?? new HttpResponseMessage(HttpStatusCode.NotFound);
         });
     }
@@ -128,12 +128,12 @@ public sealed class KeycloakMerchantManagementEdgeTests
             if (request.Method != HttpMethod.Get) return new HttpResponseMessage(HttpStatusCode.NotFound);
             if (path.EndsWith("/users", StringComparison.Ordinal))
                 return Json(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return Json(Array.Empty<object>());
             if (path.EndsWith("/groups", StringComparison.Ordinal)) return Json(new[] { Root() });
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal)) return Json(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-id/children", StringComparison.Ordinal))
                 return Json(new[] { Role("OPERATOR") });
-            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
-                return Json(Array.Empty<object>());
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         });
         Assert.False(await Service(emptyMembership).DeactivateMemberAsync(
