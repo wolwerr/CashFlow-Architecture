@@ -57,6 +57,12 @@
 
 **Implementação:** [Runbook Trilha 07](trilha-07-resilience-observability.md). **Não executar falhas, tráfego de carga ou lançamentos automaticamente na CI.** Encerrar somente quando os testes automatizados e as evidências reais locais forem aprovados.
 
+## Trilha 08 | Homologação integrada e aceite do MVP local
+
+**Pacote:** consolidar a matriz E2E, testes reais de isolamento e idempotência, Keycloak, RabbitMQ, Consolidation, PostgreSQL, auditoria, backup, observabilidade, carga e SLO em um único manifesto de aceite. Gerador offline começa em `NOT_RUN`, exige evidências locais para PASS e não permite declarar homologação com FAIL/BLOCKED/NOT_RUN.
+
+**Implementação:** [Runbook da Trilha 08](trilha-08-local-acceptance.md), `.github/scripts/local_mvp_acceptance.py` e testes offline integrados à CI. **Execução real e aceite do MVP local permanecem pendentes** até coleta e revisão dos relatórios; o pipeline não inventa evidências nem realiza testes disruptivos.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
