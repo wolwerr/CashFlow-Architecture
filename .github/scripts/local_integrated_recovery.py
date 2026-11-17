@@ -241,6 +241,11 @@ def execute(tokens, merchant, day, outage_seconds=15, timeout=120,
 def record_manifest(report, manifest_path=Path("local-acceptance.json")):
     """Only a verified PASS may update this private local manifest and evidence."""
     require(report.get("outcome") == "PASS" and report.get("audit_integrity") is True
+            and report.get("rabbitmq_restored") is True
+            and report.get("consumer_restored") is True
+            and report.get("transactions_during_broker_outage") is True
+            and report.get("transactions_during_consumer_outage") is True
+            and report.get("idempotency_replay_and_conflict") is True
             and report.get("unique_financial_history") is True
             and report.get("projection_exact_delta") is True,
             "Cannot record incomplete or failed recovery")
