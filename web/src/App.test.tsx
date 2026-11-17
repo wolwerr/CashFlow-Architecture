@@ -248,7 +248,7 @@ describe('CashFlow dashboard and interactions', () => {
     expect(labels).toContain('Loja Campinas');
     expect(labels).toContain('Loja Teste');
     expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
-    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
+    expect(nodes.some(n => n.type === 'strong' && n.props.children === 'Loja Teste')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'ADMIN')).toBe(false);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'loja.teste')).toBe(true);
@@ -256,6 +256,49 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo')).toBe(true);
     expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
     expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
+  });
+
+  it('places one selection action beside each shop, not beside its individual users', () => {
+    setupSignedIn();
+    const other = '59d0b4c5-4e64-46e1-ac52-ad946d2b4865';
+    mock.state[12] = [
+      { id: mock.state[3], name: 'Loja A', role: 'ADMIN' },
+      { id: other, name: 'Loja B', role: 'ADMIN' }
+    ];
+    mock.state[21] = {
+      [mock.state[3] as string]: [
+        { username: 'teste1', role: 'OPERATOR' },
+        { username: 'teste3', role: 'OPERATOR' }
+      ],
+      [other]: [{ username: 'teste2', role: 'OPERATOR' }]
+    };
+    const nodes = render();
+    const cells = nodes.filter(n => n.type === 'td' && n.props.rowSpan);
+    expect(cells).toHaveLength(2);
+    expect(cells.find(cell => walk(cell).some(n =>
+      n.type === 'strong' && n.props.children === 'Loja A'))?.props.rowSpan).toBe(2);
+    for (const cell of cells) {
+      expect(walk(cell).filter(n => n.type === 'button' &&
+        (n.props.children === 'Selecionar' || n.props.children === 'Selecionado'))).toHaveLength(1);
+    }
+    expect(nodes.filter(n => n.type === 'button' &&
+      n.props['aria-label'] === 'Selecionar loja Loja A')).toHaveLength(1);
+    (find('button', 'Selecionar loja Loja B').props.onClick as () => void)();
+    expect(mock.state[3]).toBe(other);
+  });
+
+  it('explains invalid usernames with spaces before submitting an additional user', () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja A', role: 'ADMIN' }];
+    (find('button', 'Adicionar usuário à loja').props.onClick as () => void)();
+    (find('input', 'Novo usuário da loja').props.onChange as (e: unknown) => void)(
+      { target: { value: 'teste 3' } });
+    const nodes = render();
+    expect(nodes.some(n => n.props.role === 'alert' &&
+      typeof n.props.children === 'string' && n.props.children.includes('sem espaços'))).toBe(true);
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Adicionar usuário');
+    expect(submit?.props.disabled).toBe(true);
+    expect(addMerchantOperator).not.toHaveBeenCalled();
   });
 
   it('loads actual Keycloak members and their ADMIN or OPERATOR roles', async () => {
