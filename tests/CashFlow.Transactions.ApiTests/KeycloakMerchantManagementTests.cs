@@ -111,6 +111,62 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task ListsActualMerchantUsersAndTheirRoleRatherThanTheRequestingAdminRole()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/groups", StringComparison.Ordinal)
+                && request.Method == HttpMethod.Get) return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith("/groups/admin-id/members", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "cashflow.admin" } });
+            if (path.EndsWith("/groups/operator-id/members", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = Guid.NewGuid().ToString("D"), username = "loja.teste" } });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        var list = await Create(fake).ListMembersAsync(MerchantId, CancellationToken.None);
+        Assert.Contains(list, member => member.Username == "cashflow.admin" && member.Role == "ADMIN");
+        Assert.Contains(list, member => member.Username == "loja.teste" && member.Role == "OPERATOR");
+        Assert.Equal(2, list.Count);
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "POST" &&
+            call.Path.Contains("members", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MissingMerchantDoesNotReturnMembersOrReadUnrelatedGroups()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+            Path(request).EndsWith("/groups", StringComparison.Ordinal) &&
+            request.Method == HttpMethod.Get
+                ? JsonResponse(Array.Empty<object>())
+                : new HttpResponseMessage(HttpStatusCode.NotFound)));
+        Assert.Empty(await Create(fake).ListMembersAsync(MerchantId, CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Path.Contains("/members", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RejectsMemberDirectoryIfKeycloakUserLookupFails()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        }));
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            Create(fake).ListMembersAsync(MerchantId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreatesMerchantHierarchyAssignsOwnerAndStoresDisplayName()    [Fact]
     public async Task CreatesMerchantHierarchyAssignsOwnerAndStoresDisplayName()
     {
         string? createdMerchantId = null;
