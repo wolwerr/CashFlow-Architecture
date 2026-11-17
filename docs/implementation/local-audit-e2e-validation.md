@@ -39,6 +39,8 @@ Testes offline na CI:
 python3 -m unittest discover -s .github/scripts -p 'test_local_audit_inventory.py'
 ```
 
+> Trilha 05: teste local opt-in de contratos JWT, segregação, idempotência, crédito/débito, histórico e saldo descrito em [trilha-05-local-e2e.md](trilha-05-local-e2e.md). A automação offline na CI valida apenas o probe; execução real requer dois merchants descartáveis e dois tokens locais distintos.
+
 ## Roteiro de homologação E2E local do CashFlow
 
 Usar apenas dados de teste, documentar commit, SO, versões Docker, especificações CPU/RAM, data, serviços e resultado dos comandos sem divulgar credenciais ou dados pessoais. **Não marcar PASS sem evidência observada.**

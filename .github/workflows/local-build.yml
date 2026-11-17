@@ -309,6 +309,9 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
+      - name: Sonar | Validate local MVP end-to-end smoke contract (offline, no writes)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_e2e_mvp.py'
+
       - name: Sonar | Run local load probe unit tests (no live load in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_load_probe.py'
 

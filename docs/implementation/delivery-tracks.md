@@ -39,6 +39,14 @@
 
 **Progresso complementar Trilha 04:** inventário não destrutivo de auditoria e roteiro integrado de homologação local, descritos em [Auditoria e E2E](local-audit-e2e-validation.md). Os testes reais, comprovação de retenção, segurança e performance ainda precisam de execução com evidências.
 
+## Trilha 05 | Integração E2E e aceite funcional local
+
+**Pacote:** teste opt-in pelo NGINX real com dois comerciantes descartáveis e tokens Keycloak distintos. Exercitar HTTP 401/403 entre lojas, POST 201 com `Idempotency-Key`, replay com mesmo ID, conflito 409, CREDIT R$ 100 / DEBIT R$ 25, histórico paginado e saldo projetado em Consolidation (+R$ 75 em relação ao baseline). Versão offline do probe na CI, documentação dos passos manuais de login/gestão/reativação, sem executar mutações em GitHub Actions.
+
+**Implementação:** [Runbook e script da Trilha 05](trilha-05-local-e2e.md), `.github/scripts/local_e2e_mvp.py` e respectivos testes unitários. A CI verifica o probe; homologação integrada com duas contas reais permanece **NOT RUN** até haver evidência coletada no Docker Compose local.
+
+**Critério de conclusão:** checks automatizados e pipeline verdes **mais** evidências reais E2E e navegador. Projeção em um ensaio de 30 s não substitui SLO estatístico; carga e hardening continuam nas trilhas seguintes.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
