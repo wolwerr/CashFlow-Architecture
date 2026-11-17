@@ -159,9 +159,8 @@ Esse cliente é usado pelas APIs **Transactions** e **Consolidation** para consu
 1. Volte à página de **Clients > cashflow-authorization-service**.
 2. Abra a aba **Service account roles**. Se essa aba não aparecer, confira em **Settings** se **Client authentication** e **Service accounts roles** estão habilitados para o cliente confidencial.
 3. Clique em **Assign role** e, na janela aberta, escolha o filtro **Filter by clients** (a descrição pode variar conforme a interface).
-4. Localize as roles pertencentes ao cliente **realm-management**.
-5. Selecione **view-users** e clique em **Assign**.
-6. Confira que `realm-management / view-users` aparece na lista de permissões da Service Account. Caso alguma consulta de usuários/grupos seja negada na homologação, investigue o retorno do Keycloak antes de ampliar privilégios.
+4. Localize as roles pertencentes ao cliente **view-users** e clique em **Assign**.
+5. Confira que `realm-management / view-users` aparece na lista de permissões da Service Account. Caso alguma consulta de usuários/grupos seja negada na homologação, investigue o retorno do Keycloak antes de ampliar privilégios.
 
 **Resultado esperado:** o cliente de autorização possui um secret próprio no `.env` e apenas as permissões de consulta necessárias. **Não atribua `manage-users` ou `manage-realm` a esse cliente.**
 
