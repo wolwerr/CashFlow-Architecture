@@ -7,6 +7,8 @@ Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débit
 > **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. O Compose inclui os seis serviços principais e cinco serviços de observabilidade. O teste funcional de observabilidade foi confirmado pelo operador localmente, sem SHA contemporâneo registrado.
 
 
+**Documentação interativa das APIs (Swagger UI, ambiente local):** [Transactions](http://localhost:8080/swagger/transactions/) · [Consolidation](http://localhost:8080/swagger/consolidation/). Ambas permitem autenticação automática no Keycloak pelo botão **Authorize → KeycloakOAuth2**, usando Authorization Code + PKCE, sem copiar JWT. Disponíveis após iniciar o Docker Compose em Development. [Veja como testar](#documentação-interativa-das-apis-swagger-ui).
+
 ## Índice
 
 - [Entrega para avaliação](#entrega-para-avaliação)
