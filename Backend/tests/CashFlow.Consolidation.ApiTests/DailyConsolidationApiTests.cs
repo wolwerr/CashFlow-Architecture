@@ -74,6 +74,28 @@ public sealed class DailyConsolidationApiTests : IDisposable
     }
 
     [Fact]
+    public async Task SwaggerDocumentsDailyConsolidationAndBearerSecurity()
+    {
+        using var client = factory.CreateClient();
+        using var response = await client.GetAsync("/swagger/v1/swagger.json");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("/api/v1/consolidation/daily", body);
+        Assert.Contains("\"Bearer\"", body);
+        Assert.Contains("\"security\"", body);
+        Assert.Contains("\"bearer\"", body);
+    }
+
+    [Fact]
+    public async Task SwaggerUiIsAvailableInDevelopment()
+    {
+        using var client = factory.CreateClient();
+        using var response = await client.GetAsync("/swagger/index.html");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
     public async Task HealthIsPublicAndBalanceRequiresJwt()
     {
         using var client = factory.CreateClient();
