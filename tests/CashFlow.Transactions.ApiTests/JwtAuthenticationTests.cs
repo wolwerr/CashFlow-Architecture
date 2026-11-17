@@ -306,10 +306,10 @@ public sealed class JwtAuthenticationTests : IDisposable
     }
 
     [Theory]
-    [InlineData("PUT", "/api/v1/merchants/details", "{\\"name\\":\\"  \\"}")]
-    [InlineData("POST", "/api/v1/merchants/members", "{\\"username\\":\\"x\\",\\"password\\":\\"a-secure-password\\"}")]
-    [InlineData("PUT", "/api/v1/merchants/members", "{\\"username\\":\\"x\\",\\"role\\":\\"ADMIN\\"}")]
-    [InlineData("DELETE", "/api/v1/merchants/members", "{\\"username\\":\\"x\\"}")]
+    [InlineData("PUT", "/api/v1/merchants/details", "{\"name\":\"  \"}")]
+    [InlineData("POST", "/api/v1/merchants/members", "{\"username\":\"x\",\"password\":\"a-secure-password\"}")]
+    [InlineData("PUT", "/api/v1/merchants/members", "{\"username\":\"x\",\"role\":\"ADMIN\"}")]
+    [InlineData("DELETE", "/api/v1/merchants/members", "{\"username\":\"x\"}")]
     public async Task InvalidMerchantMutationIsRejectedBeforeKeycloak(
         string method, string path, string payload)
     {
