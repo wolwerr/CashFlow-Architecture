@@ -101,7 +101,11 @@ public sealed class ConsolidationConsumerWorker(
                     {
                         await using var scope = scopes.CreateAsyncScope();
                         var handler = scope.ServiceProvider.GetRequiredService<ProcessTransactionUseCase>();
-                        await handler.ExecuteAsync(message, stoppingToken);
+                        var firstApplication = await handler.ExecuteAsync(message, stoppingToken);
+                        if (Guid.TryParse(delivery.BasicProperties.CorrelationId, out var safeCorrelationId))
+                            logger.LogInformation(
+                                "Consolidation event handled applied={Applied} correlation_id={CorrelationId}",
+                                firstApplication, safeCorrelationId);
                         await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false,
                             cancellationToken: stoppingToken);
                     }
