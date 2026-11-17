@@ -71,7 +71,12 @@ export function listMerchants(token: string): Promise<Merchant[]> {
 export type MerchantMember = { username: string; role: 'ADMIN' | 'OPERATOR' };
 
 export function listMerchantMembers(token: string, merchantId: string): Promise<MerchantMember[]> {
-  return call('/api/v1/merchants/' + encodeURIComponent(merchantId) + '/members', token);
+  // Only canonical merchant UUIDs are allowed in a URL path. Do not pass arbitrary
+  // user-controlled values to fetch, even after encodeURIComponent.
+  if (!validMerchant(merchantId)) {
+    return Promise.reject(new ApiError(400, 'Identificador de comerciante inválido.'));
+  }
+  return call(`/api/v1/merchants/${merchantId}/members`, token);
 }
 
 export function merchantPermissions(token: string): Promise<{can_manage_merchants: boolean}> {
