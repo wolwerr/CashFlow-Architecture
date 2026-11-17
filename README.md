@@ -1,43 +1,209 @@
-# CashFlow Architecture
+# CashFlow | Desafio de Arquitetura de Soluções
 
-MVP de fluxo de caixa multicomerciante, desenvolvido **localmente** com .NET 10, React/TypeScript, Keycloak, PostgreSQL, RabbitMQ e NGINX. As APIs Transactions e Consolidation têm bancos financeiros distintos e se comunicam de forma assíncrona via Outbox e RabbitMQ. O Keycloak é a fonte dos usuários e dos vínculos ADMIN/OPERATOR por loja, sem quarto banco de autorização.
+[![GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml/badge.svg)](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml)
 
-## Começar localmente
+Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débitos** e consulta do **saldo diário consolidado**. Este repositório contém código, testes, decisões, diagramas e procedimentos locais. O desafio exige independência entre lançamentos e consolidado, além de **50 consultas/segundo** com **no máximo 5% de falhas**. A conformidade operacional desses limites ainda depende de evidências de homologação, não apenas da CI.
 
-Pré-requisitos: Docker Compose, ambiente local descartável e segredos de desenvolvimento configurados conforme [bootstrap e cadastro de comerciantes](docs/implementation/merchant-onboarding.md).
+> **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. Recursos opcionais de observabilidade estão decididos na arquitetura, mas não fazem parte dos seis serviços do Compose abaixo.
 
-```bash
-docker compose up --build -d
+## 1. Arquitetura em poucas palavras
+
+```text
+Navegador (React + OIDC PKCE) ---> Keycloak (login)
+              |
+              v
+         NGINX :8080
+         /           \
+Transactions API   Consolidation API
+      |                    |
+ PostgreSQL            PostgreSQL
+      |                    ^
+ Transactional Outbox     |
+      +----> RabbitMQ ----+ (consumer idempotente)
+```
+
+Os bancos lógicos são `cashflow_transactions`, `cashflow_consolidation` e `cashflow_keycloak` no PostgreSQL local. O **Keycloak** é a fonte de usuários, grupos e permissões por comerciante; não existe quarto banco de autorização. O POST de lançamento confirma a transação e a Outbox antes de responder, **sem aguardar** o Consolidation. O saldo é atualizado assincronamente.
+
+## 2. Pré-requisitos
+
+- **Windows:** PowerShell, Git e Docker Desktop com Docker Compose v2 (engine Linux). Mac/Linux: adapte os comandos de terminal.
+- Docker em execução, memória/disco disponíveis para construir imagens .NET e frontend. É necessário acesso à internet para baixar imagens e dependências na primeira execução.
+- Portas livres em `127.0.0.1`: **8080** (CashFlow), **8081** (Keycloak), **5432** (PostgreSQL) e **15672** (RabbitMQ Management). Outras portas dos serviços não são publicadas.
+- **Python 3** somente para os scripts de aceite e diagnóstico; **.NET SDK/Node não são exigidos para executar a aplicação via Docker**.
+
+Confira:
+
+```powershell
+git --version
+docker version
+docker compose version
+```
+
+## 3. Clonar ou atualizar
+
+```powershell
+git clone https://github.com/wolwerr/CashFlow-Architecture.git
+cd CashFlow-Architecture
+git checkout main
+git pull origin main
+```
+
+Se já tiver o repositório, execute apenas `cd`, `git checkout main` e `git pull`.
+
+## 4. Instalação absolutamente limpa (opcional, destrutiva)
+
+**ATENÇÃO: executa a exclusão permanente dos dados de demonstração do projeto local.** Apaga comerciantes, usuários e configuração do realm Keycloak, lançamentos, saldos e filas presentes nos volumes **deste projeto Compose**. Não use se houver dados importantes, nem execute `docker system prune --volumes`, que pode afetar outros projetos.
+
+Na **raiz** do repositório, confirme primeiro o projeto e volumes:
+
+```powershell
+docker compose config --services
+docker compose ps -a
+docker volume ls --filter label=com.docker.compose.project=cashflow-local
+```
+
+Se você realmente quer recomeçar do zero:
+
+```powershell
+docker compose down --volumes --remove-orphans
+docker compose ps -a
+docker volume ls --filter label=com.docker.compose.project=cashflow-local
+```
+
+`down --volumes` exclui os volumes nomeados deste Compose; os volumes de **outros projetos Docker** não são alvo. Imagens Docker compartilhadas permanecem instaladas, o que é normal. Para reconstruir sem cache, pode usar `docker compose build --no-cache` depois, se necessário.
+
+## 5. Configurar variáveis locais
+
+Crie o arquivo não versionado `.env`:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Defina senhas próprias para `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD`, `KEYCLOAK_ADMIN_PASSWORD`. Mantenha `KEYCLOAK_AUTHZ_CLIENT_SECRET` e `KEYCLOAK_MGMT_CLIENT_SECRET` vazios **somente até concluir a etapa 7**. `.env` é ignorado pelo Git. Não cole segredos em issues, capturas ou logs.
+
+**Não confunda:** `KEYCLOAK_ADMIN` é o administrador técnico do realm `master`; `cashflow.admin` é o usuário da plataforma no realm `cashflow`.
+
+## 6. Subir infraestrutura nova
+
+```powershell
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail=80 postgres keycloak transactions consolidation rabbitmq web
+```
+
+Serviços: `postgres`, `rabbitmq`, `keycloak`, `transactions`, `consolidation`, `web`. Primeiro startup pode exigir tempo para build, migrações e inicialização. Se houver falha, rode `docker compose ps` e `docker compose logs --tail=120 <nome-do-servico>` antes de recriar qualquer coisa. Não precisa apagar volumes para repetir um build.
+
+Acesse as interfaces:
+
+| Aplicação | URL | Observação |
+| --- | --- | --- |
+| CashFlow | http://localhost:8080 | Login apenas após concluir bootstrap |
+| Keycloak Admin | http://localhost:8081/admin/ | Login com `KEYCLOAK_ADMIN` e senha definida |
+| RabbitMQ | http://localhost:15672 | Credenciais `cashflow` e `RABBITMQ_PASSWORD` |
+| PostgreSQL | localhost:5432 | Acesso local com usuário `cashflow` e `POSTGRES_PASSWORD` |
+
+## 7. Bootstrap obrigatório no Keycloak, ambiente zerado
+
+A importação automática de `infra/local/keycloak/cashflow-realm.json` cria o realm `cashflow` e os clientes, **mas não fornece as credenciais e permissões administrativas necessárias**. Complete uma vez:
+
+**A. Criar o administrador CashFlow.** Entre em `http://localhost:8081/admin/` com o administrador do realm **master** (etapa 5). Troque para o realm **cashflow** no seletor, vá a **Users > Add user** e crie `cashflow.admin` com `Enabled` ligado. Em **Credentials > Set password**, defina senha de teste segura, com `Temporary` desligado para este primeiro login local. Esse login é diferente do usuário do realm master.
+
+**B. Cliente de autorização, apenas leitura.** Em **Clients > cashflow-authorization-service > Credentials**, copie o **Client secret**. Em **Service account roles**, atribua no cliente `realm-management` somente **`view-users`** (e acesso de consulta estritamente necessário caso sua versão do Keycloak o exija). Esse cliente não pode gerenciar usuários ou grupos.
+
+**C. Cliente de gestão.** Em **Clients > cashflow-management-service > Credentials**, copie o **Client secret**. Em **Service account roles**, atribua, no cliente `realm-management`, **`manage-realm`**, **`manage-users`**, **`view-users`** e **`query-users`** conforme o contrato local de provisionamento. Essas permissões são amplas e **apenas de desenvolvimento**, nunca devem ser dadas à SPA.
+
+**D. Completar o `.env`.** Sem incluir aspas e sem publicar valores:
+
+```dotenv
+KEYCLOAK_AUTHZ_CLIENT_SECRET=<secret_do_cliente_de_autorizacao>
+KEYCLOAK_MGMT_CLIENT_SECRET=<secret_do_cliente_de_gestao>
+CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin
+```
+
+Recrie os consumidores das variáveis, preservando Keycloak e dados:
+
+```powershell
+docker compose up -d --force-recreate --no-deps transactions consolidation
 docker compose ps
 ```
 
-A aplicação local usa `http://localhost:8080`; o Keycloak local usa `http://localhost:8081`. **Não execute `docker compose down -v`** se precisar manter os dados. Para ambientes existentes, importar novamente o realm não atualiza automaticamente suas configurações.
+**E. Validar o login.** Abra `http://localhost:8080` em janela anônima, autentique como `cashflow.admin` do realm `cashflow` e confirme a área administrativa. Se não aparecer, use `docker compose logs --tail=100 transactions` e confira `GET /api/v1/merchants/permissions` no DevTools, sem expor tokens. Se o login exigir configuração de usuário, confira Enabled, senha, ações obrigatórias e realm selecionado.
 
-## Arquitetura e decisões
+A opção **Edit username** do realm novo está habilitada no JSON de importação. Em realms já existentes, o import não sobrescreve essa preferência; altere manualmente nas configurações de Login do realm.
 
-- [Arquitetura e diagramas](docs/architecture/building-block-view.md)
-- [ADRs, identidade e autorização](docs/architecture/adr/ADR-006-identity-and-access.md)
-- [Decisões consolidadas do MVP](docs/architecture/mvp-decisions.md)
-- [Visão de implantação LOCAL e Azure futura](docs/architecture/deployment-view.md)
-- [Plano de entrega por trilhas](docs/implementation/delivery-tracks.md)
+Para mais detalhes e diagnóstico: [bootstrap de comerciantes e permissões](docs/implementation/merchant-onboarding.md).
 
-## Testes e fechamento do MVP
+## 8. Roteiro de uso e demonstração
 
-- [Trilha 05, fluxo financeiro E2E](docs/implementation/trilha-05-local-e2e.md)
-- [Trilha 06, segurança e consistência Keycloak](docs/implementation/trilha-06-keycloak-consistency.md)
-- [Trilha 07, resiliência e observabilidade local](docs/implementation/trilha-07-resilience-observability.md)
-- [Trilha 08, roteiro e manifesto de homologação](docs/implementation/trilha-08-local-acceptance.md)
-- [Trilha 09, prontidão, pendências e backlog](docs/implementation/trilha-09-mvp-closeout.md)
+1. Como `cashflow.admin`, cadastrar **Loja A** e **Loja B** com usernames diferentes, senhas iniciais distintas de 12 a 128 caracteres e nomes visíveis. O username é único no realm, não por loja.
+2. Conferir a lista administrativa com loja, usuário, cargo e status. Editar username/cargo, desativar e reativar usuário de teste. Soft delete usa o grupo `INACTIVE`, sem exclusão física de histórico.
+3. Sair e entrar como usuário OPERATOR da Loja A; ele deve ver apenas **Novo lançamento, Saldo Diário, Histórico**, sem administração. Confirmar que não enxerga dados da Loja B.
+4. Na Loja A sem saldo anterior, registrar **CREDIT R$ 100,00** e **DEBIT R$ 25,00** para a mesma data. A confirmação da transação precede a consolidação: aguardar o processamento normal do RabbitMQ. Conferir duas linhas de histórico, crédito total R$ 100,00, débito total R$ 25,00, movimento líquido e saldo acumulado **R$ 75,00**.
+5. Conferir competência anterior e dia sem lançamentos, histórico paginado, bloqueio de data futura, valor zero/negativo, autorização e idempotência. Não refazer POST por atraso do saldo.
 
-Gerar um manifesto local de homologação com todos os cenários inicialmente `NOT_RUN`:
+Todos os cenários de homologação, incluindo dois tokens e isolamento real, estão no [roteiro da Trilha 08](docs/implementation/trilha-08-local-acceptance.md).
 
-```bash
-python3 .github/scripts/local_mvp_acceptance.py --init local-acceptance.json
-python3 .github/scripts/local_mvp_acceptance.py --manifest local-acceptance.json
+## 9. Testes automatizados e evidência de requisitos não funcionais
+
+**CI:** [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions) executa build, testes e Sonar. Para executar o teste offline do aceite, com Python 3 instalado:
+
+```powershell
+python .github/scripts/local_mvp_acceptance.py --init local-acceptance.json
+python .github/scripts/local_mvp_acceptance.py --manifest local-acceptance.json
 ```
 
-O segundo comando retorna `NOT_ACCEPTED` até existirem evidências reais, 14 cenários PASS e um commit SHA correspondente ao código testado. A **CI verde não significa MVP local homologado**. Scripts de carga, recuperação e lançamentos financeiros são opt-in e não rodam automaticamente na CI.
+A primeira execução cria um manifesto com 14 cenários `NOT_RUN`; a segunda retorna `NOT_ACCEPTED` até haver evidências reais. Execute `--init` **uma única vez**, pois ele não sobrescreve arquivos existentes. Os relatórios locais são ignorados pelo Git.
 
-## Fora do escopo atual
+**Diagnóstico somente de leitura:**
 
-Azure AKS (DEV/HOM/PROD/SHARED) permanece planejamento futuro. Estorno RF-06, MFA e hardening de produção exigem novas decisões e testes antes de implantação.
+```powershell
+python .github/scripts/local_operational_snapshot.py --execute
+```
+
+**Resiliência e carga:** o desafio impõe que uma falha apenas de Consolidation **não indisponibilize** o registro em Transactions e que o consolidado suporte **50 requisições/segundo com até 5% sem resposta útil**. Para testar esses requisitos, consulte:
+
+- [Drills locais, broker e consumer](docs/implementation/local-recovery-drills.md)
+- [Teste de carga de 50 RPS por 5 minutos](docs/implementation/local-hardening-load.md)
+- [SLO de projeção 95% em até 30 segundos](docs/implementation/local-slo-observability.md)
+- [Auditoria, integridade e recuperação](docs/implementation/local-audit-e2e-validation.md)
+- [Backup e restauração PostgreSQL](docs/implementation/local-postgres-backup-verification.md)
+
+Esses ensaios são **opt-in**, usam dados descartáveis e podem interromper temporariamente serviços. Não são executados automaticamente ao subir o Compose ou pela CI. Para 50 RPS, interpretar a perda como consultas válidas sem resposta útil é uma **premissa explícita do projeto**. O p95 inferior a 500 ms é um **SLO adicional do MVP**, não uma exigência textual do desafio. Nenhuma métrica é considerada comprovada sem relatório real.
+
+## 10. Documentação do desafio
+
+A [matriz de rastreabilidade do enunciado](docs/requirements/challenge-compliance-matrix.md) relaciona cada requisito do PDF à implementação, às decisões e às evidências que ainda precisam ser coletadas.
+
+| Assunto | Documento |
+| --- | --- |
+| Capacidades e domínios | [Context map](docs/domain/business-capabilities-and-context-map.md) |
+| Requisitos funcionais | [RF-01 a RF-07](docs/requirements/functional-requirements.md) |
+| Requisitos não funcionais | [RNF e SLIs/SLOs](docs/requirements/non-functional-requirements.md) |
+| Arquitetura alvo e C4 | [Building Block View](docs/architecture/building-block-view.md) |
+| Integrações e decisões | [ADRs](docs/architecture/adr/README.md) e [sequências](docs/architecture/sequence-diagrams.md) |
+| Custos estimados, não provisionados | [Planejamento Azure](docs/architecture/four-environment-total-cost-plan.md) |
+| Homologação do MVP local | [Trilha 08](docs/implementation/trilha-08-local-acceptance.md) e [fechamento técnico](docs/implementation/trilha-09-mvp-closeout.md) |
+
+**Arquitetura de transição:** o desafio não informa sistema legado; documentamos que não há migração identificada a desenhar, em vez de inventar um estado de origem.
+
+## 11. Parar, atualizar e reiniciar
+
+```powershell
+# Parar containers preservando os dados
+docker compose down
+
+# Iniciar novamente sem apagar volumes
+docker compose up -d --build
+
+# Conferir estado e logs
+docker compose ps
+docker compose logs --tail=100 transactions consolidation
+```
+
+Para **apagar novamente toda a instalação local**, consulte a etapa 4 e confirme que não precisa dos dados. Não use `docker compose down --volumes` como rotina de atualização. Nunca publique o `.env` ou senhas de teste.
+
+## Status do projeto
+
+**Código e documentação entregues**, com homologação final dos requisitos do desafio **pendente de execução real local**, sobretudo falha de Consolidation, pico de 50 RPS, recuperação e integridade. Veja a [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md) para distinguir decisão arquitetural, implementação e evidência comprovada.
