@@ -66,7 +66,7 @@ public sealed class KeycloakMerchantManagementTests
         var fake = new FakeHandler(req => TokenOr(req, request => Path(request) switch
         {
             var p when p.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal) =>
-                JsonResponse(new[] { Admin(), Operator() }),
+                JsonResponse(new[] { Admin() }),
             var p when p == "/admin/realms/cashflow/groups" => JsonResponse(new[] { Root() }),
             var p when p == "/admin/realms/cashflow/groups/root-id/children" =>
                 JsonResponse(new[] { Merchant() }),
@@ -78,6 +78,21 @@ public sealed class KeycloakMerchantManagementTests
         Assert.Equal(MerchantId, only.Id);
         Assert.Equal("Loja Campinas", only.Name);
         Assert.Equal("ADMIN", only.Role);
+    }
+
+    [Fact]
+    public async Task MerchantDirectoryRejectsSimultaneousAdminAndOperatorRoles()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request => Path(request) switch
+        {
+            var p when p.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal) =>
+                JsonResponse(new[] { Admin(), Operator() }),
+            var p when p == "/admin/realms/cashflow/groups" => JsonResponse(new[] { Root() }),
+            var p when p == "/admin/realms/cashflow/groups/root-id/children" =>
+                JsonResponse(new[] { Merchant() }),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        }));
+        Assert.Empty(await Create(fake).ListAsync(UserId, CancellationToken.None));
     }
 
     [Fact]
