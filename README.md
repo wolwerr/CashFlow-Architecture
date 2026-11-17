@@ -105,6 +105,8 @@ Copy-Item .env.example .env
 notepad .env
 ```
 
+**Senha obrigatória do Grafana:** no mesmo `.env`, substitua `CASHFLOW_GRAFANA_PASSWORD=SUBSTITUA_POR_SENHA_LOCAL_GRAFANA` por uma senha forte criada por você. O valor de `.env.example` é apenas um marcador, não deve ser usado como senha. O Grafana inicia junto com o Compose principal e fica disponível em `http://localhost:3000`, com usuário `admin` e a senha definida nessa variável. Sem ela, o `docker compose` não inicia. Para instalações já existentes, **adicione somente essa variável ao `.env` atual**, sem sobrescrever as senhas do PostgreSQL, RabbitMQ ou Keycloak.
+
 **Passo obrigatório ANTES de subir o Keycloak:** `.env.example` é um **modelo**, não um arquivo de credenciais funcionais. Os valores como `DEFINA_AQUI_SUA_SENHA_INICIAL_FORTE` são apenas marcadores e precisam ser trocados no `.env` local. Defina senhas próprias para `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD` e `KEYCLOAK_ADMIN_PASSWORD`. A conta técnica inicial do Keycloak usa `KEYCLOAK_ADMIN=admin` como username no realm `master` e **a senha que você escolher** em `KEYCLOAK_ADMIN_PASSWORD`.
 
 Exemplo ilustrativo, **não copie a senha literal**:
@@ -294,15 +296,7 @@ Para homologar, teste dois usuários de lojas diferentes, confirme o isolamento 
 
 [![Build, testes e SonarQube Cloud](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml/badge.svg?branch=main)](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml)
 
-O selo acima reflete o **estado atual da pipeline da branch `main`**, não um resultado de teste manual. Clique nele para abrir o GitHub Actions, selecione a execução mais recente e confira os jobs **Backend | Build and tests**, **Frontend | Build and tests** e **Sonar | Backend and frontend**. É possível verificar cada passo, os testes executados e a geração dos relatórios de cobertura. Um selo verde indica sucesso da execução, mas não comprova sozinho os cenários de falha e carga descritos abaixo.
-
-**Para incluir uma captura real dos testes no README:** abra [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml), selecione um run com os três jobs aprovados, capture a tela exibindo o status e salve a imagem como `docs/architecture/images/tests-github-actions.png`. Adicione o arquivo ao Git e substitua este parágrafo pelo Markdown:
-
-```markdown
-![Execução real dos testes de Backend, Frontend e Sonar no GitHub Actions](docs/architecture/images/tests-github-actions.png)
-```
-
-**Não adicione uma captura de execução antiga ou uma imagem gerada artificialmente para representar testes atuais.** O link para o GitHub Actions deve permanecer para que o avaliador confirme a execução.
+O selo acima reflete o **estado atual da pipeline da branch `main`**, não um resultado de teste manual. Clique nele para abrir o GitHub Actions, selecione a execução mais recente e confira os jobs **Backend | Build and tests**, **Frontend | Build and tests**, **Validation | Offline contracts and Compose** e **Sonar | Backend and frontend**. É possível verificar cada passo, os relatórios de testes e a geração dos relatórios de cobertura na própria execução, sem necessidade de capturas estáticas no README. Um selo verde indica sucesso da execução, mas não comprova sozinho os cenários de falha e carga descritos abaixo.
 
 ### 9.2. Resultado documentado de execução local do backend
 
