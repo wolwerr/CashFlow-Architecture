@@ -76,3 +76,14 @@ Validar efetivamente:
 **Não existe PASS automático** enquanto os itens acima não tiverem resultados reais e o manifesto continuar `observability: NOT_RUN`. A verificação deve ser realizada após CI verde e com os serviços realmente em execução. A aprovação de testes de integração não substitui essa homologação.
 
 **Nota de bootstrap:** o Grafana exige `CASHFLOW_GRAFANA_PASSWORD` no ambiente ou no `.env` local ignorado pelo Git. No primeiro bootstrap, as credenciais de serviço Keycloak exigidas pelas APIs também precisam estar configuradas conforme o README. Não rodar `docker compose down --volumes` sobre dados relevantes.
+
+## Evidência visual relatada pelo operador, 17/11/2026
+
+O operador forneceu capturas reais de **Grafana Explore** no ambiente local:
+
+- **Prometheus:** `up{job="cashflow-otel-collector"}` com valor `1` após a recuperação e cinco séries de `http_server_request_duration_seconds_count` identificando `cashflow-transactions` e `cashflow-consolidation`.
+- **Loki:** resultados contendo logs dos dois serviços `cashflow-transactions` e `cashflow-consolidation`.
+- **Tempo:** trace da requisição `POST /api/v1/transactions` com HTTP `201`, span `rabbitmq publish transaction.recorded` e span de consumo `cashflow-consolidation` na mesma árvore distribuída (5 spans, duração total relatada de 320,46 ms).
+- **Falha do Collector:** operador informou que o lançamento foi aceito enquanto o Collector estava parado e não apareceu no Grafana, comportamento consistente com telemetria não disponível. O Collector voltou a responder posteriormente (`up=1`). **Falta confirmar explicitamente a persistência desse lançamento no histórico e sua projeção no saldo.**
+
+As capturas foram compartilhadas na conversa, **não são arquivos de evidência versionados no repositório**, e não substituem verificação automatizada de disponibilidade/integração. O SHA local efetivamente testado não foi disponibilizado. Portanto, não atribuir `PASS` ao cenário `observability` nem marcar `14/14` até guardar evidência sanitizada com SHA e confirmar histórico e saldo.
