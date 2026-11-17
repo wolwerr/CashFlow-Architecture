@@ -7,7 +7,6 @@ A documentação foi dividida por objetivo para facilitar a leitura sem duplicar
 | Documento | O que apresenta |
 | --- | --- |
 | **[Decisões consolidadas do MVP](mvp-decisions.md)** | 24 decisões aprovadas para regras financeiras, escopo, IAM, contratos, qualidade e operação; distinção entre decisão e comprovação. |
-| **[Checklist de implementação e testes do MVP](mvp-implementation-checklist.md)** | Ações pendentes de OpenAPI, modelo físico, desenvolvimento, qualidade, operações e evidências antes de PROD. |
 | **[Requisitos e atendimento do desafio](../requirements/challenge-compliance-matrix.md)** | Rastreabilidade dos requisitos, decisões, implementação e evidências ainda necessárias. |
 | **[Visão de Blocos de Construção (Building Block View)](building-block-view.md)** | **C4 Níveis 1, 2 e 3 em uma página**, com diagramas, responsabilidades, protocolos, portas, componentes e justificativas técnicas. |
 | **[Deployment View](deployment-view.md)** | Implantação de LOCAL, DEV, HOM, PROD e SHARED; visão Azure e capacidades equivalentes em AWS/GCP. |
