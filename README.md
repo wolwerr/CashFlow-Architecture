@@ -4,7 +4,7 @@
 
 Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débitos** e consulta do **saldo diário consolidado**. Este repositório contém código, testes, decisões, diagramas e procedimentos locais. O desafio exige independência entre lançamentos e consolidado, além de **50 consultas/segundo** com **no máximo 5% de falhas**. Os limites foram avaliados em ensaios locais informados pelo operador; a [auditoria final](docs/validation/final-delivery-evidence.md) documenta os resultados e limitações de rastreabilidade.
 
-> **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. Além dos seis serviços financeiros/de infraestrutura originais, o Compose principal inclui cinco serviços de observabilidade: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A instrumentação OTLP é habilitada por padrão no Compose local. A coleta OTLP e propagação de trace foram validadas funcionalmente pelo operador no ambiente local, sem SHA contemporâneo registrado.
+> **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. O Compose inclui os seis serviços principais e cinco serviços de observabilidade. O teste funcional de observabilidade foi confirmado pelo operador localmente, sem SHA contemporâneo registrado.
 
 
 ## Entrega para avaliação
@@ -12,14 +12,6 @@ Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débit
 **Enunciado revisado e checklist:** [Auditoria final e evidências](docs/validation/final-delivery-evidence.md) · [Matriz de requisitos](docs/requirements/challenge-compliance-matrix.md) · [Roteiro de apresentação](docs/validation/demo-presentation.md).
 
 **Resultado informado da homologação local de 17/11/2026:** 14/14 cenários `PASS` (sem falhas), incluindo independência de Transactions, 50 RPS por cinco minutos e trace distribuído HTTP → Outbox → Consolidation. **Limite de rastreabilidade:** o manifesto local contém `commit: NOT_RECORDED` e portanto seu estado formal ainda é `NOT_ACCEPTED`; não associar os testes históricos a um SHA posterior. A [CI #577](https://github.com/wolwerr/CashFlow-Architecture/actions/runs/44163593607) aprovou Backend, Frontend, Validation e Sonar para a revisão da PR #82.
-
-**Implantação:** o MVP roda **apenas localmente**. Azure/AKS, HA de produção e preços são arquitetura e estimativas, não serviços provisionados.
-
-### Grafana e observabilidade integrada
-
-Antes de executar **qualquer** `docker compose up` no Compose unificado, configure uma senha forte para o Grafana na variável `CASHFLOW_GRAFANA_PASSWORD` ou no `.env` local (ignorado pelo Git). Em PowerShell: `$env:CASHFLOW_GRAFANA_PASSWORD = Read-Host "Senha local do Grafana" -MaskInput`. Sem essa variável o Compose recusará a inicialização, em vez de criar um painel com senha padrão.
-
-O comando usual `docker compose up -d --build` sobe os **11 serviços**, sem arquivo override. Acesse o Grafana em `http://localhost:3000`, usuário `admin`, e confira as três fontes de dados. Ver [runbook da observabilidade](docs/validation/local-observability-stack.md). No bootstrap inicial, o preparo dos segredos Keycloak continua obrigatório antes das APIs. Não apagar volumes para atualizar o ambiente.
 
 ## 1. Arquitetura em poucas palavras
 
@@ -54,7 +46,7 @@ docs/                  # Requisitos, domínios, diagramas e ADRs
 compose.yaml           # Inicialização local do sistema completo
 ```
 
-Os caminhos do código foram reorganizados, mas os seis **nomes originais dos serviços Docker Compose continuam** `postgres`, `rabbitmq`, `keycloak`, `transactions`, `consolidation` e `web`. Os novos serviços `otel-collector`, `prometheus`, `loki`, `tempo` e `grafana` também são iniciados com o mesmo `docker compose up -d --build`. Portanto, os comandos `docker compose up -d ... web` permanecem válidos. Para executar os testes fora do Docker, use `dotnet test Backend/CashFlow.slnx` e, no frontend, `cd Frontend` seguido de `npm ci` e `npm run test:coverage`.
+Os caminhos do código foram reorganizados, mas os seis **nomes originais dos serviços Docker Compose continuam** `postgres`, `rabbitmq`, `keycloak`, `transactions`, `consolidation` e `web`. Os novos serviços `otel-collector`, `prometheus`, `loki`, `tempo` e `grafana` também são iniciados com o mesmo `docker compose up -d --build`. Portanto, os comandos `docker compose up -d ... web` permanecem válidos. Para instruções de testes sem Docker, consulte a [seção 9](#9-testes-automatizados-e-evidências-do-desafio).
 
 ## 2. Pré-requisitos
 
@@ -109,11 +101,15 @@ docker volume ls --filter label=com.docker.compose.project=cashflow-local
 Crie o arquivo não versionado `.env`:
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 notepad .env
 ```
 
-**Senha obrigatória do Grafana:** no mesmo `.env`, substitua `CASHFLOW_GRAFANA_PASSWORD=SUBSTITUA_POR_SENHA_LOCAL_GRAFANA` por uma senha forte criada por você. O valor de `.env.example` é apenas um marcador, não deve ser usado como senha. O Grafana inicia junto com o Compose principal e fica disponível em `http://localhost:3000`, com usuário `admin` e a senha definida nessa variável. Sem ela, o `docker compose` não inicia. Para instalações já existentes, **adicione somente essa variável ao `.env` atual**, sem sobrescrever as senhas do PostgreSQL, RabbitMQ ou Keycloak.
+### Grafana e observabilidade local
+
+No `.env`, defina `CASHFLOW_GRAFANA_PASSWORD` com uma **senha forte própria**, substituindo o marcador de `.env.example`. Sem essa variável válida, o Compose não inicializa. Em instalações existentes, **adicione apenas a variável que falta**, sem substituir o `.env` e as senhas dos demais serviços.
+
+Após concluir o bootstrap do Keycloak na [seção 7](#7-bootstrap-obrigatório-no-keycloak-ambiente-zerado), o Compose completo inicia **11 serviços**, inclusive OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. Acesse `http://localhost:3000` como `admin` usando a senha definida; as fontes Prometheus, Loki e Tempo são provisionadas automaticamente. Consultas e verificações detalhadas estão no [runbook de observabilidade](docs/validation/local-observability-stack.md). **Não apague volumes para atualizar os contêineres.**
 
 **Passo obrigatório ANTES de subir o Keycloak:** `.env.example` é um **modelo**, não um arquivo de credenciais funcionais. Os valores como `DEFINA_AQUI_SUA_SENHA_INICIAL_FORTE` são apenas marcadores e precisam ser trocados no `.env` local. Defina senhas próprias para `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD` e `KEYCLOAK_ADMIN_PASSWORD`. A conta técnica inicial do Keycloak usa `KEYCLOAK_ADMIN=admin` como username no realm `master` e **a senha que você escolher** em `KEYCLOAK_ADMIN_PASSWORD`.
 
@@ -239,15 +235,15 @@ KEYCLOAK_MGMT_CLIENT_SECRET=<secret_do_cliente_de_gestao>
 
 **Dica:** as duas variáveis `KEYCLOAK_AUTHZ_CLIENT_SECRET` e `KEYCLOAK_MGMT_CLIENT_SECRET` devem estar preenchidas antes de iniciar as APIs. Como os clientes de serviço são confidenciais, obtenha cada segredo em **Clients > [cliente] > Credentials**. Não altere o valor do `Client ID` nem use o segredo de outro cliente.
 
-**E. Subir os serviços da aplicação somente agora:**
+**E. Subir a aplicação e a observabilidade somente agora:**
 
 ```powershell
-docker compose up -d --build transactions consolidation web
+docker compose up -d --build
 docker compose ps -a
 docker compose logs --tail=80 transactions consolidation web
 ```
 
-Os seis serviços financeiros e de infraestrutura devem aparecer ativos; a stack completa contém 11 serviços e os demais podem estar ativos no mesmo Compose. O NGINX é iniciado junto com as APIs. Confirme as verificações HTTP pelo PowerShell:
+Os **11 serviços** devem iniciar no Compose (incluindo os cinco de observabilidade). O NGINX serve a interface e encaminha as chamadas às APIs. Confirme as verificações HTTP pelo PowerShell:
 
 ```powershell
 curl.exe -i http://localhost:8080/nginx-health
@@ -302,7 +298,7 @@ Para homologar, teste dois usuários de lojas diferentes, confirme o isolamento 
 
 ### 9.1. Resultado automático da CI
 
-[![Build, testes e SonarQube Cloud](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml/badge.svg?branch=main)](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml)
+Confira os resultados mais recentes no [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml); a execução citada na [auditoria final](docs/validation/final-delivery-evidence.md) é um registro histórico e não garante que a `main` atual esteja verde.
 
 O selo acima reflete o **estado atual da pipeline da branch `main`**, não um resultado de teste manual. Clique nele para abrir o GitHub Actions, selecione a execução mais recente e confira os jobs **Backend | Build and tests**, **Frontend | Build and tests**, **Validation | Offline contracts and Compose** e **Sonar | Backend and frontend**. É possível verificar cada passo, os relatórios de testes e a geração dos relatórios de cobertura na própria execução, sem necessidade de capturas estáticas no README. Um selo verde indica sucesso da execução, mas não comprova sozinho os cenários de falha e carga descritos abaixo.
 
@@ -377,7 +373,7 @@ python .github/scripts/local_mvp_acceptance.py --init local-acceptance.json
 python .github/scripts/local_mvp_acceptance.py --manifest local-acceptance.json
 ```
 
-O resultado inicial esperado é `outcome: NOT_ACCEPTED`, `NOT_RUN: 14` e `PASS: 0`; o script retorna código 1 até que os 14 cenários estejam marcados como `PASS`, tenham referências de evidência e o manifesto registre o SHA do commit. **Não marque PASS sem executar o cenário correspondente e guardar evidência real.** O manifesto não inspeciona a veracidade do conteúdo das evidências, apenas sua estrutura e, quando aplicável, a existência de arquivos. Os relatórios locais são ignorados pelo Git.
+Em um manifesto recém-criado, o resultado esperado é `outcome: NOT_ACCEPTED`, `NOT_RUN: 14` e `PASS: 0`; o script retorna código 1 até que os 14 cenários estejam marcados como `PASS`, tenham referências de evidência e o manifesto registre o SHA do commit. **Não marque PASS sem executar o cenário correspondente e guardar evidência real.** O manifesto não inspeciona a veracidade do conteúdo das evidências, apenas sua estrutura e, quando aplicável, a existência de arquivos. Os relatórios locais são ignorados pelo Git.
 
 Para verificar apenas os containers e filas, execute o diagnóstico abaixo. O resultado `outcome: OBSERVED` significa que os serviços foram encontrados em execução e as filas puderam ser consultadas, **não que os testes funcionais tenham passado**.
 
@@ -417,7 +413,7 @@ Esses ensaios são **opt-in**, usam dados descartáveis e podem interromper temp
 
 ## 10. Documentação do desafio
 
-A [matriz de rastreabilidade do enunciado](docs/requirements/challenge-compliance-matrix.md) relaciona cada requisito do PDF à implementação, às decisões e às evidências que ainda precisam ser coletadas.
+A [matriz de rastreabilidade do enunciado](docs/requirements/challenge-compliance-matrix.md) relaciona os requisitos do PDF à implementação, às decisões arquiteturais e às evidências disponíveis, indicando limitações quando existirem.
 
 | Assunto | Documento |
 | --- | --- |
@@ -447,6 +443,4 @@ docker compose logs --tail=100 transactions consolidation
 
 Para **apagar novamente toda a instalação local**, consulte a etapa 4 e confirme que não precisa dos dados. Não use `docker compose down --volumes` como rotina de atualização. Nunca publique o `.env` ou senhas de teste.
 
-## Status do projeto
 
-**MVP local implementado e demonstrações funcionais concluídas:** 14/14 cenários reportados PASS, incluindo falha do Consolidation, carga de 50 RPS, recuperação, integridade e observabilidade. **Aceite formal do manifesto permanece NOT_ACCEPTED** por falta do SHA contemporâneo das execuções históricas. [Auditoria de entrega e limitações](docs/validation/final-delivery-evidence.md).
