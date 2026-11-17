@@ -43,11 +43,11 @@ def record(manifest_path):
             "checks": {name: True for name in checks},
             "outcome": "PASS",
             "independently_automated": False,
-        }, indent=2) + "\\n", encoding="utf-8")
+        }, indent=2) + "\n", encoding="utf-8")
         manifest["scenarios"][scenario] = {
             "status": "PASS", "evidence": [ref], "metrics": {}
         }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\\n",
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n",
                              encoding="utf-8")
 
 
