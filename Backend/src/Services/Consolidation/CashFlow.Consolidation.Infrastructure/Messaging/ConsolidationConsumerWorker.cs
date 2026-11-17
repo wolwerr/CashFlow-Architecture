@@ -61,51 +61,8 @@ public sealed class ConsolidationConsumerWorker(
                 await channel.BasicQosAsync(0, 1, global: false, cancellationToken: stoppingToken);
 
                 var consumer = new AsyncEventingBasicConsumer(channel);
-                consumer.ReceivedAsync += async (sender, delivery) =>
-                {
-                    var parentId = RabbitMqTraceContext.GetParentId(delivery.BasicProperties.Headers);
-                    using var activity = Traces.StartActivity(
-                        "rabbitmq consume transaction.recorded", ActivityKind.Consumer, parentId);
-                    activity?.SetTag("messaging.system", "rabbitmq");
-                    activity?.SetTag("messaging.destination.name", settings.Queue);
-                    var body = delivery.Body.ToArray();
-                    TransactionRecorded message;
-                    try
-                    {
-                        message = TransactionRecordedEventParser.Parse(body);
-                    }
-                    catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
-                    {
-                        logger.LogWarning(ex, "Poison transaction event sent to DLQ");
-                        await channel.BasicRejectAsync(delivery.DeliveryTag, requeue: false,
-                            cancellationToken: stoppingToken);
-                        return;
-                    }
-
-                    try
-                    {
-                        await using var scope = scopes.CreateAsyncScope();
-                        var handler = scope.ServiceProvider.GetRequiredService<ProcessTransactionUseCase>();
-                        var firstApplication = await handler.ExecuteAsync(message, stoppingToken);
-                        if (Guid.TryParse(delivery.BasicProperties.CorrelationId, out var safeCorrelationId))
-                            logger.LogInformation(
-                                "Consolidation event handled applied={Applied} correlation_id={CorrelationId}",
-                                firstApplication, safeCorrelationId);
-                        await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false,
-                            cancellationToken: stoppingToken);
-                    }
-                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                    {
-                        // Connection close requeues any unacknowledged delivery.
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Projection failed for event {EventId}, requeueing", message.EventId);
-                        await Task.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);
-                        await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false,
-                            requeue: true, cancellationToken: stoppingToken);
-                    }
-                };
+                consumer.ReceivedAsync += (_, delivery) =>
+                    HandleDeliveryAsync(channel, settings, delivery, stoppingToken);
                 await channel.BasicConsumeAsync(settings.Queue, autoAck: false,
                     consumer: consumer, cancellationToken: stoppingToken);
                 await Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken);
@@ -120,5 +77,53 @@ public sealed class ConsolidationConsumerWorker(
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
         }
+    }
+    private async Task HandleDeliveryAsync(
+        IChannel channel, RabbitMqConsumerSettings settings, BasicDeliverEventArgs delivery,
+        CancellationToken stoppingToken)
+    {
+        var parentId = RabbitMqTraceContext.GetParentId(delivery.BasicProperties.Headers);
+        using var activity = Traces.StartActivity(
+            "rabbitmq consume transaction.recorded", ActivityKind.Consumer, parentId);
+        activity?.SetTag("messaging.system", "rabbitmq");
+        activity?.SetTag("messaging.destination.name", settings.Queue);
+        var body = delivery.Body.ToArray();
+        TransactionRecorded message;
+        try
+        {
+            message = TransactionRecordedEventParser.Parse(body);
+        }
+        catch (Exception ex) when (ex is FormatException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            logger.LogWarning(ex, "Poison transaction event sent to DLQ");
+            await channel.BasicRejectAsync(delivery.DeliveryTag, requeue: false,
+                cancellationToken: stoppingToken);
+            return;
+        }
+        
+        try
+        {
+            await using var scope = scopes.CreateAsyncScope();
+            var handler = scope.ServiceProvider.GetRequiredService<ProcessTransactionUseCase>();
+            var firstApplication = await handler.ExecuteAsync(message, stoppingToken);
+            if (Guid.TryParse(delivery.BasicProperties.CorrelationId, out var safeCorrelationId))
+                logger.LogInformation(
+                    "Consolidation event handled applied={Applied} correlation_id={CorrelationId}",
+                    firstApplication, safeCorrelationId);
+            await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false,
+                cancellationToken: stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Connection close requeues any unacknowledged delivery.
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Projection failed for event {EventId}, requeueing", message.EventId);
+            await Task.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);
+            await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false,
+                requeue: true, cancellationToken: stoppingToken);
+        }
+        
     }
 }
