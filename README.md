@@ -252,7 +252,7 @@ Se a API iniciar, mas retornar `503` em operações autorizadas, confira as **Se
 
 A opção **Edit username** do realm novo está habilitada no JSON de importação. Em realms já existentes, o import não sobrescreve essa preferência; altere manualmente nas configurações de Login do realm.
 
-Para mais detalhes e diagnóstico: [bootstrap de comerciantes e permissões](docs/implementation/merchant-onboarding.md).
+Para configurar o Keycloak do zero e diagnosticar falhas de permissões, siga as etapas 5 a 7 deste README e consulte a [ADR-006](docs/architecture/adr/ADR-006-identity-and-access.md).
 
 ## 8. Roteiro de uso e demonstração
 
@@ -262,7 +262,7 @@ Para mais detalhes e diagnóstico: [bootstrap de comerciantes e permissões](doc
 4. Na Loja A sem saldo anterior, registrar **CREDIT R$ 100,00** e **DEBIT R$ 25,00** para a mesma data. A confirmação da transação precede a consolidação: aguardar o processamento normal do RabbitMQ. Conferir duas linhas de histórico, crédito total R$ 100,00, débito total R$ 25,00, movimento líquido e saldo acumulado **R$ 75,00**.
 5. Conferir competência anterior e dia sem lançamentos, histórico paginado, bloqueio de data futura, valor zero/negativo, autorização e idempotência. Não refazer POST por atraso do saldo.
 
-Todos os cenários de homologação, incluindo dois tokens e isolamento real, estão no [roteiro da Trilha 08](docs/implementation/trilha-08-local-acceptance.md).
+Para homologar, teste dois usuários de lojas diferentes, confirme o isolamento de dados e registre os resultados. Os requisitos estão na [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md).
 
 ## 9. Testes automatizados e evidência de requisitos não funcionais
 
@@ -283,11 +283,11 @@ python .github/scripts/local_operational_snapshot.py --execute
 
 **Resiliência e carga:** o desafio impõe que uma falha apenas de Consolidation **não indisponibilize** o registro em Transactions e que o consolidado suporte **50 requisições/segundo com até 5% sem resposta útil**. Para testar esses requisitos, consulte:
 
-- [Drills locais, broker e consumer](docs/implementation/local-recovery-drills.md)
-- [Teste de carga de 50 RPS por 5 minutos](docs/implementation/local-hardening-load.md)
-- [SLO de projeção 95% em até 30 segundos](docs/implementation/local-slo-observability.md)
-- [Auditoria, integridade e recuperação](docs/implementation/local-audit-e2e-validation.md)
-- [Backup e restauração PostgreSQL](docs/implementation/local-postgres-backup-verification.md)
+- Simulação de falha de Consolidation e recuperação do RabbitMQ: scripts `.github/scripts/local_recovery_drill.py` (somente com `--execute` e dados locais descartáveis).
+- Carga de 50 RPS durante cinco minutos: script `.github/scripts/local_load_probe.py` (exige execução explícita e coleta dos resultados).
+- Frescor do consolidado: `.github/scripts/local_projection_slo.py` (meta adicional: 95% até 30 segundos).
+- Inventário de auditoria, backup e restauração: scripts locais em `.github/scripts/`. Evite executar ações destrutivas sem revisar as opções de cada script.
+- Requisitos e evidências exigidas para apresentar o desafio: [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md).
 
 Esses ensaios são **opt-in**, usam dados descartáveis e podem interromper temporariamente serviços. Não são executados automaticamente ao subir o Compose ou pela CI. Para 50 RPS, interpretar a perda como consultas válidas sem resposta útil é uma **premissa explícita do projeto**. O p95 inferior a 500 ms é um **SLO adicional do MVP**, não uma exigência textual do desafio. Nenhuma métrica é considerada comprovada sem relatório real.
 
@@ -303,7 +303,7 @@ A [matriz de rastreabilidade do enunciado](docs/requirements/challenge-complianc
 | Arquitetura alvo e C4 | [Building Block View](docs/architecture/building-block-view.md) |
 | Integrações e decisões | [ADRs](docs/architecture/adr/README.md) e [sequências](docs/architecture/sequence-diagrams.md) |
 | Custos estimados, não provisionados | [Planejamento Azure](docs/architecture/four-environment-total-cost-plan.md) |
-| Homologação do MVP local | [Trilha 08](docs/implementation/trilha-08-local-acceptance.md) e [fechamento técnico](docs/implementation/trilha-09-mvp-closeout.md) |
+| Homologação do MVP local | [Matriz de atendimento e critérios de comprovação](docs/requirements/challenge-compliance-matrix.md) |
 
 **Arquitetura de transição:** o desafio não informa sistema legado; documentamos que não há migração identificada a desenhar, em vez de inventar um estado de origem.
 
