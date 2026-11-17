@@ -12,3 +12,10 @@ export function merchantLabel(merchant: Merchant): string {
 export function selectedMerchant(items: Merchant[], id: string): string {
   return items.some(item => item.id === id) ? id : '';
 }
+
+/** Stable, immutable ordering shared by both store selectors and the directory. */
+export function sortedMerchants(items: Merchant[]): Merchant[] {
+  return [...items].sort((left, right) =>
+    left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base', numeric: true }) ||
+    left.id.localeCompare(right.id));
+}

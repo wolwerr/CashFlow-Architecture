@@ -1,68 +1,28 @@
 import type { CashFlowController } from '../app/useCashFlowController';
-import type { Merchant } from '../../api/cashflow';
-import { validMerchant, validMerchantUsername } from '../../api/cashflow';
+import { validMerchant } from '../../api/cashflow';
 import { MerchantSelector } from './MerchantSelector';
 import { MerchantDirectory } from './MerchantDirectory';
-
-const isMerchantAdmin = (items: Merchant[], id: string) =>
-  items.some(item => item.id === id && item.role === 'ADMIN');
+import { StoreRegistrationActions } from './StoreRegistrationActions';
 
 export function AdminPanel({ controller }: { controller: CashFlowController }) {
-  const { merchants, merchant, changeMerchant, newMerchantName, setNewMerchantName,
-    merchantUsername, setMerchantUsername, merchantPassword, setMerchantPassword,
-    registerMerchant, registerAdmin, adminUsername, setAdminUsername,
-    adminPassword, setAdminPassword, busy, date, setDate, clearFinancialData,
-    showBalance, currentToken, refreshMerchants } = controller;
+  const { merchants, merchant, changeMerchant, busy, date, setDate,
+    clearFinancialData, showBalance, currentToken, refreshMerchants } = controller;
   return <>
       <section className="panel">
-        <h2>Gestão de comerciantes</h2>
+        <h2>Gestão de lojas</h2>
         <div className="fields merchant-fields">
           <MerchantSelector items={merchants} value={merchant}
-            onChange={changeMerchant} label="Selecione um comerciante"
-            ariaLabel="Selecionar comerciante" />
+            onChange={changeMerchant} label="Selecione uma loja"
+            ariaLabel="Selecionar loja" />
         </div>
         <MerchantDirectory items={merchants} selectedId={merchant} token={currentToken ?? ''} onSelect={changeMerchant} onRefresh={refreshMerchants} />
-        <form className="merchant-action" onSubmit={registerMerchant}>
-          <label>Nome da nova loja
-            <input aria-label="Nome da nova loja" maxLength={100} placeholder="Ex.: Loja Campinas"
-              value={newMerchantName} onChange={event => setNewMerchantName(event.target.value)} />
-          </label>
-          <label>Usuário de acesso da loja
-            <input aria-label="Usuário de acesso da loja" maxLength={64}
-              autoComplete="off" placeholder="Ex.: loja.campinas"
-              value={merchantUsername} onChange={event => setMerchantUsername(event.target.value)} />
-            <small className="muted">Login sem espaços, de 3 a 64 caracteres; inicie com uma letra.</small>
-          </label>
-          <label>Senha inicial do usuário da loja
-            <input aria-label="Senha inicial do usuário da loja" type="password" minLength={12} maxLength={128}
-              autoComplete="new-password" placeholder="Mínimo de 12 caracteres"
-              value={merchantPassword} onChange={event => setMerchantPassword(event.target.value)} />
-          </label>
-          <button type="submit" disabled={busy || !newMerchantName.trim() ||
-            !validMerchantUsername(merchantUsername.trim()) || merchantPassword.length < 12}>
-            Cadastrar loja e usuário
-          </button>
-        </form>
-        <p className="muted">Apenas o administrador da plataforma pode cadastrar lojas e usuários. O login de cada loja é independente.</p>
-        {isMerchantAdmin(merchants, merchant) && <form className="merchant-action" onSubmit={registerAdmin}>
-          <h2>Adicionar administrador</h2>
-          <label>Usuário no Keycloak
-            <input aria-label="Usuário administrador" maxLength={100} placeholder="Nome de usuário"
-              value={adminUsername} onChange={event => setAdminUsername(event.target.value)} />
-          </label>
-          <label>Senha temporária (somente para criar novo usuário)
-            <input aria-label="Senha temporária" type="password" autoComplete="new-password"
-              value={adminPassword} onChange={event => setAdminPassword(event.target.value)} />
-          </label>
-          <button type="submit" disabled={busy || !adminUsername.trim() ||
-            Boolean(adminPassword && adminPassword.length < 12)}>Adicionar ADMIN</button>
-        </form>}
+        <StoreRegistrationActions controller={controller} />
       </section>
       <section className="panel">
-        <h2>Comerciante e competência</h2>
+        <h2>Lojas e competência</h2>
         <div className="fields">
           <MerchantSelector items={merchants} value={merchant}
-            onChange={changeMerchant} label="Nome do comerciante"
+            onChange={changeMerchant} label="Nome da loja"
             ariaLabel="Comerciante da consulta" />
           <label>Data de referência
             <input aria-label="Data de referência" type="date" value={date}
@@ -72,7 +32,7 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
             Consultar
           </button>
         </div>
-        <p className="muted">O acesso ao comerciante é validado nas APIs pelo vínculo atual no Keycloak.</p>
+        <p className="muted">O acesso à loja é validado nas APIs pelo vínculo atual no Keycloak.</p>
       </section>
   </>;
 }

@@ -1,5 +1,5 @@
 import type { Merchant } from '../../api/cashflow';
-import { selectedMerchant } from './merchantPresentation';
+import { selectedMerchant, sortedMerchants } from './merchantPresentation';
 
 type MerchantSelectorProps = {
   items: Merchant[];
@@ -14,7 +14,7 @@ export function MerchantSelector({ items, value, onChange, label, ariaLabel }: M
     <select aria-label={ariaLabel} value={selectedMerchant(items, value)}
       onChange={event => onChange(event.target.value)}>
       <option value="">Selecione...</option>
-      {items.map(item => <option key={item.id} value={item.id}>
+      {sortedMerchants(items).map(item => <option key={item.id} value={item.id}>
         {item.name}
       </option>)}
     </select>

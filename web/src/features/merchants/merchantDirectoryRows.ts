@@ -1,4 +1,5 @@
 import type { Merchant, MerchantMember } from '../../api/cashflow';
+import { sortedMerchants } from './merchantPresentation';
 
 export type DirectoryRow = {
   merchant: Merchant;
@@ -13,7 +14,7 @@ export function merchantDirectoryRows(
   items: Merchant[],
   members: Record<string, MerchantMember[] | null>
 ): DirectoryRow[] {
-  return items.flatMap(merchant => {
+  return sortedMerchants(items).flatMap(merchant => {
     const accounts = members[merchant.id];
     const visible = accounts?.filter(account =>
       account.username.toLowerCase() !== 'cashflow.admin') ?? [];
