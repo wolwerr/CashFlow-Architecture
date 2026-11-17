@@ -304,19 +304,13 @@ O selo acima reflete o **estado atual da pipeline da branch `main`**, não um re
 
 ### Cobertura de código, evidência por execução
 
-A pipeline publica a **cobertura efetivamente medida** nos resumos dos jobs **Backend | Build and tests** e **Frontend | Build and tests**, usando os mesmos relatórios OpenCover e LCOV enviados ao Sonar. Clique no [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml), abra a execução desejada e consulte **Job summary**, **Backend .NET Coverage Report** e **Frontend Coverage Report**. Os XMLs OpenCover e o `lcov.info` também são disponibilizados como artifacts temporários dessa execução.
+A pipeline apresenta **um único percentual consolidado de cobertura de linhas para todo o backend .NET**, unindo os seis relatórios OpenCover (testes unitários, de integração e de API de Transactions e Consolidation). O cálculo considera cada linha instrumentada uma única vez por assembly/arquivo e a marca como coberta se **qualquer** suíte a executou. Não é média de percentuais.
 
-| Área | Cobertura / política | Evidência |
-| --- | --- | --- |
-| Transactions: Domain | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
-| Transactions: Application | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
-| Transactions: Infrastructure | Limite mínimo **80% de linhas** na CI | OpenCover + integração PostgreSQL/RabbitMQ |
-| Consolidation: Domain | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
-| Consolidation: Application | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
-| Consolidation: Integration e APIs | Relatórios gerados, **sem alegação de threshold por camada** | OpenCover por suíte |
-| Frontend | **88,30% de linhas** na execução local informada em 17/11/2026 | Vitest; a medição atualizada é exibida no Actions com base no LCOV |
+O resumo do job **Backend | Build and tests** exibe esse percentual global, junto da quantidade de linhas cobertas e instrumentadas. O job **Frontend | Build and tests** também exibe **uma cobertura de linhas** calculada do LCOV do Vitest.
 
-**Como interpretar:** as linhas do backend acima indicam **limites de cobertura exigidos**, não percentuais exatos inventados. O novo resumo da CI mostra a porcentagem real de pontos de sequência por relatório OpenCover. Um mesmo assembly pode aparecer em várias suítes, então **não somamos percentuais dos relatórios para afirmar cobertura global**. A cobertura de linhas do frontend é calculada diretamente a partir de `LH/LF` do LCOV. O percentual histórico de 88,30% não deve ser apresentado como o resultado de uma execução futura sem consultá-la.
+**Onde consultar o valor atualizado:** abra [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml), selecione a execução e consulte os resumos de **Backend .NET Coverage Report** e **Frontend Coverage Report**. Os relatórios originais continuam disponíveis como artifacts temporários.
+
+**Meta de 80%:** a CI ainda exige 80% de cobertura em camadas selecionadas do backend; a **cobertura global consolidada é uma métrica adicional** e pode ficar abaixo de 80% sem que esses limites específicos tenham falhado. Não confundir aprovação dos testes com percentual de cobertura, nem atribuir a uma execução futura o valor histórico de outra.
 
 ### 9.2. Resultado documentado de execução local do backend
 

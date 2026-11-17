@@ -20,16 +20,49 @@ def ratio(hit, total):
     return f"{100 * hit / total:.2f}%" if total else "n/a"
 
 
-def parse_opencover(path):
-    summary = ET.parse(path).getroot().find("Summary")
-    if summary is None:
-        raise ValueError("OpenCover Summary not found")
-    covered = int(summary.attrib["visitedSequencePoints"])
-    total = int(summary.attrib["numSequencePoints"])
-    if covered > total or total < 0:
-        raise ValueError("Invalid OpenCover line counts")
-    return covered, total
+def module_sequence_lines(module):
+    """Yield unique source-line identifiers and whether each was visited."""
+    name = module.findtext("ModuleName")
+    if not name:
+        raise ValueError("OpenCover ModuleName missing")
+    files = {
+        node.attrib["uid"]: node.attrib["fullPath"].replace("\\", "/")
+        for node in module.findall("./Files/File")
+    }
+    for point in module.findall(".//SequencePoints/SequencePoint"):
+        source = files.get(point.attrib.get("fileid"))
+        if not source:
+            raise ValueError("SequencePoint source file missing")
+        line = int(point.attrib["sl"])
+        visits = int(point.attrib["vc"])
+        if line < 1 or visits < 0:
+            raise ValueError("Invalid OpenCover sequence point")
+        yield (name, source, line), visits > 0
 
+
+def report_sequence_lines(path):
+    """Yield source lines from one report and reject empty instrumented reports."""
+    modules = ET.parse(path).getroot().findall("./Modules/Module")
+    if not modules:
+        raise ValueError("OpenCover report has no Modules")
+    count = 0
+    for module in modules:
+        for entry in module_sequence_lines(module):
+            count += 1
+            yield entry
+    if not count:
+        raise ValueError("OpenCover report has no sequence points")
+
+
+def merge_opencover_line_coverage(paths):
+    """Union source lines across suites; count covered when any suite visits."""
+    lines = {}
+    for path in paths:
+        for key, covered in report_sequence_lines(path):
+            lines[key] = lines.get(key, False) or covered
+    if not lines:
+        raise ValueError("No instrumented source lines")
+    return sum(lines.values()), len(lines)
 
 def parse_lcov(path):
     covered = total = 0
@@ -44,23 +77,23 @@ def parse_lcov(path):
 
 
 def backend_summary():
-    lines = ["## Backend .NET Coverage Report", "",
-             "| OpenCover report | Covered sequence points | Total sequence points | Coverage |",
-             "| --- | ---: | ---: | ---: |"]
-    for label, filename in BACKEND_REPORTS:
-        covered, total = parse_opencover(
-            Path("sonar-reports/backend") / filename)
-        lines.append(f"| {label} | {covered} | {total} | {ratio(covered, total)} |")
-    lines.extend(["",
-        "**Source:** six actual OpenCover reports from this run. Percentages reflect "
-        "sequence-point coverage **within each individual report**. Reports can "
-        "contain overlapping assemblies and must not be added to produce an "
-        "application-wide coverage percentage.",
-        "**Quality gates:** minimum 80% line coverage is checked separately for "
-        "selected backend layers; this table does not imply every project or file "
-        "has at least 80%.",
-        ""])
-    return "\n".join(lines)
+    paths = [Path("sonar-reports/backend") / filename
+             for _, filename in BACKEND_REPORTS]
+    covered, total = merge_opencover_line_coverage(paths)
+    return ("## Backend .NET Coverage Report\n\n"
+            "| Metric | Consolidated result |\n| --- | ---: |\n"
+            f"| Covered source lines | {covered} |\n"
+            f"| Instrumented source lines | {total} |\n"
+            f"| **Overall backend line coverage** | **{ratio(covered, total)}** |\n\n"
+            "**Source:** six OpenCover reports produced by this Actions run. "
+            "A source line is counted once per assembly and file, and is "
+            "considered covered when any test suite executes it. "
+            "**This is a union, not an average or a sum of percentages.**\n\n"
+            "**Policy:** CI still enforces its existing 80% thresholds on "
+            "selected backend layers separately; the overall percentage "
+            "is informative and may be lower than 80%.\n")
+
+
 
 
 def frontend_summary():
