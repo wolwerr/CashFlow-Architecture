@@ -30,11 +30,11 @@ vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
   return {
     ...original, createTransaction: vi.fn(), dailyBalance: vi.fn(),
-    transactionHistory: vi.fn(), listMerchants: vi.fn(), listMerchantMembers: vi.fn(), addMerchantOperator: vi.fn(), updateMerchantMember: vi.fn(), removeMerchantMember: vi.fn(), renameMerchant: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
+    transactionHistory: vi.fn(), listMerchants: vi.fn(), listMerchantMembers: vi.fn(), addMerchantOperator: vi.fn(), updateMerchantMember: vi.fn(), removeMerchantMember: vi.fn(), renameMerchant: vi.fn(), renameMerchantMember: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
   };
 });
 import App from './App';
-import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, listMerchantMembers, merchantPermissions, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant } from './api/cashflow';
+import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, listMerchantMembers, merchantPermissions, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant, renameMerchantMember } from './api/cashflow';
 import { beginLogin, logout } from './auth/oidc';
 import type { ReactElement } from 'react';
 
@@ -343,6 +343,43 @@ describe('CashFlow dashboard and interactions', () => {
     expect(updateMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
       'loja.campinas', 'ADMIN');
     await vi.waitFor(() => expect(mock.state[31]).toBe(''));
+  });
+
+  it('shows username update failure next to that user's row, not after merchant forms', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'loja.campinas', role: 'OPERATOR' }
+    ] };
+    vi.mocked(renameMerchantMember).mockRejectedValue(new Error('Keycloak rejected username update'));
+    (find('button', 'Editar usuário').props.onClick as () => void)();
+    const field = find('input', 'Novo usuário de loja.campinas');
+    (field.props.onChange as (event: unknown) => void)({ target: { value: 'loja.nova' } });
+    await (find('button', 'Salvar usuário').props.onClick as () => Promise<void>)();
+    expect(renameMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
+      'loja.campinas', 'loja.nova');
+    await vi.waitFor(() => expect(render().some(n =>
+      n.type === 'p' && n.props.role === 'alert' &&
+      n.props.children === 'Keycloak rejected username update')).toBe(true));
+    expect(mock.state[27]).toBe('loja.campinas');
+  });
+
+  it('shows success beside the edited user after a username update', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'loja.campinas', role: 'OPERATOR' }
+    ] };
+    vi.mocked(renameMerchantMember).mockResolvedValue(undefined);
+    vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    (find('button', 'Editar usuário').props.onClick as () => void)();
+    (find('input', 'Novo usuário de loja.campinas').props.onChange as (event: unknown) => void)(
+      { target: { value: 'loja.nova' } });
+    await (find('button', 'Salvar usuário').props.onClick as () => Promise<void>)();
+    expect(renameMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
+      'loja.campinas', 'loja.nova');
+    await vi.waitFor(() => expect(mock.state[26]).toBe('Nome de usuário atualizado no Keycloak.'));
+    expect(mock.state[32]).toBe('');
   });
 
   it('requires confirmation and removes only the member link, never the bootstrap account', async () => {
