@@ -103,7 +103,8 @@ public sealed class KeycloakMerchantManagement(
         var merchants = new List<MerchantView>();
         foreach (var roleGroup in groups.Where(g => g.Path is not null &&
                      (g.Path.EndsWith("/ADMIN", StringComparison.Ordinal) ||
-                      g.Path.EndsWith("/OPERATOR", StringComparison.Ordinal))))
+                      g.Path.EndsWith("/OPERATOR", StringComparison.Ordinal) ||
+                      g.Path.EndsWith("/INACTIVE", StringComparison.Ordinal))))
         {
             var parts = roleGroup.Path!.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length != 3 || parts[0] != RootName || !Guid.TryParse(parts[1], out var id))
@@ -116,7 +117,8 @@ public sealed class KeycloakMerchantManagement(
         // Conflicting role-group snapshots cannot grant access through the directory.
         return merchants.GroupBy(x => x.Id)
             .Where(group => group.Select(member => member.Role).Distinct().Count() == 1)
-            .Select(group => group.First()).ToArray();
+            .Select(group => group.First())
+            .Where(merchant => merchant.Role is "ADMIN" or "OPERATOR").ToArray();
     }
 
     public async Task<IReadOnlyList<MerchantMemberView>> ListMembersAsync(Guid merchantId, CancellationToken ct)
