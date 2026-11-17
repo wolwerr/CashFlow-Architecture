@@ -1,6 +1,6 @@
 import type { CashFlowController } from '../app/useCashFlowController';
 import type { Merchant } from '../../api/cashflow';
-import { validMerchant } from '../../api/cashflow';
+import { validMerchant, validMerchantUsername } from '../../api/cashflow';
 import { MerchantSelector } from './MerchantSelector';
 import { MerchantDirectory } from './MerchantDirectory';
 
@@ -31,6 +31,7 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
             <input aria-label="Usuário de acesso da loja" maxLength={64}
               autoComplete="off" placeholder="Ex.: loja.campinas"
               value={merchantUsername} onChange={event => setMerchantUsername(event.target.value)} />
+            <small className="muted">Login sem espaços, de 3 a 64 caracteres; inicie com uma letra.</small>
           </label>
           <label>Senha inicial do usuário da loja
             <input aria-label="Senha inicial do usuário da loja" type="password" minLength={12} maxLength={128}
@@ -38,7 +39,7 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
               value={merchantPassword} onChange={event => setMerchantPassword(event.target.value)} />
           </label>
           <button type="submit" disabled={busy || !newMerchantName.trim() ||
-            merchantUsername.trim().length < 3 || merchantPassword.length < 12}>
+            !validMerchantUsername(merchantUsername.trim()) || merchantPassword.length < 12}>
             Cadastrar loja e usuário
           </button>
         </form>
