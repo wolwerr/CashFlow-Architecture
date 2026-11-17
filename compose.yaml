@@ -52,6 +52,8 @@ services:
       KeycloakManagement__ClientId: cashflow-management-service
       KeycloakManagement__ClientSecret: ${KEYCLOAK_MGMT_CLIENT_SECRET:-}
       KeycloakManagement__BootstrapUsername: ${CASHFLOW_BOOTSTRAP_USERNAME:-cashflow.admin}
+      CashFlowTelemetry__Enabled: ${CASHFLOW_OTEL_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${CASHFLOW_OTEL_ENDPOINT:-http://otel-collector:4317}
       Transactions__ApplyMigrationsOnStartup: "true"
       Transactions__EnableOutboxPublisher: "true"
       RabbitMq__Host: rabbitmq
@@ -76,6 +78,8 @@ services:
       KeycloakAuthorization__Realm: cashflow
       KeycloakAuthorization__ClientId: cashflow-authorization-service
       KeycloakAuthorization__ClientSecret: ${KEYCLOAK_AUTHZ_CLIENT_SECRET:-}
+      CashFlowTelemetry__Enabled: ${CASHFLOW_OTEL_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${CASHFLOW_OTEL_ENDPOINT:-http://otel-collector:4317}
       Consolidation__ApplyMigrationsOnStartup: "true"
       Consolidation__EnableConsumer: "true"
       RabbitMq__Host: rabbitmq
