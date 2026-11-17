@@ -131,7 +131,7 @@ A importação automática de `infra/local/keycloak/cashflow-realm.json` cria o 
 4. No menu à esquerda, com **cashflow** selecionado, abra **Users** e clique em **Create new user**.
 5. Informe **Username: `cashflow.admin`**. Salve em **Create**; os demais campos de perfil não são obrigatórios para o bootstrap local salvo alguma exigência adicional configurada no realm.
 6. Na página do usuário criado, abra a aba **Credentials** e clique em **Set password**. Defina uma senha forte diferente da senha do admin do `master`, confirme-a, deixe **Temporary: OFF** para permitir o primeiro login local sem troca forçada e salve a alteração.
-7. Confira novamente em **Users** que `cashflow.admin` existe e está **Enabled** dentro do realm **cashflow**. Não atribua a ele papéis de administração do `master`: a capacidade de bootstrap do MVP é reconhecida pela API Transactions apenas em Development, pela configuração `CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin`.
+7. Confira novamente em **Users** que `cashflow.admin` existe dentro do realm **cashflow**. Não atribua a ele papéis de administração do `master`: a capacidade de bootstrap do MVP é reconhecida pela API Transactions apenas em Development, pela configuração `CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin`.
 
 **Se `cashflow` não aparecer no seletor:** verifique `docker compose logs --tail=100 keycloak`, procure `Realm 'cashflow' imported` e aguarde a inicialização. Também é possível conferir a página de configuração OIDC em **http://localhost:8081/realms/cashflow/.well-known/openid-configuration**; ela deve responder JSON quando o realm existir. Não crie outro realm com nome parecido e não apague volumes apenas para tentar corrigir o seletor.
 
