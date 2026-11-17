@@ -81,7 +81,18 @@ Copy-Item .env.example .env
 notepad .env
 ```
 
-Defina senhas próprias para `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD`, `KEYCLOAK_ADMIN_PASSWORD`. Mantenha `KEYCLOAK_AUTHZ_CLIENT_SECRET` e `KEYCLOAK_MGMT_CLIENT_SECRET` vazios **somente até concluir a etapa 7**. `.env` é ignorado pelo Git. Não cole segredos em issues, capturas ou logs.
+**Passo obrigatório ANTES de subir o Keycloak:** `.env.example` é um **modelo**, não um arquivo de credenciais funcionais. Os valores como `DEFINA_AQUI_SUA_SENHA_INICIAL_FORTE` são apenas marcadores e precisam ser trocados no `.env` local. Defina senhas próprias para `POSTGRES_PASSWORD`, `RABBITMQ_PASSWORD` e `KEYCLOAK_ADMIN_PASSWORD`. A conta técnica inicial do Keycloak usa `KEYCLOAK_ADMIN=admin` como username no realm `master` e **a senha que você escolher** em `KEYCLOAK_ADMIN_PASSWORD`.
+
+Exemplo ilustrativo, **não copie a senha literal**:
+
+```dotenv
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=<sua_senha_forte_criada_agora>
+```
+
+O Keycloak usa essa senha para criar o **administrador temporário do bootstrap** somente quando o realm `master` ainda não existe. **Não há troca automática de senha no primeiro login.** Depois de terminar a configuração inicial, crie um administrador permanente no realm `master`, confirme o acesso com ele e remova o administrador temporário. Não deixe uma senha padrão compartilhada em um repositório público nem interprete a troca de senha do usuário `cashflow.admin` como equivalente à remoção da conta temporária do `master`.
+
+Mantenha `KEYCLOAK_AUTHZ_CLIENT_SECRET` e `KEYCLOAK_MGMT_CLIENT_SECRET` vazios **somente até concluir a etapa 7**. `.env` é ignorado pelo Git. Não cole segredos em issues, capturas ou logs.
 
 **Não confunda:** `KEYCLOAK_ADMIN` é o administrador técnico do realm `master`; `cashflow.admin` é o usuário da plataforma no realm `cashflow`.
 
@@ -97,7 +108,7 @@ docker compose ps -a
 docker compose logs --tail=60 keycloak
 ```
 
-Aguarde o Keycloak concluir a inicialização e importar o realm `cashflow`. Um retorno normal registra `Realm 'cashflow' imported` e `Keycloak ... started`. Acesse **http://localhost:8081/admin/**, usando `KEYCLOAK_ADMIN` e `KEYCLOAK_ADMIN_PASSWORD` do `.env`. Se o realm ainda não aparecer, confira os logs e aguarde sua inicialização em vez de recriar volumes.
+Aguarde o Keycloak concluir a inicialização e importar o realm `cashflow`. Um retorno normal registra `Realm 'cashflow' imported` e `Keycloak ... started`. Acesse **http://localhost:8081/admin/**, usando o username `admin` (ou o valor de `KEYCLOAK_ADMIN`) e **a senha escolhida por você** em `KEYCLOAK_ADMIN_PASSWORD` no `.env`. O Keycloak não mostrará nem exigirá que você substitua a senha automaticamente no primeiro acesso. Se o realm ainda não aparecer, confira os logs e aguarde sua inicialização em vez de recriar volumes.
 
 Neste estágio, **somente** `postgres`, `rabbitmq` e `keycloak` precisam estar ativos. O CashFlow em http://localhost:8080 ainda não estará disponível. Configure a identidade na etapa 7 antes de iniciar o restante da aplicação.
 
