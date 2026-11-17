@@ -322,6 +322,11 @@ jobs:
       - name: Sonar | Verify local concurrent write probe safety (offline, no writes)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_write_load_probe.py'
 
+      - name: Sonar | Validate optional LOCAL observability Compose schema (no containers)
+        env:
+          CASHFLOW_GRAFANA_PASSWORD: local-validation-only-not-a-secret
+        run: docker compose -f compose.yaml -f compose.observability.yaml config --quiet
+
       - name: Sonar | Validate MVP acceptance evidence rules (offline, no live writes)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_mvp_acceptance.py'
 
