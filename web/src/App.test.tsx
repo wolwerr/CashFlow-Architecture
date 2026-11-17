@@ -317,12 +317,12 @@ describe('CashFlow dashboard and interactions', () => {
     const form = render().filter(n => n.type === 'form')
       .find(n => walk(n).some(child => child.props['aria-label'] === 'Novo usuário da loja'))!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
-    expect(addMerchantOperator).toHaveBeenCalledWith('access-token', mock.state[3],
-      'novo.operador', 'senha-operador-nova');
+    await vi.waitFor(() => expect(addMerchantOperator).toHaveBeenCalledWith('access-token', mock.state[3],
+      'novo.operador', 'senha-operador-nova'));
     expect(createMerchant).not.toHaveBeenCalled();
     expect(mock.state[27]).toBe('');
     expect(mock.state[28]).toBe('');
-    expect(mock.state[23]).toBe(1);
+    await vi.waitFor(() => expect(mock.state[23]).toBe(1));
   });
 
   it('changes an operator role only when the administrator selects that user', async () => {
@@ -342,7 +342,7 @@ describe('CashFlow dashboard and interactions', () => {
     await (save.props.onClick as () => Promise<void>)();
     expect(updateMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
       'loja.campinas', 'ADMIN');
-    expect(mock.state[30]).toBe('');
+    await vi.waitFor(() => expect(mock.state[30]).toBe(''));
   });
 
   it('requires confirmation and removes only the member link, never the bootstrap account', async () => {
@@ -361,8 +361,8 @@ describe('CashFlow dashboard and interactions', () => {
     expect(removeMerchantMember).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
     await (remove.props.onClick as () => Promise<void>)();
-    expect(removeMerchantMember).toHaveBeenCalledWith('access-token',
-      mock.state[3], 'loja.campinas');
+    await vi.waitFor(() => expect(removeMerchantMember).toHaveBeenCalledWith('access-token',
+      mock.state[3], 'loja.campinas'));
     expect(render().some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(false);
     vi.unstubAllGlobals();
   });
@@ -379,7 +379,7 @@ describe('CashFlow dashboard and interactions', () => {
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(renameMerchant).toHaveBeenCalledWith('access-token',
       mock.state[3], 'Loja Campinas Atualizada');
-    expect((mock.state[12] as Array<{ name: string }>)[0].name).toBe('Loja Campinas Atualizada');
+    await vi.waitFor(() => expect((mock.state[12] as Array<{ name: string }>)[0].name).toBe('Loja Campinas Atualizada'));
     expect(mock.state[29]).toBe('');
   });
 
