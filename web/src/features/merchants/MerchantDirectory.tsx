@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { listMerchantMembers } from '../../api/cashflow';
+import { listMerchantMembers, validMerchantUsername } from '../../api/cashflow';
 import { executeMerchantMutation } from './merchantMutations';
 import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
@@ -38,6 +38,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
   const [editingAccount, setEditingAccount] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [nextRole, setNextRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR');
+  const [activeTool, setActiveTool] = useState<'rename' | 'add' | null>(null);
   const merchantIds = items.map(item => item.id).join(',');
 
   useEffect(() => {
@@ -79,10 +80,11 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
       if (action === 'add') {
         setUsername('');
         setPassword('');
+        setActiveTool(null);
       }
       if (action === 'role') setEditingUsername('');
       if (action === 'username') { setEditingAccount(''); setNewUsername(''); }
-      if (action === 'rename') setEditedName('');
+      if (action === 'rename') { setEditedName(''); setActiveTool(null); }
       await onRefresh();
       setRevision(previous => previous + 1);
       setMessage(mutationMessage(action));
@@ -107,17 +109,22 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
           <tbody>
             {merchantDirectoryRows(items, members).map(({ merchant: item, member: account, first, span, loading, unavailable }) =>
               <tr key={item.id + ':' + (account?.username ?? 'empty')}>
-                {first && <td rowSpan={span}>{item.name}</td>}
+                {first && <td rowSpan={span}>
+                  <div className="merchant-row-actions">
+                    <strong>{item.name}</strong>
+                    <button type="button" className="outline"
+                      aria-label={`Selecionar loja ${item.name}`}
+                      disabled={item.id === selectedId || working}
+                      onClick={() => { onSelect(item.id); setError(''); setMessage(''); setFeedbackAccount(''); setEditingAccount(''); setEditingUsername(''); setActiveTool(null); }}>
+                      {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
+                    </button>
+                  </div>
+                </td>}
                 <td>{account?.username ?? (loading ? 'Carregando usuários...' :
                   unavailable ? 'Indisponível' : 'Sem usuário da loja')}</td>
                 <td>{account ? (account.role === 'ADMIN' ? 'ADMIN' : 'Comerciante') : '-'}</td>
                 <td>{account ? (account.role === 'INACTIVE' ? 'Inativo' : 'Ativo') : '-'}</td>
                 <td><div className="merchant-row-actions">
-                  {first && <button type="button" className="outline"
-                    disabled={item.id === selectedId || working}
-                    onClick={() => { onSelect(item.id); setError(''); setMessage(''); setFeedbackAccount(''); setEditingAccount(''); setEditingUsername(''); }}>
-                    {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
-                  </button>}
                   {item.id === selectedId && account && <MerchantMemberActions
                     account={account} working={working} editingAccount={editingAccount}
                     editingUsername={editingUsername} newUsername={newUsername} nextRole={nextRole}
@@ -134,28 +141,43 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
       </div>}
     {selected && <div className="merchant-directory-tools">
       <h3>Gerenciar {selected.name}</h3>
-      <form onSubmit={event => { event.preventDefault(); void perform('rename'); }}>
+      <p className="muted">A loja já está cadastrada. Use estas ações apenas para alterar seu nome ou criar mais um acesso para a mesma loja.</p>
+      <div className="merchant-row-actions">
+        <button type="button" className="outline" disabled={working}
+          onClick={() => setActiveTool(current => current === 'rename' ? null : 'rename')}>
+          {activeTool === 'rename' ? 'Cancelar alteração de nome' : 'Alterar nome da loja'}
+        </button>
+        <button type="button" className="outline" disabled={working}
+          onClick={() => setActiveTool(current => current === 'add' ? null : 'add')}>
+          {activeTool === 'add' ? 'Cancelar novo usuário' : 'Adicionar usuário à loja'}
+        </button>
+      </div>
+      {activeTool === 'rename' && <form onSubmit={event => { event.preventDefault(); void perform('rename'); }}>
         <label>Atualizar nome da loja
           <input aria-label="Novo nome da loja" maxLength={100} value={editedName}
             onChange={event => setEditedName(event.target.value)} placeholder={selected.name} />
         </label>
         <button type="submit" disabled={working || !editedName.trim()}>Salvar nome</button>
-      </form>
-      <form onSubmit={event => { event.preventDefault(); void perform('add'); }}>
-        <h3>Adicionar comerciante à loja existente</h3>
+      </form>}
+      {activeTool === 'add' && <form onSubmit={event => { event.preventDefault(); void perform('add'); }}>
+        <h3>Novo usuário de {selected.name}</h3>
+        <p className="muted">Adiciona um usuário à loja atual, sem criar outra loja.</p>
         <label>Usuário
           <input aria-label="Novo usuário da loja" value={username} maxLength={64}
             autoComplete="off" onChange={event => setUsername(event.target.value)} />
+          {username && !validMerchantUsername(username) &&
+            <small role="alert">Nome de usuário inválido. Use 3 a 64 caracteres, começando por uma letra, sem espaços. Permitidos: letras, números, ponto, hífen e _.</small>}
+          <small className="muted">Ex.: teste3 ou loja.a. Sem espaços; 3 a 64 caracteres, começando por uma letra.</small>
         </label>
         <label>Senha inicial
           <input aria-label="Senha do novo usuário" type="password" value={password}
             minLength={12} maxLength={128} autoComplete="new-password"
             onChange={event => setPassword(event.target.value)} />
         </label>
-        <button type="submit" disabled={working || username.trim().length < 3 || password.length < 12}>
-          Adicionar comerciante
+        <button type="submit" disabled={working || !validMerchantUsername(username) || password.length < 12 || password.length > 128}>
+          Adicionar usuário
         </button>
-      </form>
+      </form>}
     </div>}
   </div>;
 }

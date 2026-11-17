@@ -20,6 +20,10 @@ export function validMerchant(merchant: string): boolean {
 }
 export { validBrl } from './brl';
 
+export function validMerchantUsername(username: string): boolean {
+  return /^[a-zA-Z][a-zA-Z0-9._-]{2,63}$/.test(username);
+}
+
 async function call<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
     ...options,
@@ -94,12 +98,23 @@ async function mutateMerchant(token: string, merchantId: string, method: 'POST' 
   });
   if (!response.ok) {
     const problem = await response.json().catch(() => ({})) as { title?: string };
-    throw new ApiError(response.status, problem.title || 'Não foi possível atualizar o comerciante.');
+    throw new ApiError(response.status, problem.title || ({
+      400: 'Dados inválidos. Confira o usuário e a senha.',
+      401: 'Sessão expirada. Entre novamente.',
+      403: 'Sem permissão para gerenciar usuários desta loja.',
+      404: 'Loja não encontrada.',
+      409: 'Esse usuário já está cadastrado no Keycloak.',
+      503: 'Keycloak indisponível ou erro de provisionamento. Consulte os logs de Transactions.'
+    } as Record<number, string>)[response.status] || 'Não foi possível atualizar o usuário da loja.');
   }
 }
 
 export function addMerchantOperator(token: string, merchantId: string,
   username: string, password: string): Promise<void> {
+  if (!validMerchantUsername(username)) {
+    return Promise.reject(new ApiError(400,
+      'Usuário inválido: use de 3 a 64 caracteres, começando com uma letra, sem espaços. São permitidos letras, números, ponto, hífen e _ .'));
+  }
   return mutateMerchant(token, merchantId, 'POST', '/api/v1/merchants/members',
     { username, password });
 }

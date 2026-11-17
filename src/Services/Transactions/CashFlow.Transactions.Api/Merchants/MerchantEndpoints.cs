@@ -94,7 +94,8 @@ public static class MerchantEndpoints
         if (Actor(context) == Guid.Empty) return Results.Unauthorized();
         if (merchantId == Guid.Empty || !ValidUsername(request?.Username) ||
             request?.Password is null || request.Password.Length is < 12 or > 128)
-            return Results.BadRequest();
+            return Results.BadRequest(new { title =
+                "Dados inválidos: o usuário deve ter de 3 a 64 caracteres, começar por letra e não conter espaços. Permitidos: letras, números, ponto, hífen e _. A senha deve ter de 12 a 128 caracteres." });
         try
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))

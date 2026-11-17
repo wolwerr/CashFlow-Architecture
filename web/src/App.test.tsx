@@ -248,7 +248,7 @@ describe('CashFlow dashboard and interactions', () => {
     expect(labels).toContain('Loja Campinas');
     expect(labels).toContain('Loja Teste');
     expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
-    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
+    expect(nodes.some(n => n.type === 'strong' && n.props.children === 'Loja Teste')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'ADMIN')).toBe(false);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'loja.teste')).toBe(true);
@@ -256,6 +256,49 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo')).toBe(true);
     expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
     expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
+  });
+
+  it('places one selection action beside each shop, not beside its individual users', () => {
+    setupSignedIn();
+    const other = '59d0b4c5-4e64-46e1-ac52-ad946d2b4865';
+    mock.state[12] = [
+      { id: mock.state[3], name: 'Loja A', role: 'ADMIN' },
+      { id: other, name: 'Loja B', role: 'ADMIN' }
+    ];
+    mock.state[21] = {
+      [mock.state[3] as string]: [
+        { username: 'teste1', role: 'OPERATOR' },
+        { username: 'teste3', role: 'OPERATOR' }
+      ],
+      [other]: [{ username: 'teste2', role: 'OPERATOR' }]
+    };
+    const nodes = render();
+    const cells = nodes.filter(n => n.type === 'td' && n.props.rowSpan);
+    expect(cells).toHaveLength(2);
+    expect(cells.find(cell => walk(cell).some(n =>
+      n.type === 'strong' && n.props.children === 'Loja A'))?.props.rowSpan).toBe(2);
+    for (const cell of cells) {
+      expect(walk(cell).filter(n => n.type === 'button' &&
+        (n.props.children === 'Selecionar' || n.props.children === 'Selecionado'))).toHaveLength(1);
+    }
+    expect(nodes.filter(n => n.type === 'button' &&
+      n.props['aria-label'] === 'Selecionar loja Loja A')).toHaveLength(1);
+    (find('button', 'Selecionar loja Loja B').props.onClick as () => void)();
+    expect(mock.state[3]).toBe(other);
+  });
+
+  it('explains invalid usernames with spaces before submitting an additional user', () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja A', role: 'ADMIN' }];
+    (find('button', 'Adicionar usuário à loja').props.onClick as () => void)();
+    (find('input', 'Novo usuário da loja').props.onChange as (e: unknown) => void)(
+      { target: { value: 'teste 3' } });
+    const nodes = render();
+    expect(nodes.some(n => n.props.role === 'alert' &&
+      typeof n.props.children === 'string' && n.props.children.includes('sem espaços'))).toBe(true);
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Adicionar usuário');
+    expect(submit?.props.disabled).toBe(true);
+    expect(addMerchantOperator).not.toHaveBeenCalled();
   });
 
   it('loads actual Keycloak members and their ADMIN or OPERATOR roles', async () => {
@@ -308,12 +351,28 @@ describe('CashFlow dashboard and interactions', () => {
     expect(mock.state[21]).toEqual({});
   });
 
+  it('hides optional shop management forms until an explicit action is selected', () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    let nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo usuário da loja')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo nome da loja')).toBe(false);
+    (find('button', 'Adicionar usuário à loja').props.onClick as () => void)();
+    nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo usuário da loja')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo nome da loja')).toBe(false);
+    (find('button', 'Cancelar novo usuário').props.onClick as () => void)();
+    nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo usuário da loja')).toBe(false);
+  });
+
   it('adds an operator to an existing selected shop without creating another merchant', async () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
     mock.state[28] = 'novo.operador';
     mock.state[29] = 'senha-operador-nova';
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    (find('button', 'Adicionar usuário à loja').props.onClick as () => void)();
     const form = render().filter(n => n.type === 'form')
       .find(n => walk(n).some(child => child.props['aria-label'] === 'Novo usuário da loja'))!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
@@ -426,6 +485,7 @@ describe('CashFlow dashboard and interactions', () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
     mock.state[30] = 'Loja Campinas Atualizada';
+    (find('button', 'Alterar nome da loja').props.onClick as () => void)();
     vi.mocked(listMerchants).mockResolvedValue([
       { id: mock.state[3] as string, name: 'Loja Campinas Atualizada', role: 'ADMIN' }
     ]);
@@ -603,7 +663,7 @@ describe('CashFlow dashboard and interactions', () => {
   });
   it('creates a merchant and selects it without manually entering a UUID', async () => {
     setupSignedIn();
-    const input = find('input', 'Nome do comerciante');
+    const input = find('input', 'Nome da nova loja');
     (input.props.onChange as (event: unknown) => void)({ target: { value: 'Loja Campinas' } });
     mock.state[17] = 'loja.campinas';
     mock.state[18] = 'senha-local-segura';
@@ -623,8 +683,9 @@ describe('CashFlow dashboard and interactions', () => {
     }];
     const admin = find('input', 'Usuário administrador');
     (admin.props.onChange as (event: unknown) => void)({ target: { value: 'new.admin' } });
-    const forms = render().filter(n => n.type === 'form');
-    await (forms[3].props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    const form = render().filter(n => n.type === 'form')
+      .find(n => walk(n).some(child => child.props['aria-label'] === 'Usuário administrador'))!;
+    await (form.props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(addMerchantAdmin).toHaveBeenCalledWith('access-token',
       '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', 'new.admin', undefined);
   });
@@ -640,25 +701,25 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(true);
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Saldo diário')).toBe(true);
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Histórico de lançamentos')).toBe(true);
-    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(false);
-    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome da nova loja')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha inicial do usuário da loja')).toBe(false);
   });
   it('operator session cannot submit merchant creation even through a forged callback', async () => {
     setupSignedIn();
     mock.state[19] = false;
     const nodes = render();
     expect(nodes.filter(n => n.type === 'form')).toHaveLength(1);
-    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário de acesso da loja')).toBe(false);
     expect(createMerchant).not.toHaveBeenCalled();
   });
   it('admin sees merchant creation only after login and requires username and password', () => {
     setupSignedIn();
     const nodes = render();
-    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(true);
-    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(true);
-    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome da nova loja')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário de acesso da loja')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha inicial do usuário da loja')).toBe(true);
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Comerciante e competência')).toBe(true);
-    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Cadastrar comerciante e acesso');
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Cadastrar loja e usuário');
     expect(submit?.props.disabled).toBe(true);
   });
 

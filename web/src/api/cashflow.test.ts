@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions, listMerchantMembers, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant, renameMerchantMember } from './cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, validMerchantUsername, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions, listMerchantMembers, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant, renameMerchantMember } from './cashflow';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('CashFlow API contracts', () => {
@@ -9,6 +9,27 @@ describe('CashFlow API contracts', () => {
   it.each(['0.00', '0', '-1.00', '10.251', '10,251', 'abc', 'Infinity', '1,000.00'])('rejects BRL %s', value => {
     expect(validBrl(value)).toBe(false);
   });
+  it.each(['teste3', 'loja.teste', 'abc_d', 'a-b'])('accepts valid merchant username %s', value => {
+    expect(validMerchantUsername(value)).toBe(true);
+  });
+  it.each(['teste 3', '3teste', 'ab', 'loja@teste', 'loja/xyz'])('rejects invalid merchant username %s', value => {
+    expect(validMerchantUsername(value)).toBe(false);
+  });
+  it('blocks an invalid additional member username before making HTTP requests', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(addMerchantOperator('token', '68a5baac-d97f-45b4-9119-b4c5b9de7c9b',
+      'teste 3', 'senha-completa-local')).rejects.toMatchObject({ status: 400 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('preserves the status-specific message for failed member creation', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403,
+      json: async () => ({}) }));
+    await expect(addMerchantOperator('token', '68a5baac-d97f-45b4-9119-b4c5b9de7c9b',
+      'teste3', 'senha-completa-local')).rejects.toEqual(
+        new ApiError(403, 'Sem permissão para gerenciar usuários desta loja.'));
+  });
+
   it('validates UUID merchant', () => {
     expect(validMerchant('68a5baac-d97f-45b4-9119-b4c5b9de7c9b')).toBe(true);
     expect(validMerchant('not-a-merchant')).toBe(false);

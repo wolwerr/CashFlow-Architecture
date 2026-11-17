@@ -1,6 +1,6 @@
 import type { CashFlowController } from '../app/useCashFlowController';
 import type { Merchant } from '../../api/cashflow';
-import { validMerchant } from '../../api/cashflow';
+import { validMerchant, validMerchantUsername } from '../../api/cashflow';
 import { MerchantSelector } from './MerchantSelector';
 import { MerchantDirectory } from './MerchantDirectory';
 
@@ -23,23 +23,24 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
         </div>
         <MerchantDirectory items={merchants} selectedId={merchant} token={currentToken ?? ''} onSelect={changeMerchant} onRefresh={refreshMerchants} />
         <form className="merchant-action" onSubmit={registerMerchant}>
-          <label>Nome do novo comerciante
-            <input aria-label="Nome do comerciante" maxLength={100} placeholder="Ex.: Loja Campinas"
+          <label>Nome da nova loja
+            <input aria-label="Nome da nova loja" maxLength={100} placeholder="Ex.: Loja Campinas"
               value={newMerchantName} onChange={event => setNewMerchantName(event.target.value)} />
           </label>
-          <label>Usuário do comerciante
-            <input aria-label="Usuário do comerciante" maxLength={64}
+          <label>Usuário de acesso da loja
+            <input aria-label="Usuário de acesso da loja" maxLength={64}
               autoComplete="off" placeholder="Ex.: loja.campinas"
               value={merchantUsername} onChange={event => setMerchantUsername(event.target.value)} />
+            <small className="muted">Login sem espaços, de 3 a 64 caracteres; inicie com uma letra.</small>
           </label>
-          <label>Senha de acesso do comerciante
-            <input aria-label="Senha do comerciante" type="password" minLength={12} maxLength={128}
+          <label>Senha inicial do usuário da loja
+            <input aria-label="Senha inicial do usuário da loja" type="password" minLength={12} maxLength={128}
               autoComplete="new-password" placeholder="Mínimo de 12 caracteres"
               value={merchantPassword} onChange={event => setMerchantPassword(event.target.value)} />
           </label>
           <button type="submit" disabled={busy || !newMerchantName.trim() ||
-            merchantUsername.trim().length < 3 || merchantPassword.length < 12}>
-            Cadastrar comerciante e acesso
+            !validMerchantUsername(merchantUsername.trim()) || merchantPassword.length < 12}>
+            Cadastrar loja e usuário
           </button>
         </form>
         <p className="muted">Apenas o administrador da plataforma pode cadastrar lojas e usuários. O login de cada loja é independente.</p>

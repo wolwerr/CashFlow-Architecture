@@ -256,7 +256,7 @@ Para mais detalhes e diagnóstico: [bootstrap de comerciantes e permissões](doc
 
 ## 8. Roteiro de uso e demonstração
 
-1. Como `cashflow.admin`, cadastrar **Loja A** e **Loja B** com usernames diferentes, senhas iniciais distintas de 12 a 128 caracteres e nomes visíveis. O username é único no realm, não por loja.
+1. Como `cashflow.admin`, use o formulário **Gestão de comerciantes** para cadastrar duas lojas. Neste MVP, **comerciante é a loja**, não a pessoa que fará login. No campo **Nome da nova loja**, digite `Loja A`. Em **Usuário de acesso da loja**, informe um login exclusivo, por exemplo `loja.a`. Em **Senha inicial do usuário da loja**, defina uma senha de 12 a 128 caracteres e clique em **Cadastrar loja e usuário**. Repita com `Loja B`, username `loja.b` e outra senha. O username é único no realm inteiro, e o cadastro cria a loja e sua conta de acesso.
 2. Conferir a lista administrativa com loja, usuário, cargo e status. Editar username/cargo, desativar e reativar usuário de teste. Soft delete usa o grupo `INACTIVE`, sem exclusão física de histórico.
 3. Sair e entrar como usuário OPERATOR da Loja A; ele deve ver apenas **Novo lançamento, Saldo Diário, Histórico**, sem administração. Confirmar que não enxerga dados da Loja B.
 4. Na Loja A sem saldo anterior, registrar **CREDIT R$ 100,00** e **DEBIT R$ 25,00** para a mesma data. A confirmação da transação precede a consolidação: aguardar o processamento normal do RabbitMQ. Conferir duas linhas de histórico, crédito total R$ 100,00, débito total R$ 25,00, movimento líquido e saldo acumulado **R$ 75,00**.
