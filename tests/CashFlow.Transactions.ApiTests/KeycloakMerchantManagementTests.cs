@@ -166,7 +166,6 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
-    public async Task CreatesMerchantHierarchyAssignsOwnerAndStoresDisplayName()    [Fact]
     public async Task CreatesMerchantHierarchyAssignsOwnerAndStoresDisplayName()
     {
         string? createdMerchantId = null;
