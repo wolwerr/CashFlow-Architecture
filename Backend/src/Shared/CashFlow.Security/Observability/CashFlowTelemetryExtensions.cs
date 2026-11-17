@@ -30,6 +30,8 @@ public static class CashFlowTelemetryExtensions
                 .AddAspNetCoreInstrumentation(options => options.Filter =
                     context => !context.Request.Path.StartsWithSegments("/health"))
                 .AddHttpClientInstrumentation()
+                .AddSource("CashFlow.Transactions.Outbox")
+                .AddSource("CashFlow.Consolidation.Consumer")
                 .AddOtlpExporter())
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
