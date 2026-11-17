@@ -76,8 +76,9 @@ def record():
         "status": "PASS", "evidence": ["evidence/merchant-management-manual.json"],
         "metrics": {}
     }
-    MANIFEST_FILE.write_text(json.dumps(manifest, indent=2) + "\n",
-                             encoding="utf-8")
+    with MANIFEST_FILE.open("w", encoding="utf-8") as output:
+        json.dump(manifest, output, indent=2)
+        output.write("\n")
 
 
 def main(argv=None):
