@@ -5,6 +5,7 @@ import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
 import { merchantRoleLabel } from './merchantPresentation';
 import { merchantDirectoryRows } from './merchantDirectoryRows';
+import { MerchantMemberActions } from './MerchantMemberActions';
 
 function mutationMessage(action: MerchantAction): string {
   if (action === 'remove') {
@@ -113,44 +114,13 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
                     onClick={() => { onSelect(item.id); setError(''); setMessage(''); }}>
                     {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
                   </button>}
-                  {item.id === selectedId && account && <>
-                    {editingAccount === account.username ?
-                      <div className="merchant-member-actions">
-                        <input aria-label={`Novo usuário de ${account.username}`}
-                          value={newUsername} maxLength={64} autoComplete="off"
-                          onChange={event => setNewUsername(event.target.value)} />
-                        <button type="button" disabled={working || !/^[a-zA-Z][a-zA-Z0-9._-]{2,63}$/.test(newUsername)}
-                          onClick={() => void perform('username', account.username)}>Salvar usuário</button>
-                        <button type="button" className="outline"
-                          onClick={() => setEditingAccount('')}>Cancelar</button>
-                      </div>
-                    : <button type="button" className="outline" disabled={working}
-                        onClick={() => { setEditingAccount(account.username); setEditingUsername('');
-                          setNewUsername(account.username); }}>Editar usuário</button>}
-                    {account.role === 'INACTIVE'
-                      ? <button type="button" className="outline" disabled={working}
-                          onClick={() => void perform('restore', account.username)}>Reativar</button>
-                      : editingUsername === account.username ?
-                        <div className="merchant-member-actions">
-                          <select aria-label={`Novo cargo de ${account.username}`} value={nextRole}
-                            onChange={event => setNextRole(event.target.value as 'ADMIN' | 'OPERATOR')}>
-                            <option value="OPERATOR">Comerciante</option>
-                            <option value="ADMIN">ADMIN</option>
-                          </select>
-                          <button type="button" disabled={working}
-                            onClick={() => void perform('role', account.username)}>Salvar cargo</button>
-                          <button type="button" className="outline"
-                            onClick={() => setEditingUsername('')}>Cancelar</button>
-                        </div>
-                      : <>
-                          <button type="button" className="outline" disabled={working}
-                            onClick={() => { setEditingUsername(account.username); setEditingAccount('');
-                              setNextRole(account.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR'); }}>
-                            Editar cargo
-                          </button>
-                          <button type="button" className="outline" disabled={working}
-                            onClick={() => void perform('remove', account.username)}>Desativar</button>
-                        </>}
+                  {item.id === selectedId && account && <MerchantMemberActions
+                    account={account} working={working} editingAccount={editingAccount}
+                    editingUsername={editingUsername} newUsername={newUsername} nextRole={nextRole}
+                    onNewUsername={setNewUsername} onNextRole={setNextRole}
+                    onEditingAccount={setEditingAccount} onEditingUsername={setEditingUsername}
+                    onAction={(action, user) => void perform(action, user)}
+                  />}
                   </>}
                 </div></td>
               </tr>)}
