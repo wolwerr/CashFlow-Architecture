@@ -161,6 +161,29 @@ public sealed class KeycloakMerchantManagement(
         return await AddMemberAsync(merchantId, username, password, "OPERATOR", ct);
     }
 
+    public async Task<bool> RenameMemberAsync(Guid merchantId, string username,
+        string nextUsername, string bootstrapUsername, CancellationToken ct)
+    {
+        if (string.Equals(username, bootstrapUsername, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(nextUsername, bootstrapUsername, StringComparison.OrdinalIgnoreCase))
+            throw new MerchantProtectedAccountException();
+        var member = await LookupMembershipAsync(merchantId, username, ct);
+        if (member is null) return false;
+        if (string.Equals(username, nextUsername, StringComparison.Ordinal))
+            return true;
+        if ((await UsersAsync(nextUsername, ct)).Count > 0)
+            throw new MerchantUsernameConflictException();
+
+        // Update only the Keycloak username. Keep user UUID, passwords, group
+        // memberships, and all financial history unchanged.
+        using var response = await SendAsync(HttpMethod.Put,
+            $"users/{member.Value.UserId:D}", new { username = nextUsername }, ct);
+        if (response.StatusCode == HttpStatusCode.Conflict)
+            throw new MerchantUsernameConflictException();
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
     public async Task<bool> ChangeMemberRoleAsync(Guid merchantId, string username,
         string nextRole, string bootstrapUsername, CancellationToken ct)
     {
