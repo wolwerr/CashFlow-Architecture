@@ -111,6 +111,37 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task AdminPermissionFailsClosedWhenInactiveAndAdminOverlap()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+            Path(request).EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal)
+                ? JsonResponse(new object[] { Admin(), new {
+                    id = "inactive-id", name = "INACTIVE",
+                    path = $"/merchants/{MerchantId:D}/INACTIVE"
+                } })
+                : new HttpResponseMessage(HttpStatusCode.NotFound)));
+        Assert.False(await Create(fake).IsAdminAsync(UserId, MerchantId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task MerchantDirectoryDoesNotGrantAmbiguousAdminMembership()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request => Path(request) switch
+        {
+            var p when p.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal) =>
+                JsonResponse(new object[] { Admin(), new {
+                    id = "inactive-id", name = "INACTIVE",
+                    path = $"/merchants/{MerchantId:D}/INACTIVE"
+                } }),
+            var p when p == "/admin/realms/cashflow/groups" => JsonResponse(new[] { Root() }),
+            var p when p == "/admin/realms/cashflow/groups/root-id/children" =>
+                JsonResponse(new[] { Merchant() }),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        }));
+        Assert.Empty(await Create(fake).ListAsync(UserId, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task ListsActualMerchantUsersAndTheirRoleRatherThanTheRequestingAdminRole()
     {
         var fake = new FakeHandler(req => TokenOr(req, request =>
