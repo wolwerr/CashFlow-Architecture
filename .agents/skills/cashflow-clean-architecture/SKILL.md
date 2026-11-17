@@ -128,7 +128,7 @@ dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -
 2. Choose correct ownership: business invariant -> Domain/Models; orchestration -> Application/UseCases; persistence integration -> Infrastructure/Entities and adapters; HTTP -> Api.
 3. Implement smallest coherent behavior with typed domain exceptions, no framework leaks to inner layers.
 4. Write/update unit and architectural tests. Add coverage gates for every newly implemented module.
-5. Run build, tests, coverage and relevant local integration checks. Capture evidence in `docs/architecture/validations/` when executed.
+5. Run build, tests, coverage and relevant local integration checks. Keep runtime evidence in local untracked acceptance artifacts described by `docs/implementation/trilha-08-local-acceptance.md`; do not re-create the historical `docs/architecture/validations/` folder.
 6. Update only documentation/diagrams/contracts affected by the change. Clearly distinguish pending validation from completed evidence.
 7. Summarize files changed, validations and remaining risks. Do not provision or deploy Azure.
 
