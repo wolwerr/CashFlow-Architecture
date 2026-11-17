@@ -22,7 +22,7 @@ class Result:
 
 class ManualUiTests(unittest.TestCase):
     def test_preview_writes_nothing(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory, patch.object(manual, "PROJECT_ROOT", Path(directory).resolve()):
             path = Path(directory) / "local-acceptance.json"
             path.write_text(json.dumps(acceptance.initial_manifest()), encoding="utf-8")
             with contextlib.redirect_stdout(io.StringIO()):
@@ -39,6 +39,22 @@ class ManualUiTests(unittest.TestCase):
             result = acceptance.report(json.loads(path.read_text()), path.parent)
             self.assertEqual(2, result["counts"]["PASS"])
             self.assertEqual("NOT_RUN", result["scenarios"]["observability"])
+
+    def test_rejects_manifest_outside_workspace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            outside = Path(directory) / "local-acceptance.json"
+            outside.write_text("{}", encoding="utf-8")
+            with patch.object(manual, "PROJECT_ROOT", (Path(directory) / "subdir").resolve()):
+                with self.assertRaises(ValueError):
+                    manual.allowed_manifest(outside)
+
+    def test_rejects_wrong_manifest_filename(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "arbitrary.json"
+            path.write_text("{}", encoding="utf-8")
+            with patch.object(manual, "PROJECT_ROOT", Path(directory).resolve()):
+                with self.assertRaises(ValueError):
+                    manual.allowed_manifest(path)
 
     def test_observability_preview_has_no_docker_calls(self):
         with patch.object(inventory, "docker") as docker:
