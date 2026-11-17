@@ -10,6 +10,11 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import local_integrated_recovery as probe
 
 
+class Token:
+    def get(self):
+        return "test-only-token"
+
+
 class Result:
     def __init__(self, code=0):
         self.returncode = code
@@ -78,7 +83,7 @@ class IntegratedRecoveryTests(unittest.TestCase):
     def test_idempotency_replay_and_conflict(self):
         result = iter([(201, {"id": "test-1"}), (201, {"id": "test-1"}), (409, None)])
         with patch.object(probe.uuid, "uuid4", return_value="key"):
-            outcome = probe.create(None, "merchant", "2026-01-01", "CREDIT",
+            outcome = probe.create(Token(), "merchant", "2026-01-01", "CREDIT",
                                    request=lambda *args: next(result))
         self.assertEqual(outcome, "test-1")
 
