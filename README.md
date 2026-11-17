@@ -314,7 +314,24 @@ Na execução local de **17/11/2026**, em Windows PowerShell com **.NET 10**, o 
 
 **Resultado:** 223 testes executados e aprovados, 0 falhas, 0 ignorados, código de saída 0, conforme saída do terminal compartilhada pelo responsável pelo projeto. Esta tabela é um **registro de execução local informado**, não um relatório de CI vinculado a commit e não uma medição de cobertura de código. Para evidência auditável, associe a captura real, o log da execução e o SHA do commit testado.
 
-### 9.3. Rodar os testes automatizados localmente
+### 9.3. Resultado documentado de execução local do frontend
+
+Na execução local de **17/11/2026**, em Windows PowerShell, Node.js/npm e Vitest 3.2.7, o comando `npm run test:coverage` em `Frontend/` apresentou:
+
+| Indicador | Resultado |
+| --- | ---: |
+| Arquivos de teste | 9 aprovados |
+| Testes | **169 aprovados, 0 falhas** |
+| Cobertura de linhas | **95,48%** |
+| Cobertura de instruções | 95,48% |
+| Cobertura de ramificações | 90,16% |
+| Cobertura de funções | 88,99% |
+
+**Total backend + frontend:** **392 testes aprovados**, 0 falhas, em execuções locais separadas. Os 223 testes .NET e os 169 testes Vitest passaram, mas **100% de aprovação de testes não significa 100% de cobertura de código**. Estes números são provenientes das saídas de terminal compartilhadas pelo responsável pelo projeto; para evidência auditável, incluir a captura real, os relatórios e o SHA correspondente.
+
+**Pontos de atenção:** `src/features/app/useCashFlowController.ts` apresentou **79,91% de cobertura de linhas**, abaixo de 80% naquele arquivo, apesar da cobertura global de 95,48%. Durante `npm ci`, o npm informou **7 vulnerabilidades em dependências (5 moderadas, 2 críticas)**. A aprovação dos testes não elimina esses alertas. Investigar com `npm audit` e não executar `npm audit fix --force` sem avaliar impactos e mudanças incompatíveis.
+
+### 9.4. Rodar os testes automatizados localmente
 
 Para executar os testes .NET, com o SDK .NET 10 instalado e os serviços de integração necessários disponíveis:
 
@@ -335,7 +352,7 @@ cd ..
 
 **Alternativa sem SDK .NET e Node.js instalados localmente:** acompanhe o build, os testes, a cobertura e os Docker builds pelo [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml). O Docker Compose serve para executar o sistema, não substitui automaticamente os testes da CI. Testes de integração podem exigir PostgreSQL e RabbitMQ, que são provisionados especificamente no workflow de CI.
 
-### 9.4. Aceite funcional, falha e desempenho
+### 9.5. Aceite funcional, falha e desempenho
 
 O script `local_mvp_acceptance.py` **não executa testes**, não acessa Docker e não valida as APIs. Ele apenas cria ou lê um **manifesto de evidências** para 14 cenários que deverão ser executados e comprovados separadamente. Para criar o manifesto na primeira utilização (Python 3):
 
