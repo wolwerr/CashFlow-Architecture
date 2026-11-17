@@ -252,14 +252,14 @@ def record_manifest(report, manifest_path=Path("local-acceptance.json")):
         require(name in SCENARIOS, "Unexpected acceptance scenario")
     evidence_file = Path("evidence/integrated-recovery.json")
     evidence_file.parent.mkdir(parents=True, exist_ok=True)
-    evidence_file.write_text(json.dumps(report, indent=2) + "\\n", encoding="utf-8")
+    evidence_file.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     for name in ("rabbitmq_recovery", "consumer_recovery", "audit_integrity"):
         manifest["scenarios"][name] = {
             "status": "PASS",
-            "evidence": [str(evidence_file).replace("\\\\", "/")],
+            "evidence": [evidence_file.as_posix()],
             "metrics": {},
         }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 def main(argv=None):
