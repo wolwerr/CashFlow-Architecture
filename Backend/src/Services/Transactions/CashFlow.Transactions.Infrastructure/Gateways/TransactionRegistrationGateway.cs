@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -80,6 +81,7 @@ public sealed class TransactionRegistrationGateway(TransactionsDbContext db)
                 EventType = "transaction.recorded",
                 SchemaVersion = "1",
                 CorrelationId = correlationId,
+                TraceParent = Activity.Current?.Id,
                 Payload = JsonSerializer.Serialize(payload, EventJsonOptions),
                 CreatedAtUtc = transaction.CreatedAtUtc,
                 AttemptCount = 0
