@@ -92,10 +92,15 @@ def validate_metrics(name, metrics):
             raise InvalidEvidence(f"{name}: {key} fails acceptance threshold")
 
 
-def report(manifest):
+def report(manifest, evidence_root=None):
     data = validate_metadata(manifest)
     for name, record in data.items():
         validate_scenario(name, record)
+        if evidence_root is not None and record["status"] == "PASS":
+            for ref in record["evidence"]:
+                target = (evidence_root / ref).resolve()
+                if not target.is_relative_to(evidence_root.resolve()) or not target.is_file():
+                    raise InvalidEvidence(f"{name}: evidence file missing or outside evidence root")
     counts = {status: sum(item["status"] == status for item in data.values())
               for status in sorted(STATUSES)}
     ready = counts["PASS"] == len(SCENARIOS) and manifest["commit"] != "NOT_RECORDED"
@@ -108,7 +113,7 @@ def report(manifest):
         "outcome": "ACCEPTED" if ready else "NOT_ACCEPTED",
         "counts": counts,
         "scenarios": {name: item["status"] for name, item in data.items()},
-        "note": "Evidence references are operator declarations, not cryptographic verification.",
+        "note": "Evidence references are existing evidence filenames and operator declarations; content is not independently validated.",
     }
 
 
@@ -129,7 +134,7 @@ def main(argv=None):
             print("Created NOT_RUN acceptance template")
             return 0
         with args.manifest.open(encoding="utf-8") as source:
-            result = report(json.load(source))
+            result = report(json.load(source), args.manifest.parent)
     except (OSError, json.JSONDecodeError, InvalidEvidence) as error:
         print(f"Acceptance report failed: {type(error).__name__}", file=sys.stderr)
         return 2
