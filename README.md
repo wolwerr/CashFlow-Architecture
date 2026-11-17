@@ -228,7 +228,27 @@ docker compose up -d --force-recreate --no-deps transactions consolidation
 
 Se a API iniciar, mas retornar `503` em operações autorizadas, confira as **Service account roles** dos dois clientes no Keycloak; segredo presente não garante permissão de consulta.
 
-**F. Validar o login.** Abra `http://localhost:8080` em janela anônima, autentique como `cashflow.admin` do realm `cashflow` e confirme a área administrativa. Se não aparecer, use `docker compose logs --tail=100 transactions` e confira `GET /api/v1/merchants/permissions` no DevTools, sem expor tokens. Se o login exigir configuração de usuário, confira Enabled, senha, ações obrigatórias e realm selecionado.
+**F. Fazer o primeiro login com `cashflow.admin` e concluir o cadastro do perfil.**
+
+1. Depois de confirmar que `transactions`, `consolidation` e `web` estão ativos em `docker compose ps`, abra **http://localhost:8080** em uma janela anônima do navegador.
+2. Clique para entrar, se a tela de autenticação não abrir automaticamente. Você será direcionado ao **Keycloak**, no realm **cashflow**.
+3. Preencha o formulário de login com:
+   - **Username:** `cashflow.admin`
+   - **Password:** a senha que **você definiu em Users > cashflow.admin > Credentials > Set password** quando criou esse usuário na etapa **A**. **Não** é a senha `KEYCLOAK_ADMIN_PASSWORD` do arquivo `.env`, pois essa senha pertence ao administrador técnico do realm `master`.
+4. **No primeiro acesso**, conforme o comportamento observado nesta instalação do Keycloak, será exibida a tela **Update Account Information**. Antes de entrar na aplicação, preencha todos os campos obrigatórios marcados com `*`:
+   
+   | Campo na tela | O que informar |
+   | --- | --- |
+   | **Username** | `cashflow.admin` (já preenchido; mantenha esse valor) |
+   | **Email** | Um endereço de e-mail válido para a conta administrativa local |
+   | **First name** | Nome do administrador de teste |
+   | **Last name** | Sobrenome do administrador de teste |
+   
+   Clique em **Submit** para concluir a atualização do perfil. Se algum campo ficar vazio, o Keycloak mostrará **Please specify this field** e não permitirá continuar.
+5. Após enviar o formulário, o Keycloak deve redirecionar o navegador de volta ao **CashFlow** em `http://localhost:8080`. Confira que está autenticado como `cashflow.admin` e que a área de **administração de comerciantes** aparece.
+6. Se houver erro de login ou o redirecionamento não funcionar, confira se o usuário está **Enabled** no realm `cashflow`, se a senha foi definida e se o perfil foi preenchido. Consulte `docker compose logs --tail=100 keycloak transactions web` e, no DevTools do navegador, verifique a resposta de `GET /api/v1/merchants/permissions` sem copiar tokens nem segredos.
+
+**Observação:** a tela `Update Account Information` é uma etapa de conclusão de perfil exigida pela configuração atual do Keycloak. Não confunda com a troca de senha: quando o usuário foi criado com **Temporary: OFF**, a senha definida na etapa A continua sendo usada no login. A solicitação de preenchimento do perfil pode variar se os campos já tiverem sido informados previamente.
 
 A opção **Edit username** do realm novo está habilitada no JSON de importação. Em realms já existentes, o import não sobrescreve essa preferência; altere manualmente nas configurações de Login do realm.
 
