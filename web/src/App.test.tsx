@@ -603,7 +603,7 @@ describe('CashFlow dashboard and interactions', () => {
   });
   it('creates a merchant and selects it without manually entering a UUID', async () => {
     setupSignedIn();
-    const input = find('input', 'Nome do comerciante');
+    const input = find('input', 'Nome da nova loja');
     (input.props.onChange as (event: unknown) => void)({ target: { value: 'Loja Campinas' } });
     mock.state[17] = 'loja.campinas';
     mock.state[18] = 'senha-local-segura';
@@ -640,25 +640,25 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(true);
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Saldo diário')).toBe(true);
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Histórico de lançamentos')).toBe(true);
-    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(false);
-    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome da nova loja')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha inicial do usuário da loja')).toBe(false);
   });
   it('operator session cannot submit merchant creation even through a forged callback', async () => {
     setupSignedIn();
     mock.state[19] = false;
     const nodes = render();
     expect(nodes.filter(n => n.type === 'form')).toHaveLength(1);
-    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário de acesso da loja')).toBe(false);
     expect(createMerchant).not.toHaveBeenCalled();
   });
   it('admin sees merchant creation only after login and requires username and password', () => {
     setupSignedIn();
     const nodes = render();
-    expect(nodes.some(n => n.props['aria-label'] === 'Nome do comerciante')).toBe(true);
-    expect(nodes.some(n => n.props['aria-label'] === 'Usuário do comerciante')).toBe(true);
-    expect(nodes.some(n => n.props['aria-label'] === 'Senha do comerciante')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Nome da nova loja')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Usuário de acesso da loja')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Senha inicial do usuário da loja')).toBe(true);
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Comerciante e competência')).toBe(true);
-    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Cadastrar comerciante e acesso');
+    const submit = nodes.find(n => n.type === 'button' && n.props.children === 'Cadastrar loja e usuário');
     expect(submit?.props.disabled).toBe(true);
   });
 
