@@ -5,3 +5,7 @@
 .env
 .vs/
 .idea/
+
+# Local-only MVP acceptance records, never commit operational evidence or secrets
+local-acceptance.json
+/evidence/
