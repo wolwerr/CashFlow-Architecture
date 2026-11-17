@@ -130,8 +130,8 @@ public static class MerchantEndpoints
         IOptions<KeycloakManagementSettings> settings, CancellationToken ct)
     {
         if (Actor(context) == Guid.Empty) return Results.Unauthorized();
-        if (merchantId == Guid.Empty || !ValidUsername(request?.Username) ||
-            !ValidUsername(request?.NewUsername)) return Results.BadRequest();
+        if (merchantId == Guid.Empty || request is null || !ValidUsername(request.Username) ||
+            !ValidUsername(request.NewUsername)) return Results.BadRequest();
         try
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
@@ -156,7 +156,8 @@ public static class MerchantEndpoints
         IOptions<KeycloakManagementSettings> settings, CancellationToken ct)
     {
         if (Actor(context) == Guid.Empty) return Results.Unauthorized();
-        if (merchantId == Guid.Empty || !ValidUsername(request?.Username)) return Results.BadRequest();
+        if (merchantId == Guid.Empty || request is null || !ValidUsername(request.Username))
+            return Results.BadRequest();
         try
         {
             if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
