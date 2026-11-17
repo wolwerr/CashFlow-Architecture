@@ -334,6 +334,9 @@ jobs:
       - name: Sonar | Verify LOCAL financial resilience probe safety (offline, no Docker writes)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_resilience_e2e.py'
 
+      - name: Sonar | Verify integrated broker-consumer recovery safety offline
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_integrated_recovery.py'
+
       - name: Sonar | Verify local backup and restore safety tests (no database changes in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_backup_restore_check.py'
 
