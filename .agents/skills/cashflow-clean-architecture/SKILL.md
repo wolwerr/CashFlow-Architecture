@@ -9,7 +9,7 @@ Apply this skill to all CashFlow implementation changes. **Repository ADRs and a
 
 ## Repository and stack
 
-- Two independently deployable financial services, **Transactions** and **Consolidation**, inside `src/Services/`. This `Services` directory denotes deployable applications; **do not create a business-layer `Services` folder**.
+- Two independently deployable financial services, **Transactions** and **Consolidation**, inside `Backend/src/Services/`. This `Services` directory denotes deployable applications; **do not create a business-layer `Services` folder**.
 - Each service has `CashFlow.<Service>.Domain`, `Application`, `Infrastructure`, `Api`.
 - C#/.NET 10, ASP.NET Core, EF Core + PostgreSQL, RabbitMQ, Keycloak OIDC, React/TypeScript, NGINX. Follow the existing code/versions rather than upgrading without a decision.
 - **Current execution scope: LOCAL + Docker Compose only.** Azure/AKS DEV/HOM/PROD and cloud deployment remain future work.
@@ -17,7 +17,7 @@ Apply this skill to all CashFlow implementation changes. **Repository ADRs and a
 ## Naming and directories
 
 ```text
-src/Services/<Service>/
+Backend/src/Services/<Service>/
   CashFlow.<Service>.Domain/
     Models/         # Business models and business invariants; no persistence attributes
     Enums/          # Business enumerations
@@ -102,20 +102,20 @@ For detailed or disputed behavior consult `docs/architecture/mvp-decisions.md`, 
 ## Testing and architectural gates
 
 - Use xUnit for unit/architecture tests and `NetArchTest.Rules` plus assembly / project reference checks for architectural enforcement. Keep test assemblies outside Domain and Application.
-- Maintain tests in `tests/`. For every change, add/update tests for happy paths, invalid values, boundary dates, exceptions, isolation, idempotency/concurrency where relevant.
+- Maintain tests in `Backend/tests/`. For every change, add/update tests for happy paths, invalid values, boundary dates, exceptions, isolation, idempotency/concurrency where relevant.
 - Require **at least 80% line coverage in each production module under test**, not a global average that can conceal under-tested modules. Use Coverlet; add independent gate when new Application/Consolidation code appears. Never treat a placeholder test as meaningful coverage.
 - Existing Transactions Domain command (PowerShell):
 
 ```powershell
-dotnet test tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
+dotnet test Backend/tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
 ```
 
 - Execute architecture and build validation:
 
 ```powershell
-dotnet restore CashFlow.slnx
-dotnet build CashFlow.slnx -c Release
-dotnet test tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release
+dotnet restore Backend/CashFlow.slnx
+dotnet build Backend/CashFlow.slnx -c Release
+dotnet test Backend/tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release
 ```
 
 - Where implementation requires local dependencies, use `docker compose up --build -d` and test without Azure. Never present a health response as proof of end-to-end business operation.
