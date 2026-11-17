@@ -104,10 +104,15 @@ A visão ADMIN mostra somente **usuários efetivos das lojas**, e oculta a conta
 Com uma loja selecionada, o administrador pode:
 - **Adicionar comerciante:** cria usuário novo com username exclusivo no realm e senha inicial (12 a 128 caracteres), e vincula ao grupo `OPERATOR` da loja existente.
 - **Editar cargo:** alterna entre `Comerciante` (`OPERATOR`) e `ADMIN`. O serviço atribui primeiro o novo grupo e depois remove o anterior.
-- **Excluir acesso:** remove apenas o vínculo de usuário à loja selecionada. **Não exclui** usuário global do Keycloak, senha, histórico, transações ou dados financeiros. A confirmação visual explica esse efeito.
+- **Desativar (soft delete):** move o usuário do grupo de permissões `ADMIN` ou `OPERATOR` da loja para o grupo `INACTIVE` na mesma loja. A identidade, o vínculo histórico recuperável, a senha e as transações continuam preservados. Os endpoints financeiros verificam a associação ativa no Keycloak e deixam de autorizar essa conta na loja.
+- **Reativar:** move um membro `INACTIVE` de volta para `OPERATOR` sem recriar conta ou perder lançamentos. O ADMIN pode então promover o cargo novamente.
 - **Atualizar nome da loja:** altera apenas o atributo `displayName` do grupo no Keycloak; o identificador UUID e a movimentação permanecem os mesmos.
 
-Os endpoints exigem JWT válido, vínculo atual **ADMIN da loja**, identificador UUID validado (`X-Merchant-ID`) e autorização do próprio backend. O username de bootstrap **não pode ser removido nem rebaixado** pelo serviço. Os endpoints de escrita usam rotas fixas: `POST /api/v1/merchants/members`, `PUT /api/v1/merchants/members`, `DELETE /api/v1/merchants/members` e `PUT /api/v1/merchants/details`.
+Os endpoints exigem JWT válido, vínculo atual **ADMIN da loja**, identificador UUID validado (`X-Merchant-ID`) e autorização do próprio backend. O username de bootstrap **não pode ser desativado nem rebaixado** pelo serviço. Os endpoints de escrita usam rotas fixas: `POST /api/v1/merchants/members`, `PUT /api/v1/merchants/members`, `DELETE /api/v1/merchants/members` e `PUT /api/v1/merchants/details`.
 
 **Exclusão integral de loja** permanece fora deste MVP. Exige decisão específica sobre conservação de dados financeiros, auditoria, vínculos órfãos e recuperação, não deve ser confundida com a remoção de acesso de um usuário. Alterar username e senha de identidade compartilhada também permanece no Keycloak até existir um fluxo dedicado e auditável.
 
+
+### Soft delete e recuperação
+
+A conta desativada permanece visível na tabela como **Inativo**, com botão **Reativar**. O grupo Keycloak `/merchants/{uuid}/INACTIVE` é criado automaticamente em novas lojas e sob demanda nas lojas antigas. Esse grupo não confere os direitos de `ADMIN` ou `OPERATOR`. A operação de desativação usa o endpoint `DELETE /api/v1/merchants/members`, mas **não executa exclusão definitiva**: remove apenas a permissão ativa após atribuir o grupo `INACTIVE`. O endpoint `PUT /api/v1/merchants/members` com cargo `OPERATOR` realiza a recuperação. O username global permanece reservado, portanto criar outra conta com o mesmo nome não é o mecanismo de recuperação.
