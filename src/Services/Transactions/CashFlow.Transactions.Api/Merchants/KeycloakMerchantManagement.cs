@@ -127,6 +127,91 @@ public sealed class KeycloakMerchantManagement(
         return members.Distinct().OrderBy(m => m.Role).ThenBy(m => m.Username).ToArray();
     }
 
+    public async Task<bool> RenameMerchantAsync(Guid merchantId, string displayName, CancellationToken ct)
+    {
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return false;
+        var attributes = merchant.Attributes is null
+            ? new Dictionary<string, string[]>()
+            : new Dictionary<string, string[]>(merchant.Attributes);
+        attributes["displayName"] = [displayName];
+        using var response = await SendAsync(HttpMethod.Put, $"groups/{merchant.Id}",
+            new { name = merchant.Name, attributes }, ct);
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<bool> AddOperatorAsync(Guid merchantId, string username,
+        string password, CancellationToken ct)
+    {
+        // Do not silently attach an existing realm user to a different merchant.
+        if ((await UsersAsync(username, ct)).Count > 0)
+            throw new MerchantUsernameConflictException();
+        return await AddMemberAsync(merchantId, username, password, "OPERATOR", ct);
+    }
+
+    public async Task<bool> ChangeMemberRoleAsync(Guid merchantId, string username,
+        string nextRole, string bootstrapUsername, CancellationToken ct)
+    {
+        if (string.Equals(username, bootstrapUsername, StringComparison.OrdinalIgnoreCase))
+            throw new MerchantProtectedAccountException();
+        var member = await LookupMembershipAsync(merchantId, username, ct);
+        if (member is null) return false;
+        if (member.Value.Role.Name == nextRole) return true;
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return false;
+        var destination = (await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct))
+            .FirstOrDefault(g => g.Name == nextRole);
+        if (destination is null) throw new HttpRequestException("Merchant role group missing.");
+        // Assign first, then remove the old group. If removal fails, undo the new role.
+        await AssignAsync(member.Value.UserId, destination.Id, ct);
+        try
+        {
+            await UnassignAsync(member.Value.UserId, member.Value.Role.Id, ct);
+        }
+        catch
+        {
+            await UnassignAsync(member.Value.UserId, destination.Id, ct);
+            throw;
+        }
+        return true;
+    }
+
+    public async Task<bool> RemoveMemberAsync(Guid merchantId, string username,
+        string bootstrapUsername, CancellationToken ct)
+    {
+        if (string.Equals(username, bootstrapUsername, StringComparison.OrdinalIgnoreCase))
+            throw new MerchantProtectedAccountException();
+        var member = await LookupMembershipAsync(merchantId, username, ct);
+        if (member is null) return false;
+        // Only revoke this merchant membership, never delete the Keycloak identity or finances.
+        await UnassignAsync(member.Value.UserId, member.Value.Role.Id, ct);
+        return true;
+    }
+
+    private async Task<(Guid UserId, GroupView Role)?> LookupMembershipAsync(
+        Guid merchantId, string username, CancellationToken ct)
+    {
+        var users = await UsersAsync(username, ct);
+        if (users.Count != 1 || !Guid.TryParse(users[0].Id, out var userId) ||
+            !string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase))
+            return null;
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return null;
+        var roleGroups = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
+        var linkedGroups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
+        var role = roleGroups.FirstOrDefault(g => (g.Name == "ADMIN" || g.Name == "OPERATOR") &&
+            linkedGroups.Any(link => link.Id == g.Id));
+        return role is null ? null : (userId, role);
+    }
+
+    private async Task UnassignAsync(Guid userId, string groupId, CancellationToken ct)
+    {
+        using var response = await SendAsync(HttpMethod.Delete,
+            $"users/{userId:D}/groups/{groupId}", null, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<bool> IsAdminAsync(Guid userId, Guid merchantId, CancellationToken ct)
     {
         var groups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
@@ -218,3 +303,4 @@ public sealed record MerchantView(Guid Id, string Name, string Role);
 public sealed record MerchantMemberView(string Username, string Role);
 
 public sealed class MerchantUsernameConflictException : Exception { }
+public sealed class MerchantProtectedAccountException : Exception { }
