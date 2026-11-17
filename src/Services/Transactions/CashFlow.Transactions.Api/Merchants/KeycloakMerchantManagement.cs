@@ -114,7 +114,7 @@ public sealed class KeycloakMerchantManagement(
         if (merchant is null) return [];
         var roles = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
         var members = new List<MerchantMemberView>();
-        foreach (var role in roles.Where(g => g.Name is "ADMIN" or "OPERATOR"))
+        foreach (var role in roles.Where(g => g.Name is "ADMIN" or "OPERATOR" or "INACTIVE"))
         {
             // Keycloak is the source of truth for the actual accounts, not the role
             // of the platform administrator querying the merchant directory.
@@ -160,9 +160,8 @@ public sealed class KeycloakMerchantManagement(
         if (member.Value.Role.Name == nextRole) return true;
         var merchant = await MerchantGroupAsync(merchantId, ct);
         if (merchant is null) return false;
-        var destination = (await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct))
-            .FirstOrDefault(g => g.Name == nextRole);
-        if (destination is null) throw new HttpRequestException("Merchant role group missing.");
+        // A dormant account retains its Keycloak identity and can be reactivated.
+        var destination = await GetOrCreateGroupAsync(merchant, nextRole, ct);
         // Assign first, then remove the old group. If removal fails, undo the new role.
         await AssignAsync(member.Value.UserId, destination.Id, ct);
         try
@@ -177,15 +176,28 @@ public sealed class KeycloakMerchantManagement(
         return true;
     }
 
-    public async Task<bool> RemoveMemberAsync(Guid merchantId, string username,
+    public async Task<bool> DeactivateMemberAsync(Guid merchantId, string username,
         string bootstrapUsername, CancellationToken ct)
     {
         if (string.Equals(username, bootstrapUsername, StringComparison.OrdinalIgnoreCase))
             throw new MerchantProtectedAccountException();
         var member = await LookupMembershipAsync(merchantId, username, ct);
         if (member is null) return false;
-        // Only revoke this merchant membership, never delete the Keycloak identity or finances.
-        await UnassignAsync(member.Value.UserId, member.Value.Role.Id, ct);
+        if (member.Value.Role.Name == "INACTIVE") return true;
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return false;
+        var inactive = await GetOrCreateGroupAsync(merchant, "INACTIVE", ct);
+        // Assign a non-privileged state before revoking the active group.
+        await AssignAsync(member.Value.UserId, inactive.Id, ct);
+        try
+        {
+            await UnassignAsync(member.Value.UserId, member.Value.Role.Id, ct);
+        }
+        catch
+        {
+            await UnassignAsync(member.Value.UserId, inactive.Id, ct);
+            throw;
+        }
         return true;
     }
 
@@ -200,7 +212,7 @@ public sealed class KeycloakMerchantManagement(
         if (merchant is null) return null;
         var roleGroups = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
         var linkedGroups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
-        var role = roleGroups.FirstOrDefault(g => (g.Name == "ADMIN" || g.Name == "OPERATOR") &&
+        var role = roleGroups.FirstOrDefault(g => (g.Name is "ADMIN" or "OPERATOR" or "INACTIVE") &&
             linkedGroups.Any(link => link.Id == g.Id));
         return role is null ? null : (userId, role);
     }
@@ -229,6 +241,7 @@ public sealed class KeycloakMerchantManagement(
             update.EnsureSuccessStatusCode();
         var admin = await GetOrCreateGroupAsync(merchant, "ADMIN", ct);
         await GetOrCreateGroupAsync(merchant, "OPERATOR", ct);
+        await GetOrCreateGroupAsync(merchant, "INACTIVE", ct);
         await AssignAsync(ownerId, admin.Id, ct);
         return new MerchantView(id, name, "ADMIN");
     }
