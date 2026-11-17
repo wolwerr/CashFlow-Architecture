@@ -26,20 +26,33 @@ class VerificationError(Exception):
     pass
 
 
+def request_headers(token, has_body, extra):
+    result = {"Accept": "application/json"}
+    if token:
+        result["Authorization"] = "Bearer " + token
+    if has_body:
+        result["Content-Type"] = "application/json"
+    if extra:
+        result.update(extra)
+    return result
+
+
+def decode_response(response):
+    raw = response.read()
+    return response.status, json.loads(raw) if raw else None
+
+
 def request(method, path, token=None, body=None, headers=None):
     data = json.dumps(body).encode("utf-8") if body is not None else None
-    request_headers = {"Accept": "application/json"}
-    if token:
-        request_headers["Authorization"] = "Bearer " + token
-    if data is not None:
-        request_headers["Content-Type"] = "application/json"
-    if headers:
-        request_headers.update(headers)
-    req = urllib.request.Request(BASE + path, data=data, headers=request_headers, method=method)
+    req = urllib.request.Request(
+        BASE + path,
+        data=data,
+        headers=request_headers(token, data is not None, headers),
+        method=method
+    )
     try:
         with urllib.request.urlopen(req, timeout=8) as response:
-            raw = response.read()
-            return response.status, json.loads(raw) if raw else None
+            return decode_response(response)
     except urllib.error.HTTPError as error:
         error.read()
         return error.code, None
