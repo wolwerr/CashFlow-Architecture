@@ -127,6 +127,9 @@ public sealed class OutboxPublisherWorker(
             row.AttemptCount++;
             await db.SaveChangesAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);
+            if (Guid.TryParse(row.CorrelationId, out var safeCorrelationId))
+                logger.LogInformation("Outbox event published correlation_id={CorrelationId}",
+                    safeCorrelationId);
             return true;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
