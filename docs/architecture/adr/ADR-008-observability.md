@@ -9,7 +9,7 @@
 
 O desafio exige que Transactions permaneça disponível quando Consolidation falhar e que Consolidation suporte **50 RPS de consultas com no máximo 5% de perda de requisições**, conforme interpretação documentada em [requisitos não funcionais](../../requirements/non-functional-requirements.md). Os componentes assíncronos incluem **Outbox worker**, **RabbitMQ**, **Consolidation consumer** e **PostgreSQL**.
 
-Para demonstrar o comportamento sob falha e sob carga, precisamos tornar observáveis os caminhos síncrono e assíncrono, sem confundir **auditoria financeira persistida** com telemetria técnica. A ADR-007 prevê React e NGINX no MVP, e a ADR-006 adota Keycloak. A instrumentação inicial prioriza Transactions, Outbox e Consolidation, com coleta adicional dos componentes de borda e IAM conforme a capacidade exposta por cada produto. A stack de observabilidade é escolhida nesta ADR, mas implantação e validação ainda são etapas futuras.
+Para demonstrar o comportamento sob falha e sob carga, precisamos tornar observáveis os caminhos síncrono e assíncrono, sem confundir **auditoria financeira persistida** com telemetria técnica. A ADR-007 prevê React e NGINX no MVP, e a ADR-006 adota Keycloak. A instrumentação inicial prioriza Transactions, Outbox e Consolidation, com coleta adicional dos componentes de borda e IAM conforme a capacidade exposta por cada produto. A stack de observabilidade foi implantada no Compose local; a operação em Azure e a homologação integrada permanecem fora dessa afirmação.
 
 ## Alternativas avaliadas
 
@@ -28,7 +28,7 @@ OpenTelemetry é um conjunto de especificações, APIs, SDKs e ferramentas de co
 2. **Logs estruturados** por meio das APIs de logging do .NET, contendo identificadores de correlação, resultado da operação, duração e categoria de erro. Não registrar tokens, credenciais, payloads financeiros sensíveis ou dados pessoais desnecessários.
 3. **Traces distribuídos** propagando contexto entre API, Outbox worker, RabbitMQ e consumidor. Usar o padrão W3C Trace Context quando apropriado e transportar o contexto por headers das mensagens. Preservar `correlation_id`, `transaction_id` e `event_id` como identificadores de negócio/integração, sem confundi-los com `trace_id`.
 4. **Métricas técnicas e de negócio operacional**, com nomes/labels de baixa cardinalidade e limites explícitos para evitar explosão de custos.
-5. **OTLP + OpenTelemetry Collector:** adotar o Collector como ponto central de recepção, processamento e exportação de métricas, logs e traces. O Collector faz parte da stack escolhida para o MVP, embora a integração executável e os limites operacionais ainda precisem ser implementados.
+5. **OTLP + OpenTelemetry Collector:** adotar o Collector como ponto central de recepção, processamento e exportação de métricas, logs e traces. O Collector e sua integração OTLP estão configurados no Compose local; os limites operacionais de produção continuam futuros.
 6. **Stack self-hosted escolhida (opção B):** **Prometheus para métricas, Loki para logs, Tempo para traces e Grafana para dashboards**, com OpenTelemetry Collector distribuindo os três sinais. Em ambiente local, executar os serviços em containers e manter seus dados em volumes persistentes adequados.
 7. **Pipeline de métricas:** as aplicações exportam métricas OTLP para o Collector, que expõe endpoint em formato Prometheus; o **Prometheus coleta (scrape)** esse endpoint e o Grafana consulta Prometheus. Definir no deployment final endpoints, intervalos de scrape, nomenclatura e limites de cardinalidade. Fontes como RabbitMQ, PostgreSQL e NGINX podem exigir exporters ou integrações próprias.
 8. **Pipeline de logs:** aplicações .NET emitem logs estruturados integrados à instrumentação e os enviam ao Collector por OTLP; o Collector encaminha via **OTLP/HTTP ao endpoint suportado pelo Loki**. A coleta dos logs stdout/stderr de containers de terceiros pode requerer receiver de arquivos ou agente específico; não presumir que todos os logs são capturados automaticamente.
@@ -124,7 +124,7 @@ Reenviar evento existente; registrar ocorrência de duplicata e comprovar que o 
 
 ## Detalhes de implantação ainda pendentes
 
-- Configurações versionadas do Collector, Prometheus, Loki, Tempo e Grafana; provisionamento de data sources, dashboards e health checks.
+- Dashboards especializados, health checks, backlog/métricas de workers e alertas operacionais além dos três datasources já provisionados.
 - Retenção, custos, sampling, limites e alertas de produção.
 - Observabilidade de Keycloak, borda e frontend quando esses componentes forem implementados.
 - Política de métricas e dados sensíveis no ambiente real, alinhada à Issue #9 e à ADR-009.
@@ -147,18 +147,12 @@ Reenviar evento existente; registrar ocorrência de duplicata e comprovar que o 
 
 Metas **aprovadas pelo projeto e medidas localmente em 17/11/2026** (consulte evidências da matriz de atendimento): 50 consultas/s por 5 minutos após aquecimento, até 5% de consultas válidas enviadas terminando em erro, timeout ou sem resposta útil; latência p95 inferior a 500 ms e 95% dos lançamentos visíveis no consolidado em até 30 segundos em operação saudável. Instrumentar commit de Transactions, processamento Consolidation, latência de consulta e backlog. Auditoria financeira básica de registros confirmados é separada de logs técnicos, com retenção inicial de 365 dias sujeita a revisão legal. [Decisões do MVP](../mvp-decisions.md).
 
-## Estado de implementação local verificado em 17/11/2026
+## Estado atual da implementação (17/11/2026)
 
-Esta ADR continua **decidida**, mas não deve ser confundida com infraestrutura implantada. O Compose principal atual contém PostgreSQL, RabbitMQ, Keycloak, Transactions, Consolidation e NGINX. Não contém Collector, Prometheus, Loki, Tempo nem Grafana. A ausência desses serviços no Compose não comprova por si só ausência de qualquer instrumentação interna, mas impede afirmar o pipeline completo de três sinais.
+O [Compose principal](../../../compose.yaml) inclui 11 serviços: PostgreSQL, RabbitMQ, Keycloak, Transactions, Consolidation, NGINX, Collector, Prometheus, Loki, Tempo e Grafana. As APIs exportam sinais OpenTelemetry por OTLP para o Collector. Grafana provisiona as três fontes de dados automaticamente, com senha local obrigatória.
 
-**Evidências locais já fornecidas:** snapshot de seis serviços ativos e duas filas RabbitMQ (zero mensagens prontas e zero não confirmadas); logs disponíveis em Transactions, Consolidation e NGINX; referências de correlação encontradas em logs Transactions, mas não identificadas nos últimos logs de Consolidation e NGINX pelo filtro empregado. A inspeção não demonstrou `trace_id` ou `traceparent`; isso **não prova** ausência absoluta de traces, apenas falta de evidência nesse recorte. Relatórios de carga, falha e SLO de projeção já existem independentemente.
+Após esta PR, o `traceparent` W3C da requisição HTTP de lançamento é persistido com a Outbox e propagado pelo worker RabbitMQ até o consumer. A migration `202611170001_AddOutboxTraceParent` acrescenta uma coluna opcional, sem remover dados ou exigir reinstalação. O `correlation_id` de negócio continua separado. Para registros históricos sem `trace_parent`, o publisher inicia um trace independente, preservando compatibilidade.
 
-**Resultado do cenário `observability`: NOT_RUN/BLOCKED para a stack completa da ADR-008**, até comprovação real dos itens pendentes. O script `.github/scripts/local_observability_inventory.py --execute` produz inventário sanitizado e **não** altera o manifesto nem afirma PASS. Este inventário não valida propagação de trace, pipeline OTLP, dashboards, exporters ou alertas.
+**Evidência disponível:** o operador relatou conseguir visualizar traces no Grafana, mas isso não comprova ainda a cadeia completa nem os três sinais nos dois serviços. O cenário `observability` permanece `NOT_RUN` no manifesto até comprovação com data, SHA, um trace HTTP → Outbox → consumer, métricas no Prometheus, logs no Loki e tolerância à falha do Collector. Ver [runbook de homologação](../../validation/local-observability-stack.md).
 
-**Plano necessário antes do aceite completo da ADR:** instrumentar ambos os serviços e os workers com propagação W3C; configurar Collector e backends locais de métricas, logs e traces, dashboards e retenção; coletar evidência de um lançamento atravessando API, Outbox, RabbitMQ e Consolidation; verificar degradação segura do pipeline; medir backlog, consumo de recursos e latência. Caso a banca aceite apenas a arquitetura documentada como diferencial, essa dispensa precisa ser decidida expressamente no escopo do aceite, sem fingir que foi implementada.
-
-## Implementação opcional para validação, 17/11/2026
-
-Nova implementação no [compose.yaml principal](../../../compose.yaml): Collector, Prometheus, Loki, Tempo, Grafana, instrumentação habilitada por padrão localmente nas duas APIs e [procedimento de verificação](../../validation/local-observability-stack.md).
-
-**Não homologado:** a presença de arquivos versionados não demonstra que todos os containers iniciam, que cada datasource recebe dados ou que existe trace distribuído até o consumidor. Propagação RabbitMQ/Outbox, métricas de workers e o teste com Collector indisponível ainda requerem execução/implementação. Manter `observability` como `NOT_RUN` até evidência real completa.
+**Fora do MVP local:** dashboards avançados, exporters para PostgreSQL/RabbitMQ/NGINX, métricas específicas de workers, alta disponibilidade e implantação Azure. Os relatórios de carga e resiliência existentes continuam válidos como evidência **das execuções históricas**, sem transferência automática ao SHA novo.
