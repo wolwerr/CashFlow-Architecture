@@ -281,16 +281,96 @@ Para configurar o Keycloak do zero e diagnosticar falhas de permissões, siga as
 
 Para homologar, teste dois usuários de lojas diferentes, confirme o isolamento de dados e registre os resultados. Os requisitos estão na [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md).
 
-## 9. Testes automatizados e evidência de requisitos não funcionais
+## 9. Testes automatizados e evidências do desafio
 
-**CI:** [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions) executa build, testes e Sonar. Para executar o teste offline do aceite, com Python 3 instalado:
+### 9.1. Resultado automático da CI
+
+[![Build, testes e SonarQube Cloud](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml/badge.svg?branch=main)](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml)
+
+O selo acima reflete o **estado atual da pipeline da branch `main`**, não um resultado de teste manual. Clique nele para abrir o GitHub Actions, selecione a execução mais recente e confira os jobs **Backend | Build and tests**, **Frontend | Build and tests** e **Sonar | Backend and frontend**. É possível verificar cada passo, os testes executados e a geração dos relatórios de cobertura. Um selo verde indica sucesso da execução, mas não comprova sozinho os cenários de falha e carga descritos abaixo.
+
+**Para incluir uma captura real dos testes no README:** abra [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml), selecione um run com os três jobs aprovados, capture a tela exibindo o status e salve a imagem como `docs/architecture/images/tests-github-actions.png`. Adicione o arquivo ao Git e substitua este parágrafo pelo Markdown:
+
+```markdown
+![Execução real dos testes de Backend, Frontend e Sonar no GitHub Actions](docs/architecture/images/tests-github-actions.png)
+```
+
+**Não adicione uma captura de execução antiga ou uma imagem gerada artificialmente para representar testes atuais.** O link para o GitHub Actions deve permanecer para que o avaliador confirme a execução.
+
+### 9.2. Resultado documentado de execução local do backend
+
+Na execução local de **17/11/2026**, em Windows PowerShell com **.NET 10**, o terminal apresentou os seguintes resultados para `dotnet test Backend/CashFlow.slnx -c Release --no-build` (após configurar bancos PostgreSQL exclusivos de teste):
+
+| Projeto de testes | Aprovados | Falhas |
+| --- | ---: | ---: |
+| CashFlow.Transactions.ApiTests | 103 | 0 |
+| CashFlow.Transactions.UnitTests | 38 | 0 |
+| CashFlow.Transactions.IntegrationTests | 26 | 0 |
+| CashFlow.Consolidation.ApiTests | 5 | 0 |
+| CashFlow.Consolidation.UnitTests | 12 | 0 |
+| CashFlow.Consolidation.IntegrationTests | 23 | 0 |
+| CashFlow.ArchitectureTests | 16 | 0 |
+| **Total** | **223** | **0** |
+
+**Resultado:** 223 testes executados e aprovados, 0 falhas, 0 ignorados, código de saída 0, conforme saída do terminal compartilhada pelo responsável pelo projeto. Esta tabela é um **registro de execução local informado**, não um relatório de CI vinculado a commit e não uma medição de cobertura de código. Para evidência auditável, associe a captura real, o log da execução e o SHA do commit testado.
+
+### 9.3. Resultado documentado de execução local do frontend
+
+Na execução local de **17/11/2026**, em Windows PowerShell, Node.js 24.21.0/npm e Vitest 5.1.0, o comando `npm run test:coverage` em `Frontend/` apresentou:
+
+| Indicador | Resultado |
+| --- | ---: |
+| Arquivos de teste | 9 aprovados |
+| Testes | **169 aprovados, 0 falhas** |
+| Cobertura de linhas | **88,30%** |
+| Cobertura de instruções | 84,51% |
+| Cobertura de ramificações | 84,22% |
+| Cobertura de funções | 80,83% |
+
+O build `tsc -b && vite build` também concluiu com sucesso em **Vite 6.4.6**. O `npm audit` e `npm audit --omit=dev` informaram **0 vulnerabilidades** no ambiente local após a atualização das dependências.
+
+**Total backend + frontend:** **392 testes aprovados**, 0 falhas, em execuções locais separadas. Os 223 testes .NET e os 169 testes Vitest passaram, mas **100% de aprovação de testes não significa 100% de cobertura de código**. Estes números são provenientes das saídas de terminal compartilhadas pelo responsável pelo projeto; para evidência auditável, incluir a captura real, os relatórios e o SHA correspondente.
+
+**Pontos de atenção:** `src/features/app/useCashFlowController.ts` apresentou **76,07% de cobertura de linhas** após a migração do Vitest 3 para 5, abaixo de 80% individualmente, embora as quatro métricas globais estejam acima de 80%. A atualização também alterou os percentuais de cobertura (antes eram 95,48% de linhas); isso não significa, por si só, perda de testes. O `npm audit` anterior apontava 7 vulnerabilidades (5 moderadas e 2 críticas), mas a nova verificação local informou 0. **O repositório ainda precisa receber o `Frontend/package.json` e o `Frontend/package-lock.json` alterados, e a CI precisa validar essas versões antes de considerar a correção integrada.**
+
+### 9.4. Rodar os testes automatizados localmente
+
+Para executar os testes .NET, com o SDK .NET 10 instalado e os serviços de integração necessários disponíveis:
+
+```powershell
+dotnet restore Backend/CashFlow.slnx
+dotnet build Backend/CashFlow.slnx -c Release
+dotnet test Backend/CashFlow.slnx -c Release --no-build
+```
+
+Para executar os testes de frontend, com Node.js 22 e npm instalados:
+
+```powershell
+cd Frontend
+npm ci
+npm run test:coverage
+cd ..
+```
+
+**Alternativa sem SDK .NET e Node.js instalados localmente:** acompanhe o build, os testes, a cobertura e os Docker builds pelo [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml). O Docker Compose serve para executar o sistema, não substitui automaticamente os testes da CI. Testes de integração podem exigir PostgreSQL e RabbitMQ, que são provisionados especificamente no workflow de CI.
+
+### 9.5. Aceite funcional, falha e desempenho
+
+O script `local_mvp_acceptance.py` **não executa testes**, não acessa Docker e não valida as APIs. Ele apenas cria ou lê um **manifesto de evidências** para 14 cenários que deverão ser executados e comprovados separadamente. Para criar o manifesto na primeira utilização (Python 3):
 
 ```powershell
 python .github/scripts/local_mvp_acceptance.py --init local-acceptance.json
+```
+
+**Se `local-acceptance.json` já existir, pule o comando acima.** Ele usa criação exclusiva e retorna `Acceptance report failed: FileExistsError` se o arquivo já existe. Isso evita sobrescrever registros e **não indica falha dos testes da aplicação**. Para apenas consultar o manifesto existente:
+
+```powershell
 python .github/scripts/local_mvp_acceptance.py --manifest local-acceptance.json
 ```
 
-A primeira execução cria um manifesto com 14 cenários `NOT_RUN`; a segunda retorna `NOT_ACCEPTED` até haver evidências reais. Execute `--init` **uma única vez**, pois ele não sobrescreve arquivos existentes. Os relatórios locais são ignorados pelo Git.
+O resultado inicial esperado é `outcome: NOT_ACCEPTED`, `NOT_RUN: 14` e `PASS: 0`; o script retorna código 1 até que os 14 cenários estejam marcados como `PASS`, tenham referências de evidência e o manifesto registre o SHA do commit. **Não marque PASS sem executar o cenário correspondente e guardar evidência real.** O manifesto não inspeciona a veracidade do conteúdo das evidências, apenas sua estrutura e, quando aplicável, a existência de arquivos. Os relatórios locais são ignorados pelo Git.
+
+Para verificar apenas os containers e filas, execute o diagnóstico abaixo. O resultado `outcome: OBSERVED` significa que os serviços foram encontrados em execução e as filas puderam ser consultadas, **não que os testes funcionais tenham passado**.
 
 **Diagnóstico somente de leitura:**
 

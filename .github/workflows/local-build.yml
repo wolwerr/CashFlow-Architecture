@@ -67,25 +67,25 @@ jobs:
         run: docker build -f Backend/src/Services/Consolidation/Dockerfile -t cashflow-consolidation:ci .
 
       - name: Backend | Architecture tests
-        run: dotnet test Backend/tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.ArchitectureTests/CashFlow.ArchitectureTests.csproj -c Release --no-build --logger 'trx;LogFileName=ci-results.trx'
 
       - name: Backend | Transactions Domain (min 80% lines)
-        run: dotnet test Backend/tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Domain]*' /p:CoverletOutputFormat=cobertura --logger 'trx;LogFileName=ci-results.trx'
 
       - name: Backend | Transactions Application (min 80% lines)
         run: dotnet test Backend/tests/CashFlow.Transactions.UnitTests/CashFlow.Transactions.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Application]*' /p:CoverletOutputFormat=cobertura
 
       - name: Backend | JWT authentication API tests
-        run: dotnet test Backend/tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.Transactions.ApiTests/CashFlow.Transactions.ApiTests.csproj -c Release --no-build --logger 'trx;LogFileName=ci-results.trx'
 
       - name: Backend | PostgreSQL integration and Infrastructure coverage (min 80% lines)
         env:
           CASHFLOW_TEST_POSTGRES: Host=localhost;Port=5432;Database=cashflow_transactions_test;Username=cashflow;Password=local_ci_only
           CASHFLOW_TEST_RABBITMQ: "true"
-        run: dotnet test Backend/tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Infrastructure]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Transactions.IntegrationTests/CashFlow.Transactions.IntegrationTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Transactions.Infrastructure]*' /p:CoverletOutputFormat=cobertura --logger 'trx;LogFileName=ci-results.trx'
 
       - name: Backend | Consolidation unit tests and Domain coverage (min 80%)
-        run: dotnet test Backend/tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Domain]*' /p:CoverletOutputFormat=cobertura
+        run: dotnet test Backend/tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Domain]*' /p:CoverletOutputFormat=cobertura --logger 'trx;LogFileName=ci-results.trx'
 
       - name: Backend | Consolidation Application coverage (min 80%)
         run: dotnet test Backend/tests/CashFlow.Consolidation.UnitTests/CashFlow.Consolidation.UnitTests.csproj -c Release --no-build /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=Minimum '/p:Include=[CashFlow.Consolidation.Application]*' /p:CoverletOutputFormat=cobertura
@@ -94,10 +94,14 @@ jobs:
         env:
           CASHFLOW_TEST_CONSOLIDATION: Host=localhost;Port=5432;Database=cashflow_consolidation_test;Username=cashflow;Password=local_ci_only
           CASHFLOW_TEST_RABBITMQ: "true"
-        run: dotnet test Backend/tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.Consolidation.IntegrationTests/CashFlow.Consolidation.IntegrationTests.csproj -c Release --no-build --logger 'trx;LogFileName=ci-results.trx'
 
       - name: Backend | Consolidation HTTP API tests
-        run: dotnet test Backend/tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj -c Release --no-build
+        run: dotnet test Backend/tests/CashFlow.Consolidation.ApiTests/CashFlow.Consolidation.ApiTests.csproj -c Release --no-build --logger 'trx;LogFileName=ci-results.trx'
+
+      - name: Backend | Publish xUnit test summary
+        if: always()
+        run: python3 .github/scripts/backend_test_summary.py
 
       - name: Backend | Generate OpenCover for Sonar
         run: |
