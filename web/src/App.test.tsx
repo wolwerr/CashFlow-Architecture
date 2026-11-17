@@ -250,9 +250,10 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
     expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'ADMIN')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'ADMIN')).toBe(false);
     expect(nodes.some(n => n.type === 'span' && n.props.children === 'loja.teste')).toBe(true);
-    expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo do usuário')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(false);
+    expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo')).toBe(true);
     expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
     expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
   });
