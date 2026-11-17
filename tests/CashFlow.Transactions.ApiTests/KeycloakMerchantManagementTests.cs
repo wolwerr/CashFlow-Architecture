@@ -166,6 +166,92 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task ConflictingRolesFailClosedBeforeAnyMembershipMutation()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            Create(fake).ChangeMemberRoleAsync(MerchantId, "loja.teste", "OPERATOR",
+                "cashflow.admin", CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method is "PUT" or "DELETE");
+    }
+
+    [Fact]
+    public async Task ConcurrentUsernameCreationConflictDoesNotLinkAnotherIdentity()
+    {
+        var reads = 0;
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith("/users", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+            {
+                reads++;
+                return JsonResponse(Array.Empty<object>());
+            }
+            if (path.EndsWith("/users", StringComparison.Ordinal) && request.Method == HttpMethod.Post)
+                return new HttpResponseMessage(HttpStatusCode.Conflict);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<MerchantUsernameConflictException>(() =>
+            Create(fake).AddOperatorAsync(MerchantId, "loja.teste", "senha-forte-teste", CancellationToken.None));
+        Assert.True(reads >= 1);
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "PUT" &&
+            call.Path.Contains("/users/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task FailedGroupAssignmentDeletesOnlyTheUserCreatedInCurrentRequest()
+    {
+        var created = false;
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith("/users", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+                return created
+                    ? JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } })
+                    : JsonResponse(Array.Empty<object>());
+            if (path.EndsWith("/users", StringComparison.Ordinal) && request.Method == HttpMethod.Post)
+            {
+                created = true;
+                return new HttpResponseMessage(HttpStatusCode.Created);
+            }
+            if (request.Method == HttpMethod.Put &&
+                path.EndsWith($"/users/{UserId:D}/groups/operator-id", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+            if (request.Method == HttpMethod.Delete &&
+                path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            Create(fake).AddOperatorAsync(MerchantId, "loja.teste", "senha-forte-teste", CancellationToken.None));
+        Assert.Contains(fake.Calls, call => call.Method == "DELETE" &&
+            call.Path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task BootstrapAdministratorCannotBeRemovedOrDemoted()
     {
         var fake = new FakeHandler(_ => throw new InvalidOperationException("Should not call Keycloak."));
