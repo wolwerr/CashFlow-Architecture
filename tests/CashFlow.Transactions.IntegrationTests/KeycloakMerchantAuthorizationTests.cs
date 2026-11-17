@@ -195,7 +195,7 @@ public sealed class KeycloakMerchantAuthorizationTests
     {
         var merchant = Guid.NewGuid();
         var gateway = Create(req => req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal)
-            ? Json("{\\"access_token\\":\\"service-token\\",\\"expires_in\\":300}")
+            ? Json("{\"access_token\":\"service-token\",\"expires_in\":300}")
             : Json($@"[{{""path"":""/merchants/{merchant:D}/INACTIVE""}}]"));
         Assert.False(await gateway.CanCreateAsync(Guid.NewGuid(), merchant, default));
     }
@@ -204,7 +204,7 @@ public sealed class KeycloakMerchantAuthorizationTests
     public async Task MissingGroupResponseFailsClosed()
     {
         var gateway = Create(req => req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal)
-            ? Json("{\\"access_token\\":\\"service-token\\",\\"expires_in\\":300}")
+            ? Json("{\"access_token\":\"service-token\",\"expires_in\":300}")
             : Json("null"));
         await Assert.ThrowsAsync<MerchantAuthorizationUnavailableException>(() =>
             gateway.CanCreateAsync(Guid.NewGuid(), Guid.NewGuid(), default));
@@ -213,7 +213,7 @@ public sealed class KeycloakMerchantAuthorizationTests
     [Fact]
     public async Task InvalidServiceTokenNeverGrantsMembership()
     {
-        var gateway = Create(_ => Json("{\\"access_token\\":\\"\\",\\"expires_in\\":0}"));
+        var gateway = Create(_ => Json("{\"access_token\":\"\",\"expires_in\":0}"));
         await Assert.ThrowsAsync<MerchantAuthorizationUnavailableException>(() =>
             gateway.CanCreateAsync(Guid.NewGuid(), Guid.NewGuid(), default));
     }
