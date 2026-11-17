@@ -24,6 +24,23 @@ Transactions API   Consolidation API
 
 Os bancos lógicos são `cashflow_transactions`, `cashflow_consolidation` e `cashflow_keycloak` no PostgreSQL local. O **Keycloak** é a fonte de usuários, grupos e permissões por comerciante; não existe quarto banco de autorização. O POST de lançamento confirma a transação e a Outbox antes de responder, **sem aguardar** o Consolidation. O saldo é atualizado assincronamente.
 
+### Organização do repositório
+
+```text
+Backend/
+  CashFlow.slnx       # Solução .NET 10
+  src/                # Transactions, Consolidation e segurança compartilhada
+  tests/              # Testes unitários, integração, API e arquitetura
+Frontend/
+  src/                # React + TypeScript
+  Dockerfile           # Build do frontend e imagem NGINX
+infra/                 # Keycloak, banco local e configuração NGINX
+docs/                  # Requisitos, domínios, diagramas e ADRs
+compose.yaml           # Inicialização local do sistema completo
+```
+
+Os caminhos do código foram reorganizados, mas os **nomes dos serviços Docker Compose continuam** `postgres`, `rabbitmq`, `keycloak`, `transactions`, `consolidation` e `web`. Portanto, os comandos `docker compose up -d ... web` permanecem válidos. Para executar os testes fora do Docker, use `dotnet test Backend/CashFlow.slnx` e, no frontend, `cd Frontend` seguido de `npm ci` e `npm run test:coverage`.
+
 ## 2. Pré-requisitos
 
 - **Windows:** PowerShell, Git e Docker Desktop com Docker Compose v2 (engine Linux). Mac/Linux: adapte os comandos de terminal.
