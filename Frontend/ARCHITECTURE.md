@@ -44,7 +44,7 @@ Frontend/src/
 ## Executar
 
 ```powershell
-cd web
+cd Frontend
 npm ci
 npm run build
 npm run test:coverage
