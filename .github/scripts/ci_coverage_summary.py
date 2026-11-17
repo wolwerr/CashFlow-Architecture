@@ -20,45 +20,49 @@ def ratio(hit, total):
     return f"{100 * hit / total:.2f}%" if total else "n/a"
 
 
-def merge_opencover_line_coverage(paths):
-    """Union executable source lines across reports, keeping a line covered if any run hit it.
+def module_sequence_lines(module):
+    """Yield unique source-line identifiers and whether each was visited."""
+    name = module.findtext("ModuleName")
+    if not name:
+        raise ValueError("OpenCover ModuleName missing")
+    files = {
+        node.attrib["uid"]: node.attrib["fullPath"].replace("\\", "/")
+        for node in module.findall("./Files/File")
+    }
+    for point in module.findall(".//SequencePoints/SequencePoint"):
+        source = files.get(point.attrib.get("fileid"))
+        if not source:
+            raise ValueError("SequencePoint source file missing")
+        line = int(point.attrib["sl"])
+        visits = int(point.attrib["vc"])
+        if line < 1 or visits < 0:
+            raise ValueError("Invalid OpenCover sequence point")
+        yield (name, source, line), visits > 0
 
-    OpenCover's root Summary counts sequence points for one test execution;
-    summing or averaging those counts would double-count overlapping code.
-    A source line is identified by assembly, source file and line number.
-    """
+
+def report_sequence_lines(path):
+    """Yield source lines from one report and reject empty instrumented reports."""
+    modules = ET.parse(path).getroot().findall("./Modules/Module")
+    if not modules:
+        raise ValueError("OpenCover report has no Modules")
+    count = 0
+    for module in modules:
+        for entry in module_sequence_lines(module):
+            count += 1
+            yield entry
+    if not count:
+        raise ValueError("OpenCover report has no sequence points")
+
+
+def merge_opencover_line_coverage(paths):
+    """Union source lines across suites; count covered when any suite visits."""
     lines = {}
     for path in paths:
-        root = ET.parse(path).getroot()
-        modules = root.findall("./Modules/Module")
-        if not modules:
-            raise ValueError("OpenCover report has no Modules")
-        report_lines = 0
-        for module in modules:
-            module_name = module.findtext("ModuleName")
-            if not module_name:
-                raise ValueError("OpenCover ModuleName missing")
-            files = {
-                node.attrib["uid"]: node.attrib["fullPath"].replace("\\\\", "/")
-                for node in module.findall("./Files/File")
-            }
-            for point in module.findall(".//SequencePoints/SequencePoint"):
-                source = files.get(point.attrib.get("fileid"))
-                if not source:
-                    raise ValueError("SequencePoint source file missing")
-                line = int(point.attrib["sl"])
-                visits = int(point.attrib["vc"])
-                if line < 1 or visits < 0:
-                    raise ValueError("Invalid OpenCover sequence point")
-                key = (module_name, source, line)
-                lines[key] = lines.get(key, False) or visits > 0
-                report_lines += 1
-        if report_lines == 0:
-            raise ValueError("OpenCover report has no sequence points")
+        for key, covered in report_sequence_lines(path):
+            lines[key] = lines.get(key, False) or covered
     if not lines:
         raise ValueError("No instrumented source lines")
     return sum(lines.values()), len(lines)
-
 
 def parse_lcov(path):
     covered = total = 0
