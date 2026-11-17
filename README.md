@@ -394,6 +394,8 @@ Remove-Item Env:CASHFLOW_RESILIENCE_TOKEN
 
 A execução confirma (1) membership e saldo antes da interrupção, (2) Consolidation realmente parado, (3) HTTP `201` em Transactions durante a falha, (4) restauração no bloco `finally`, (5) uma única transação no histórico, e (6) incremento exato de R$ 1,00 no saldo após a recuperação. O relatório local é salvo em `reports/resilience-local.json`, sem token ou IDs; execute **apenas no projeto Compose local**. O status `PASS` só é emitido após essas verificações. Este teste não substitui o teste de carga nem prova disponibilidade contínua por períodos maiores.
 
+**Evidência local relatada em 17/11/2026 (UTC 14:55:28):** execução com `--execute` retornou código `0` e `outcome: PASS`. O relatório exibido confirmou saldo inicial consultado, Consolidation parado durante um `POST` que retornou HTTP `201`, restauração do container, unicidade da transação no histórico e incremento exato do saldo. Janela solicitada: 15 segundos. Trata-se de resultado observado e fornecido pelo executor local, **não de um teste destrutivo realizado pela CI**; o JSON original permanece no ambiente local em `reports/resilience-local.json`.
+
 **Resiliência e carga:** o desafio impõe que uma falha apenas de Consolidation **não indisponibilize** o registro em Transactions e que o consolidado suporte **50 requisições/segundo com até 5% sem resposta útil**. Para testar esses requisitos, consulte:
 
 - Simulação de falha de Consolidation e recuperação do RabbitMQ: scripts `.github/scripts/local_recovery_drill.py` (somente com `--execute` e dados locais descartáveis).
