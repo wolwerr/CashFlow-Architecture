@@ -1,7 +1,7 @@
 import { addMerchantOperator, removeMerchantMember, renameMerchant,
-  updateMerchantMember } from '../../api/cashflow';
+  updateMerchantMember, renameMerchantMember } from '../../api/cashflow';
 
-export type MerchantAction = 'add' | 'role' | 'remove' | 'restore' | 'rename';
+export type MerchantAction = 'add' | 'role' | 'remove' | 'restore' | 'rename' | 'username';
 export type MerchantCommand = {
   action: MerchantAction;
   token: string;
@@ -12,6 +12,7 @@ export type MerchantCommand = {
   password: string;
   editedName: string;
   nextRole: 'ADMIN' | 'OPERATOR';
+  newUsername: string;
   confirmDeactivate: (message: string) => boolean;
 };
 
@@ -25,6 +26,11 @@ export async function executeMerchantMutation(command: MerchantCommand): Promise
     case 'role':
       if (!command.account) return false;
       await updateMerchantMember(command.token, command.merchantId, command.account, command.nextRole);
+      return true;
+    case 'username':
+      if (!command.account || !command.newUsername.trim()) return false;
+      await renameMerchantMember(command.token, command.merchantId,
+        command.account, command.newUsername.trim());
       return true;
     case 'remove':
       if (!command.account || !command.confirmDeactivate(

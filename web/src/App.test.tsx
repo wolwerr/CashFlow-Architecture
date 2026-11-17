@@ -186,7 +186,7 @@ describe('CashFlow dashboard and interactions', () => {
     const nodes = render();
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Novo lançamento')).toBe(false);
     expect(nodes.some(n => n.type === 'h2' && n.props.children === 'Gestão de comerciantes')).toBe(false);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(false);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(false);
   });
   it('distinguishes a verified admin from a merchant in the header', () => {
     setupSignedIn();
@@ -249,10 +249,10 @@ describe('CashFlow dashboard and interactions', () => {
     expect(labels).toContain('Loja Teste');
     expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'ADMIN')).toBe(false);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'loja.teste')).toBe(true);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(false);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'ADMIN')).toBe(false);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'loja.teste')).toBe(true);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'cashflow.admin')).toBe(false);
     expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo')).toBe(true);
     expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
     expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
@@ -276,8 +276,8 @@ describe('CashFlow dashboard and interactions', () => {
     });
     expect(listMerchantMembers).toHaveBeenCalledWith('access-token', mock.state[3]);
     const nodes = render();
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'loja.campinas')).toBe(true);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'loja.campinas')).toBe(true);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
     if (typeof cleanup === 'function') cleanup();
   });
 
@@ -363,7 +363,7 @@ describe('CashFlow dashboard and interactions', () => {
     await (remove.props.onClick as () => Promise<void>)();
     await vi.waitFor(() => expect(removeMerchantMember).toHaveBeenCalledWith('access-token',
       mock.state[3], 'loja.campinas'));
-    expect(render().some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(false);
+    expect(render().some(n => n.type === 'td' && n.props.children === 'cashflow.admin')).toBe(false);
     vi.unstubAllGlobals();
   });
 
@@ -376,7 +376,7 @@ describe('CashFlow dashboard and interactions', () => {
     ] };
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
     const nodes = render();
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Inativo')).toBe(true);
+    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Inativo')).toBe(true);
     expect(nodes.some(n => n.type === 'button' && n.props.children === 'Reativar')).toBe(true);
     expect(nodes.some(n => n.type === 'button' && n.props.children === 'Desativar')).toBe(false);
     const activate = find('button', 'Reativar');

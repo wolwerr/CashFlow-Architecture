@@ -73,6 +73,14 @@ public sealed class KeycloakMerchantManagement(
         var createPath = parent is null ? "groups" : $"groups/{parent.Id}/children";
         using var response = await SendAsync(HttpMethod.Post, createPath,
             new { name }, ct);
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            // A competing request may have created the exact same group.
+            // Accept only the group read back at its expected hierarchical path.
+            var winner = (await GroupsAsync(listPath, ct))
+                .FirstOrDefault(g => g.Name == name && g.Path == expectedPath);
+            return winner ?? throw new HttpRequestException("Group conflict without an identifiable winner.");
+        }
         if (response.StatusCode != HttpStatusCode.Created)
             response.EnsureSuccessStatusCode();
         // A subsequent read is intentionally authoritative: never infer a Keycloak group ID.
@@ -95,7 +103,8 @@ public sealed class KeycloakMerchantManagement(
         var merchants = new List<MerchantView>();
         foreach (var roleGroup in groups.Where(g => g.Path is not null &&
                      (g.Path.EndsWith("/ADMIN", StringComparison.Ordinal) ||
-                      g.Path.EndsWith("/OPERATOR", StringComparison.Ordinal))))
+                      g.Path.EndsWith("/OPERATOR", StringComparison.Ordinal) ||
+                      g.Path.EndsWith("/INACTIVE", StringComparison.Ordinal))))
         {
             var parts = roleGroup.Path!.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length != 3 || parts[0] != RootName || !Guid.TryParse(parts[1], out var id))
@@ -105,7 +114,11 @@ public sealed class KeycloakMerchantManagement(
             var name = merchantGroup.Attributes?.GetValueOrDefault("displayName")?.FirstOrDefault();
             merchants.Add(new MerchantView(id, name ?? id.ToString("D"), parts[2]));
         }
-        return merchants.DistinctBy(x => x.Id).ToArray();
+        // Conflicting role-group snapshots cannot grant access through the directory.
+        return merchants.GroupBy(x => x.Id)
+            .Where(group => group.Select(member => member.Role).Distinct().Count() == 1)
+            .Select(group => group.First())
+            .Where(merchant => merchant.Role is "ADMIN" or "OPERATOR").ToArray();
     }
 
     public async Task<IReadOnlyList<MerchantMemberView>> ListMembersAsync(Guid merchantId, CancellationToken ct)
@@ -148,6 +161,38 @@ public sealed class KeycloakMerchantManagement(
         if ((await UsersAsync(username, ct)).Count > 0)
             throw new MerchantUsernameConflictException();
         return await AddMemberAsync(merchantId, username, password, "OPERATOR", ct);
+    }
+
+    public async Task<bool> RenameMemberAsync(Guid merchantId, string username,
+        string nextUsername, string bootstrapUsername, CancellationToken ct)
+    {
+        if (string.Equals(username, bootstrapUsername, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(nextUsername, bootstrapUsername, StringComparison.OrdinalIgnoreCase))
+            throw new MerchantProtectedAccountException();
+        var member = await LookupMembershipAsync(merchantId, username, ct);
+        if (member is null) return false;
+        if (string.Equals(username, nextUsername, StringComparison.Ordinal))
+            return true;
+        // A merchant administrator may not rename a shared account used by
+        // another merchant: username is realm-global, not merchant-scoped.
+        var assignedGroups = await GroupsAsync(
+            $"users/{member.Value.UserId:D}/groups?max=1000", ct);
+        var ownPrefix = $"/merchants/{merchantId:D}/";
+        if (assignedGroups.Any(group => group.Path is not null &&
+            group.Path.StartsWith("/merchants/", StringComparison.Ordinal) &&
+            !group.Path.StartsWith(ownPrefix, StringComparison.Ordinal)))
+            throw new MerchantProtectedAccountException();
+        if ((await UsersAsync(nextUsername, ct)).Count > 0)
+            throw new MerchantUsernameConflictException();
+
+        // Update only the Keycloak username. Keep user UUID, passwords, group
+        // memberships, and all financial history unchanged.
+        using var response = await SendAsync(HttpMethod.Put,
+            $"users/{member.Value.UserId:D}", new { username = nextUsername }, ct);
+        if (response.StatusCode == HttpStatusCode.Conflict)
+            throw new MerchantUsernameConflictException();
+        response.EnsureSuccessStatusCode();
+        return true;
     }
 
     public async Task<bool> ChangeMemberRoleAsync(Guid merchantId, string username,
@@ -212,9 +257,14 @@ public sealed class KeycloakMerchantManagement(
         if (merchant is null) return null;
         var roleGroups = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
         var linkedGroups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
-        var role = roleGroups.FirstOrDefault(g => (g.Name is "ADMIN" or "OPERATOR" or "INACTIVE") &&
-            linkedGroups.Any(link => link.Id == g.Id));
-        return role is null ? null : (userId, role);
+        // Never guess a role when Keycloak exposes overlapping memberships.
+        // A partial role transition must fail closed until repaired.
+        var activeRoles = roleGroups.Where(g =>
+            (g.Name is "ADMIN" or "OPERATOR" or "INACTIVE") &&
+            linkedGroups.Any(link => link.Id == g.Id)).ToArray();
+        if (activeRoles.Length > 1)
+            throw new HttpRequestException("Conflicting merchant memberships require reconciliation.");
+        return activeRoles.Length == 0 ? null : (userId, activeRoles[0]);
     }
 
     private async Task UnassignAsync(Guid userId, string groupId, CancellationToken ct)
@@ -227,7 +277,12 @@ public sealed class KeycloakMerchantManagement(
     public async Task<bool> IsAdminAsync(Guid userId, Guid merchantId, CancellationToken ct)
     {
         var groups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
-        return groups.Any(g => g.Path == $"/merchants/{merchantId:D}/ADMIN");
+        var prefix = $"/merchants/{merchantId:D}/";
+        var currentRoles = groups.Where(g => g.Path is not null &&
+            g.Path.StartsWith(prefix, StringComparison.Ordinal) &&
+            (g.Path == prefix + "ADMIN" || g.Path == prefix + "OPERATOR" ||
+             g.Path == prefix + "INACTIVE")).Select(g => g.Path).Distinct().ToArray();
+        return currentRoles.Length == 1 && currentRoles[0] == prefix + "ADMIN";
     }
 
     public async Task<MerchantView> CreateAsync(string name, Guid ownerId, CancellationToken ct)
@@ -279,11 +334,11 @@ public sealed class KeycloakMerchantManagement(
         var group = (await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct))
             .FirstOrDefault(g => g.Name == role);
         if (group is null) throw new HttpRequestException("Merchant role group missing.");
+
         var users = await UsersAsync(username, ct);
+        var createdByThisRequest = false;
         if (users.Count == 0 && !string.IsNullOrWhiteSpace(password))
         {
-            // New merchant credentials are usable immediately in the local MVP.
-            // Password strength and recovery hardening are deferred and documented.
             using var created = await SendAsync(HttpMethod.Post, "users", new
             {
                 username, enabled = true,
@@ -292,15 +347,50 @@ public sealed class KeycloakMerchantManagement(
                     temporary = role == "ADMIN"
                 } }
             }, ct);
+            if (created.StatusCode == HttpStatusCode.Conflict)
+                throw new MerchantUsernameConflictException();
             created.EnsureSuccessStatusCode();
+            createdByThisRequest = true;
             users = await UsersAsync(username, ct);
         }
-        if (users.Count != 1) return false;
-        if (!string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (!Guid.TryParse(users[0].Id, out var userId)) return false;
-        await AssignAsync(userId, group.Id, ct);
+
+        if (users.Count == 0 && !createdByThisRequest)
+            return false; // Existing ADMIN flow may intentionally omit a new password.
+        if (users.Count != 1 ||
+            !string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase) ||
+            !Guid.TryParse(users[0].Id, out var userId))
+            throw new HttpRequestException("Keycloak user resolution ambiguous; manual reconciliation required.");
+
+        try
+        {
+            await AssignAsync(userId, group.Id, ct);
+        }
+        catch (HttpRequestException) when (createdByThisRequest)
+        {
+            // Only compensate a user created by this request. Never delete an
+            // existing realm account, even when the requested username matches.
+            await DeleteNewlyCreatedUserAsync(userId);
+            throw;
+        }
         return true;
+    }
+
+    private async Task DeleteNewlyCreatedUserAsync(Guid userId)
+    {
+        // A request may have been cancelled while the assignment failed.
+        // Attempt bounded cleanup without reusing its cancelled token.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            using var response = await SendAsync(HttpMethod.Delete,
+                $"users/{userId:D}", null, timeout.Token);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        {
+            throw new HttpRequestException(
+                "Keycloak provisioning compensation failed; manual reconciliation required.", ex);
+        }
     }
 
     private async Task<List<UserView>> UsersAsync(string username, CancellationToken ct)

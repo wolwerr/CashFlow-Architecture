@@ -4,12 +4,16 @@ import { executeMerchantMutation } from './merchantMutations';
 import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
 import { merchantRoleLabel } from './merchantPresentation';
+import { merchantDirectoryRows } from './merchantDirectoryRows';
+import { MerchantMemberActions } from './MerchantMemberActions';
 
 function mutationMessage(action: MerchantAction): string {
   if (action === 'remove') {
     return 'Usuário desativado nesta loja. É possível reativar sem perder o histórico.';
   }
-  return action === 'restore' ? 'Comerciante reativado nesta loja.' : 'Alteração realizada.';
+  if (action === 'restore') return 'Comerciante reativado nesta loja.';
+  if (action === 'username') return 'Nome de usuário atualizado no Keycloak.';
+  return 'Alteração realizada.';
 }
 
 type MerchantDirectoryProps = {
@@ -31,6 +35,8 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
   const [password, setPassword] = useState('');
   const [editedName, setEditedName] = useState('');
   const [editingUsername, setEditingUsername] = useState('');
+  const [editingAccount, setEditingAccount] = useState('');
+  const [newUsername, setNewUsername] = useState('');
   const [nextRole, setNextRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR');
   const merchantIds = items.map(item => item.id).join(',');
 
@@ -65,7 +71,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
     try {
       const changed = await executeMerchantMutation({
         action, token, merchantId: selectedId, merchantName: selected.name, account,
-        username, password, editedName, nextRole,
+        username, password, editedName, nextRole, newUsername,
         confirmDeactivate: message => window.confirm(message)
       });
       if (!changed) return;
@@ -74,6 +80,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
         setPassword('');
       }
       if (action === 'role') setEditingUsername('');
+      if (action === 'username') { setEditingAccount(''); setNewUsername(''); }
       if (action === 'rename') setEditedName('');
       await onRefresh();
       setRevision(previous => previous + 1);
@@ -95,58 +102,28 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
         <table>
           <thead><tr><th>Comerciante</th><th>Usuário da loja</th><th>Cargo</th><th>Ações</th></tr></thead>
           <tbody>
-            {items.map(item => {
-              const accounts = members[item.id];
-              // The bootstrap administrator must remain in Keycloak to manage the
-              // merchant, but is not an operator account shown in the directory.
-              const visible = accounts?.filter(account =>
-                account.username.toLowerCase() !== 'cashflow.admin') ?? [];
-              return <tr key={item.id}>
-                <td>{item.name}</td>
-                <td>{accounts === undefined ? 'Carregando usuários...' :
-                  accounts === null ? 'Indisponível' : visible.length === 0 ? 'Sem usuário da loja' :
-                    <div className="merchant-accounts">
-                      {visible.map(account => <span key={account.username + account.role}>{account.username}</span>)}
-                    </div>}</td>
-                <td>{accounts === undefined ? '...' : accounts === null ? 'Indisponível' :
-                  <div className="merchant-accounts">
-                    {visible.map(account => <span key={account.username + account.role}>
-                      {merchantRoleLabel(account.role)}
-                    </span>)}
-                  </div>}</td>
+            {merchantDirectoryRows(items, members).map(({ merchant: item, member: account, first, loading, unavailable }) =>
+              <tr key={item.id + ':' + (account?.username ?? 'empty')}>
+                <td>{first ? item.name : ''}</td>
+                <td>{account?.username ?? (loading ? 'Carregando usuários...' :
+                  unavailable ? 'Indisponível' : 'Sem usuário da loja')}</td>
+                <td>{account ? merchantRoleLabel(account.role) : '-'}</td>
                 <td><div className="merchant-row-actions">
-                  <button type="button" className="outline"
+                  {first && <button type="button" className="outline"
                     disabled={item.id === selectedId || working}
                     onClick={() => { onSelect(item.id); setError(''); setMessage(''); }}>
                     {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
-                  </button>
-                  {item.id === selectedId && visible.map(account =>
-                    <div key={account.username} className="merchant-member-actions">
-                      {account.role === 'INACTIVE' ?
-                        <button type="button" className="outline" disabled={working}
-                          onClick={() => void perform('restore', account.username)}>Reativar</button>
-                      : editingUsername === account.username ? <>
-                        <select aria-label={`Novo cargo de ${account.username}`} value={nextRole}
-                          onChange={event => setNextRole(event.target.value as 'ADMIN' | 'OPERATOR')}>
-                          <option value="OPERATOR">Comerciante</option>
-                          <option value="ADMIN">ADMIN</option>
-                        </select>
-                        <button type="button" disabled={working}
-                          onClick={() => void perform('role', account.username)}>Salvar cargo</button>
-                        <button type="button" className="outline"
-                          onClick={() => setEditingUsername('')}>Cancelar</button>
-                      </> : <>
-                        <button type="button" className="outline" disabled={working}
-                          onClick={() => { setEditingUsername(account.username); setNextRole(account.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR'); }}>
-                          Editar cargo
-                        </button>
-                        <button type="button" className="outline" disabled={working}
-                          onClick={() => void perform('remove', account.username)}>Desativar</button>
-                      </>}
-                    </div>)}
+                  </button>}
+                  {item.id === selectedId && account && <MerchantMemberActions
+                    account={account} working={working} editingAccount={editingAccount}
+                    editingUsername={editingUsername} newUsername={newUsername} nextRole={nextRole}
+                    onNewUsername={setNewUsername} onNextRole={setNextRole}
+                    onEditingAccount={setEditingAccount} onEditingUsername={setEditingUsername}
+                    onAction={(action, user) => void perform(action, user)}
+                  />}
+                  
                 </div></td>
-              </tr>;
-            })}
+              </tr>)}
           </tbody>
         </table>
       </div>}

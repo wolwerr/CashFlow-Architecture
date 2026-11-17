@@ -26,20 +26,8 @@ public sealed class KeycloakGroupAuthorizationClient(
         try
         {
             var bearer = await GetAccessTokenAsync(cancellationToken);
-            // Never cache membership: a revoked role must be checked against Keycloak.
-            for (var page = 0; page < MaxPages; page++)
-            {
-                var groups = await ReadGroupPageAsync(
-                    actorId, bearer, page, cancellationToken);
-                if (groups is null)
-                    return false; // Keycloak reports the user does not exist.
-                if (groups.Any(group => MatchesRole(group.Path, merchantId)))
-                    return true;
-                if (groups.Count < PageSize)
-                    return false;
-            }
-            throw new MerchantAuthorizationUnavailableException(
-                "Keycloak group page limit exceeded.");
+            return await HasSingleActiveMerchantRoleAsync(
+                actorId, merchantId, bearer, cancellationToken);
         }
         catch (HttpRequestException ex)
         {
@@ -58,9 +46,38 @@ public sealed class KeycloakGroupAuthorizationClient(
         }
     }
 
-    private static bool MatchesRole(string? path, Guid merchantId) =>
-        string.Equals(path, $"/merchants/{merchantId:D}/ADMIN", StringComparison.Ordinal) ||
-        string.Equals(path, $"/merchants/{merchantId:D}/OPERATOR", StringComparison.Ordinal);
+    private async Task<bool> HasSingleActiveMerchantRoleAsync(Guid actorId, Guid merchantId,
+        string bearer, CancellationToken ct)
+    {
+        // Examine all pages before deciding; INACTIVE may occur after ADMIN.
+        var roles = new HashSet<string>(StringComparer.Ordinal);
+        for (var page = 0; page < MaxPages; page++)
+        {
+            var groups = await ReadGroupPageAsync(actorId, bearer, page, ct);
+            if (groups is null) return false;
+            foreach (var group in groups)
+            {
+                var role = MerchantRole(group.Path, merchantId);
+                if (role is not null) roles.Add(role);
+            }
+            if (groups.Count < PageSize)
+                return roles.Count == 1 && !roles.Contains("INACTIVE");
+        }
+        throw new MerchantAuthorizationUnavailableException(
+            "Keycloak group page limit exceeded.");
+    }
+
+    private static string? MerchantRole(string? path, Guid merchantId)
+    {
+        var prefix = $"/merchants/{merchantId:D}/";
+        return path switch
+        {
+            var value when value == prefix + "ADMIN" => "ADMIN",
+            var value when value == prefix + "OPERATOR" => "OPERATOR",
+            var value when value == prefix + "INACTIVE" => "INACTIVE",
+            _ => null
+        };
+    }
 
     private async Task<List<GroupView>?> ReadGroupPageAsync(Guid actorId,
         string bearer, int page, CancellationToken cancellationToken)

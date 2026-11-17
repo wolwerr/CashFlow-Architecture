@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions, listMerchantMembers, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant } from './cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions, listMerchantMembers, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant, renameMerchantMember } from './cashflow';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('CashFlow API contracts', () => {
@@ -125,6 +125,17 @@ describe('CashFlow API contracts', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
+  it('updates username using a fixed authorized route and merchant header', async () => {
+    const id = '68a5baac-d97f-45b4-9119-b4c5b9de7c9b';
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+    vi.stubGlobal('fetch', fetchMock);
+    await renameMerchantMember('token', id, 'teste', 'teste4');
+    const [path, req] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/v1/merchants/members/username');
+    expect(req.method).toBe('PUT');
+    expect((req.headers as Record<string,string>)['X-Merchant-ID']).toBe(id);
+    expect(JSON.parse(req.body as string)).toEqual({ username: 'teste', newUsername: 'teste4' });
+  });
   it('reports a rejected role update without pretending it succeeded', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false, status: 403, json: async () => ({ title: 'Forbidden' })
