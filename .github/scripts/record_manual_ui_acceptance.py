@@ -89,7 +89,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not args.confirm_seven_checks:
         print("No manifest changes. Use --confirm-seven-checks only after successful manual UI test.")
-        return 0
+        return
     try:
         validate_manifest_argument(args.manifest)
     except ValueError as error:
@@ -99,8 +99,7 @@ def main(argv=None):
     except ValueError as error:
         parser.error(str(error))
     print("Recorded two operator-confirmed UI scenarios in local acceptance manifest.")
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
