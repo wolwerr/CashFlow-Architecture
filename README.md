@@ -198,9 +198,9 @@ Esse cliente é usado pela API **Transactions** para cadastrar lojas, criar usu�
 **D. Completar o `.env`.** Sem incluir aspas e sem publicar valores:
 
 ```dotenv
+CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin
 KEYCLOAK_AUTHZ_CLIENT_SECRET=<secret_do_cliente_de_autorizacao>
 KEYCLOAK_MGMT_CLIENT_SECRET=<secret_do_cliente_de_gestao>
-CASHFLOW_BOOTSTRAP_USERNAME=cashflow.admin
 ```
 
 **Dica:** as duas variáveis `KEYCLOAK_AUTHZ_CLIENT_SECRET` e `KEYCLOAK_MGMT_CLIENT_SECRET` devem estar preenchidas antes de iniciar as APIs. Como os clientes de serviço são confidenciais, obtenha cada segredo em **Clients > [cliente] > Credentials**. Não altere o valor do `Client ID` nem use o segredo de outro cliente.
