@@ -1,3 +1,4 @@
+using CashFlow.Security.OpenApi;
 using CashFlow.Security.Observability;
 using CashFlow.Security.Authentication;
 using CashFlow.Security.Keycloak;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCashFlowTelemetry("cashflow-consolidation");
 builder.Services.AddHealthChecks();
+builder.Services.AddCashFlowSwagger(builder.Environment, "CashFlow Consolidation API");
 builder.Services.AddCashFlowAuthentication(builder.Configuration, builder.Environment);
 
 var authorization = builder.Configuration.GetSection(KeycloakAuthorizationSettings.SectionName)
@@ -51,6 +53,7 @@ if (app.Environment.IsDevelopment() &&
     var db = scope.ServiceProvider.GetRequiredService<ConsolidationDbContext>();
     await db.Database.MigrateAsync();
 }
+app.UseCashFlowSwagger("consolidation");
 app.UseCashFlowRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();

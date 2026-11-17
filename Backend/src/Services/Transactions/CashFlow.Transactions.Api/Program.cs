@@ -1,3 +1,4 @@
+using CashFlow.Security.OpenApi;
 using CashFlow.Security.Observability;
 using CashFlow.Transactions.Api.Merchants;
 using CashFlow.Security.Authentication;
@@ -13,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCashFlowTelemetry("cashflow-transactions");
 builder.Services.AddHealthChecks();
+builder.Services.AddCashFlowSwagger(builder.Environment, "CashFlow Transactions API");
 builder.Services.AddCashFlowAuthentication(builder.Configuration, builder.Environment);
 
 var authz = builder.Configuration.GetSection(KeycloakAuthorizationSettings.SectionName)
@@ -59,6 +61,7 @@ if (app.Environment.IsDevelopment() &&
     var db = scope.ServiceProvider.GetRequiredService<TransactionsDbContext>();
     await db.Database.MigrateAsync();
 }
+app.UseCashFlowSwagger("transactions");
 app.UseCashFlowRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();

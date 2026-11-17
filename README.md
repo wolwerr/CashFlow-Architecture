@@ -177,6 +177,8 @@ Neste estágio, **somente** `postgres`, `rabbitmq` e `keycloak` precisam estar a
 | PostgreSQL | localhost:5432 | Sim; usuário `cashflow` e senha `POSTGRES_PASSWORD` |
 | CashFlow/NGINX | http://localhost:8080 | **Ainda não**, só depois da etapa 7 |
 | Grafana | [http://localhost:3000](http://localhost:3000) | **Ainda não**; após a etapa 7 e inicialização do Compose completo, login `admin` com `CASHFLOW_GRAFANA_PASSWORD` |
+| Swagger UI Transactions | [http://localhost:8080/swagger/transactions/](http://localhost:8080/swagger/transactions/) | **Ainda não**; após a etapa 7 e Compose completo, somente em Development |
+| Swagger UI Consolidation | [http://localhost:8080/swagger/consolidation/](http://localhost:8080/swagger/consolidation/) | **Ainda não**; após a etapa 7 e Compose completo, somente em Development |
 
 ## 7. Bootstrap obrigatório no Keycloak, ambiente zerado
 
@@ -322,6 +324,14 @@ Para configurar o Keycloak do zero e diagnosticar falhas de permissões, siga as
 5. Conferir competência anterior e dia sem lançamentos, histórico paginado, bloqueio de data futura, valor zero/negativo, autorização e idempotência. Não refazer POST por atraso do saldo.
 
 Para homologar, teste dois usuários de lojas diferentes, confirme o isolamento de dados e registre os resultados. Os requisitos estão na [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md).
+
+### Documentação interativa das APIs, Swagger UI
+
+Com o ambiente completo iniciado após o bootstrap do Keycloak, abra **[Transactions Swagger](http://localhost:8080/swagger/transactions/)** ou **[Consolidation Swagger](http://localhost:8080/swagger/consolidation/)**. Cada UI usa um documento OpenAPI gerado **a partir dos endpoints reais da API .NET**, com o botão **Authorize** configurado para JWT Bearer. Cole somente o access token Keycloak, sem prefixo `Bearer`; o próprio Swagger UI enviará o cabeçalho `Authorization: Bearer <token>` nas chamadas de teste.
+
+A interface é habilitada **apenas em `ASPNETCORE_ENVIRONMENT=Development`**. Como o NGINX está vinculado a `127.0.0.1:8080`, as URLs acima são acessíveis somente no computador local. Não exponha essas interfaces publicamente nem reutilize tokens reais em demonstrações. Os endpoints de escrita realmente gravam lançamentos financeiros e exigem um comerciante de testes. A autenticação e a autorização de comerciantes continuam sendo validadas pelas APIs e pelo Keycloak.
+
+O arquivo [`docs/architecture/contracts/cashflow-openapi.yaml`](docs/architecture/contracts/cashflow-openapi.yaml) permanece como **contrato arquitetural de referência (draft)**; não é carregado na UI, pois pode divergir de endpoints já implementados. Para consulta executável e atualizada dos endpoints, use os documentos gerados pelas APIs. Os testes automatizados verificam as rotas e a definição de segurança.
 
 ## 9. Testes automatizados e evidências do desafio
 
@@ -500,6 +510,7 @@ As versões abaixo foram conferidas nos arquivos de configuração do repositór
 | Backend e APIs REST | C# / ASP.NET Core / .NET | **10.0** (`net10.0`) | Projetos `Backend/**/*.csproj`; Docker SDK/runtime `10.0` |
 | ORM e driver PostgreSQL | EF Core via `Npgsql.EntityFrameworkCore.PostgreSQL` | **10.0.3** | Projetos Infrastructure |
 | Integração RabbitMQ | `RabbitMQ.Client` | **7.2.2** | Projetos Infrastructure |
+| Documentação das APIs | Swashbuckle.AspNetCore / Swagger UI e OpenAPI | **10.3.1** | `CashFlow.Security.csproj`; habilitado apenas em Development |
 | Autenticação JWT no backend | `Microsoft.AspNetCore.Authentication.JwtBearer` | **10.0.15** | Projeto `CashFlow.Security` |
 | Telemetria .NET | OpenTelemetry SDK, OTLP, ASP.NET Core e HTTP Instrumentation | **1.20.1** | Projeto `CashFlow.Security` |
 | Testes backend | xUnit / xUnit Runner | **2.9.3 / 3.1.5** | Projetos de testes .NET |
