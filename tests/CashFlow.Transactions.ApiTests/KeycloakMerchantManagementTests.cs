@@ -358,6 +358,34 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task RenameMemberRejectedByRealmProducesActionableConflict()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (request.Method == HttpMethod.Get && path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(request.RequestUri!.Query.Contains("loja.nova", StringComparison.Ordinal)
+                    ? Array.Empty<object>()
+                    : new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Operator() });
+            if (request.Method == HttpMethod.Put &&
+                path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.BadRequest);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<MerchantUsernameChangeNotAllowedException>(() =>
+            Create(fake).RenameMemberAsync(MerchantId, "loja.teste", "loja.nova",
+                "cashflow.admin", CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "DELETE");
+    }
+
+    [Fact]
     public async Task RenamingMemberToExistingRealmUsernameIsRejected()
     {
         var fake = new FakeHandler(req => TokenOr(req, request =>

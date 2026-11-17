@@ -47,6 +47,16 @@
 
 **Critério de conclusão:** checks automatizados e pipeline verdes **mais** evidências reais E2E e navegador. Projeção em um ensaio de 30 s não substitui SLO estatístico; carga e hardening continuam nas trilhas seguintes.
 
+## Trilha 06 | Segurança e consistência Keycloak (PR #53)
+
+**Integrado:** fail-closed de vínculos conflitantes, compensação controlada de usuários recém-criados, nome de usuário editável sem troca de identidade e listagem por usuário. A homologação com falhas reais de Keycloak e reconciliação permanece pendente.
+
+## Trilha 07 | Resiliência, observabilidade e desempenho local
+
+**Pacote:** corrigir avisos recorrentes de Sonar e runtime Node.js 20 no workflow; adicionar snapshot opt-in, read-only, de serviços Compose e profundidade das filas RabbitMQ. Consolidar num runbook as ferramentas já existentes de carga 50 RPS/300 s, SLO de projeção 95%/30 s, recovery drills, backup/restauração e seus requisitos de evidência.
+
+**Implementação:** [Runbook Trilha 07](trilha-07-resilience-observability.md). **Não executar falhas, tráfego de carga ou lançamentos automaticamente na CI.** Encerrar somente quando os testes automatizados e as evidências reais locais forem aprovados.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.

@@ -30,11 +30,11 @@ vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
   return {
     ...original, createTransaction: vi.fn(), dailyBalance: vi.fn(),
-    transactionHistory: vi.fn(), listMerchants: vi.fn(), listMerchantMembers: vi.fn(), addMerchantOperator: vi.fn(), updateMerchantMember: vi.fn(), removeMerchantMember: vi.fn(), renameMerchant: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
+    transactionHistory: vi.fn(), listMerchants: vi.fn(), listMerchantMembers: vi.fn(), addMerchantOperator: vi.fn(), updateMerchantMember: vi.fn(), removeMerchantMember: vi.fn(), renameMerchant: vi.fn(), renameMerchantMember: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
   };
 });
 import App from './App';
-import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, listMerchantMembers, merchantPermissions, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant } from './api/cashflow';
+import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, listMerchantMembers, merchantPermissions, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant, renameMerchantMember } from './api/cashflow';
 import { beginLogin, logout } from './auth/oidc';
 import type { ReactElement } from 'react';
 
@@ -311,8 +311,8 @@ describe('CashFlow dashboard and interactions', () => {
   it('adds an operator to an existing selected shop without creating another merchant', async () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
-    mock.state[27] = 'novo.operador';
-    mock.state[28] = 'senha-operador-nova';
+    mock.state[28] = 'novo.operador';
+    mock.state[29] = 'senha-operador-nova';
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
     const form = render().filter(n => n.type === 'form')
       .find(n => walk(n).some(child => child.props['aria-label'] === 'Novo usuário da loja'))!;
@@ -320,8 +320,8 @@ describe('CashFlow dashboard and interactions', () => {
     await vi.waitFor(() => expect(addMerchantOperator).toHaveBeenCalledWith('access-token', mock.state[3],
       'novo.operador', 'senha-operador-nova'));
     expect(createMerchant).not.toHaveBeenCalled();
-    expect(mock.state[27]).toBe('');
     expect(mock.state[28]).toBe('');
+    expect(mock.state[29]).toBe('');
     await vi.waitFor(() => expect(mock.state[23]).toBe(1));
   });
 
@@ -335,14 +335,51 @@ describe('CashFlow dashboard and interactions', () => {
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
     const edit = find('button', 'Editar cargo');
     (edit.props.onClick as () => void)();
-    expect(mock.state[30]).toBe('loja.campinas');
+    expect(mock.state[31]).toBe('loja.campinas');
     const role = find('select', 'Novo cargo de loja.campinas');
     (role.props.onChange as (event: unknown) => void)({ target: { value: 'ADMIN' } });
     const save = find('button', 'Salvar cargo');
     await (save.props.onClick as () => Promise<void>)();
     expect(updateMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
       'loja.campinas', 'ADMIN');
-    await vi.waitFor(() => expect(mock.state[30]).toBe(''));
+    await vi.waitFor(() => expect(mock.state[31]).toBe(''));
+  });
+
+  it("shows username update failure next to that user's row, not after merchant forms", async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'loja.campinas', role: 'OPERATOR' }
+    ] };
+    vi.mocked(renameMerchantMember).mockRejectedValue(new Error('Keycloak rejected username update'));
+    (find('button', 'Editar usuário').props.onClick as () => void)();
+    const field = find('input', 'Novo usuário de loja.campinas');
+    (field.props.onChange as (event: unknown) => void)({ target: { value: 'loja.nova' } });
+    await (find('button', 'Salvar usuário').props.onClick as () => Promise<void>)();
+    expect(renameMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
+      'loja.campinas', 'loja.nova');
+    await vi.waitFor(() => expect(render().some(n =>
+      n.type === 'p' && n.props.role === 'alert' &&
+      n.props.children === 'Keycloak rejected username update')).toBe(true));
+    expect(mock.state[27]).toBe('loja.campinas');
+  });
+
+  it('shows success beside the edited user after a username update', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'loja.campinas', role: 'OPERATOR' }
+    ] };
+    vi.mocked(renameMerchantMember).mockResolvedValue(undefined);
+    vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    (find('button', 'Editar usuário').props.onClick as () => void)();
+    (find('input', 'Novo usuário de loja.campinas').props.onChange as (event: unknown) => void)(
+      { target: { value: 'loja.nova' } });
+    await (find('button', 'Salvar usuário').props.onClick as () => Promise<void>)();
+    expect(renameMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
+      'loja.campinas', 'loja.nova');
+    await vi.waitFor(() => expect(mock.state[26]).toBe('Nome de usuário atualizado no Keycloak.'));
+    expect(mock.state[32]).toBe('');
   });
 
   it('requires confirmation and removes only the member link, never the bootstrap account', async () => {
@@ -388,7 +425,7 @@ describe('CashFlow dashboard and interactions', () => {
   it('renames a shop without replacing its merchant UUID or transactions', async () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
-    mock.state[29] = 'Loja Campinas Atualizada';
+    mock.state[30] = 'Loja Campinas Atualizada';
     vi.mocked(listMerchants).mockResolvedValue([
       { id: mock.state[3] as string, name: 'Loja Campinas Atualizada', role: 'ADMIN' }
     ]);
@@ -398,7 +435,7 @@ describe('CashFlow dashboard and interactions', () => {
     expect(renameMerchant).toHaveBeenCalledWith('access-token',
       mock.state[3], 'Loja Campinas Atualizada');
     await vi.waitFor(() => expect((mock.state[12] as Array<{ name: string }>)[0].name).toBe('Loja Campinas Atualizada'));
-    expect(mock.state[29]).toBe('');
+    expect(mock.state[30]).toBe('');
   });
 
   it('selects a registered merchant by name for consultation and clears previous balances', () => {

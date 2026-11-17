@@ -11,6 +11,8 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using CashFlow.Security.Authentication;
+using CashFlow.Transactions.Api.Merchants;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -427,6 +429,130 @@ public sealed class JwtAuthenticationTests : IDisposable
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
         var response = await client.GetAsync($"/api/v1/transactions?merchant_id={Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("add", 204)]
+    [InlineData("role", 204)]
+    [InlineData("remove", 204)]
+    [InlineData("rename", 204)]
+    [InlineData("renameblocked", 409)]
+    public async Task AdminMerchantMutationsExerciseRealHttpEndpointContracts(
+        string operation, int expectedStatus)
+    {
+        var merchant = Guid.NewGuid();
+        var member = Guid.NewGuid();
+        var handler = new MerchantManagementStub(merchant, member, operation == "renameblocked");
+        using var keycloak = new HttpClient(handler) { BaseAddress = new Uri("http://keycloak:8080/") };
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<KeycloakMerchantManagement>();
+                services.AddSingleton(new KeycloakMerchantManagement(keycloak,
+                    Options.Create(new KeycloakManagementSettings
+                    {
+                        Realm = "cashflow", ClientId = "management", ClientSecret = "local-test"
+                    })));
+            }));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token());
+        var path = operation switch
+        {
+            "rename" or "renameblocked" => "/api/v1/merchants/members/username",
+            _ => "/api/v1/merchants/members"
+        };
+        var method = operation switch
+        {
+            "add" => HttpMethod.Post,
+            "remove" => HttpMethod.Delete,
+            _ => HttpMethod.Put
+        };
+        object body = operation switch
+        {
+            "add" => new { username = "new.operator", password = "long-test-password" },
+            "role" => new { username = "old.operator", role = "ADMIN" },
+            "remove" => new { username = "old.operator" },
+            _ => new { username = "old.operator", newUsername = "new.name" }
+        };
+        using var request = new HttpRequestMessage(method, path)
+        {
+            Content = JsonContent.Create(body)
+        };
+        request.Headers.Add("X-Merchant-ID", merchant.ToString("D"));
+        using var response = await client.SendAsync(request);
+        Assert.Equal((HttpStatusCode)expectedStatus, response.StatusCode);
+        Assert.True(handler.ReceivedManagementRequest);
+    }
+
+    private sealed class MerchantManagementStub(Guid merchant, Guid member, bool denyRename)
+        : HttpMessageHandler
+    {
+        private bool created;
+
+        public bool ReceivedManagementRequest { get; private set; }
+
+        private static HttpResponseMessage Json(object body) =>
+            new(HttpStatusCode.OK) { Content = JsonContent.Create(body) };
+
+        private static object Role(string id, string role, Guid merchantId) =>
+            new { id, name = role, path = $"/merchants/{merchantId:D}/{role}" };
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            if (path.EndsWith("/protocol/openid-connect/token", StringComparison.Ordinal))
+                return Task.FromResult(Json(new { access_token = "service-token" }));
+            ReceivedManagementRequest = true;
+            return Task.FromResult(request.Method == HttpMethod.Get
+                ? Read(path, request.RequestUri.Query) : Write(path, request.Method));
+        }
+
+        private HttpResponseMessage Read(string path, string query)
+        {
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return UserLookup(query);
+            if (path.EndsWith("/groups", StringComparison.Ordinal) &&
+                path.Contains("/users/", StringComparison.Ordinal))
+                return Json(path.Contains($"/users/{member:D}/", StringComparison.Ordinal)
+                    ? new[] { Role("operator-id", "OPERATOR", merchant) }
+                    : new[] { Role("admin-id", "ADMIN", merchant) });
+            if (path.EndsWith("/groups", StringComparison.Ordinal))
+                return Json(new[] { new { id = "root-id", name = "merchants", path = "/merchants" } });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return Json(new[] { new { id = "merchant-id", name = merchant.ToString("D"),
+                    path = $"/merchants/{merchant:D}" } });
+            if (path.EndsWith("/groups/merchant-id/children", StringComparison.Ordinal))
+                return Json(new[] { Role("admin-id", "ADMIN", merchant),
+                    Role("operator-id", "OPERATOR", merchant), Role("inactive-id", "INACTIVE", merchant) });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }
+
+        private HttpResponseMessage Write(string path, HttpMethod method)
+        {
+            if (method == HttpMethod.Post && path.EndsWith("/users", StringComparison.Ordinal))
+            {
+                created = true;
+                return new HttpResponseMessage(HttpStatusCode.Created);
+            }
+            if (method == HttpMethod.Put && path.EndsWith($"/users/{member:D}", StringComparison.Ordinal)
+                && denyRename)
+                return new HttpResponseMessage(HttpStatusCode.BadRequest);
+            if (method == HttpMethod.Put || method == HttpMethod.Delete)
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }
+
+        private HttpResponseMessage UserLookup(string query)
+        {
+            if (query.Contains("new.name", StringComparison.Ordinal))
+                return Json(Array.Empty<object>());
+            if (query.Contains("new.operator", StringComparison.Ordinal) && !created)
+                return Json(Array.Empty<object>());
+            return Json(new[] { new { id = member.ToString("D"),
+                username = query.Contains("new.operator", StringComparison.Ordinal)
+                    ? "new.operator" : "old.operator" } });
+        }
     }
 
     private static async Task<HttpResponseMessage> Submit(HttpClient client, string amount,

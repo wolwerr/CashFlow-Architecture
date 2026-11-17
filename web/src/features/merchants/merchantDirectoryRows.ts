@@ -4,6 +4,7 @@ export type DirectoryRow = {
   merchant: Merchant;
   member: MerchantMember | null;
   first: boolean;
+  span: number;
   loading: boolean;
   unavailable: boolean;
 };
@@ -18,7 +19,7 @@ export function merchantDirectoryRows(
       account.username.toLowerCase() !== 'cashflow.admin') ?? [];
     const rows: Array<MerchantMember | null> = visible.length ? visible : [null];
     return rows.map((member, index) => ({
-      merchant, member, first: index === 0,
+      merchant, member, first: index === 0, span: rows.length,
       loading: accounts === undefined,
       unavailable: accounts === null
     }));

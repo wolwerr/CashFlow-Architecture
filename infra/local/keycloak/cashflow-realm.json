@@ -3,6 +3,7 @@
   "enabled": true,
   "displayName": "CashFlow (local development)",
   "registrationAllowed": false,
+  "editUsernameAllowed": true,
   "resetPasswordAllowed": false,
   "accessTokenLifespan": 300,
   "clients": [

@@ -22,6 +22,9 @@ public sealed class KeycloakMerchantManagement(
 {
     private readonly KeycloakManagementSettings settings = options.Value;
     private const string RootName = "merchants";
+    private const string AdminRole = "ADMIN";
+    private const string OperatorRole = "OPERATOR";
+    private const string InactiveRole = "INACTIVE";
 
     private sealed record GroupView(string Id, string Name, string? Path, Dictionary<string, string[]>? Attributes);
     private sealed record UserView(string Id, string Username);
@@ -118,7 +121,7 @@ public sealed class KeycloakMerchantManagement(
         return merchants.GroupBy(x => x.Id)
             .Where(group => group.Select(member => member.Role).Distinct().Count() == 1)
             .Select(group => group.First())
-            .Where(merchant => merchant.Role is "ADMIN" or "OPERATOR").ToArray();
+            .Where(merchant => merchant.Role is AdminRole or OperatorRole).ToArray();
     }
 
     public async Task<IReadOnlyList<MerchantMemberView>> ListMembersAsync(Guid merchantId, CancellationToken ct)
@@ -127,7 +130,7 @@ public sealed class KeycloakMerchantManagement(
         if (merchant is null) return [];
         var roles = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
         var members = new List<MerchantMemberView>();
-        foreach (var role in roles.Where(g => g.Name is "ADMIN" or "OPERATOR" or "INACTIVE"))
+        foreach (var role in roles.Where(g => g.Name is AdminRole or OperatorRole or InactiveRole))
         {
             // Keycloak is the source of truth for the actual accounts, not the role
             // of the platform administrator querying the merchant directory.
@@ -160,7 +163,7 @@ public sealed class KeycloakMerchantManagement(
         // Do not silently attach an existing realm user to a different merchant.
         if ((await UsersAsync(username, ct)).Count > 0)
             throw new MerchantUsernameConflictException();
-        return await AddMemberAsync(merchantId, username, password, "OPERATOR", ct);
+        return await AddMemberAsync(merchantId, username, password, OperatorRole, ct);
     }
 
     public async Task<bool> RenameMemberAsync(Guid merchantId, string username,
@@ -191,6 +194,8 @@ public sealed class KeycloakMerchantManagement(
             $"users/{member.Value.UserId:D}", new { username = nextUsername }, ct);
         if (response.StatusCode == HttpStatusCode.Conflict)
             throw new MerchantUsernameConflictException();
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+            throw new MerchantUsernameChangeNotAllowedException();
         response.EnsureSuccessStatusCode();
         return true;
     }
@@ -228,10 +233,10 @@ public sealed class KeycloakMerchantManagement(
             throw new MerchantProtectedAccountException();
         var member = await LookupMembershipAsync(merchantId, username, ct);
         if (member is null) return false;
-        if (member.Value.Role.Name == "INACTIVE") return true;
+        if (member.Value.Role.Name == InactiveRole) return true;
         var merchant = await MerchantGroupAsync(merchantId, ct);
         if (merchant is null) return false;
-        var inactive = await GetOrCreateGroupAsync(merchant, "INACTIVE", ct);
+        var inactive = await GetOrCreateGroupAsync(merchant, InactiveRole, ct);
         // Assign a non-privileged state before revoking the active group.
         await AssignAsync(member.Value.UserId, inactive.Id, ct);
         try
@@ -260,7 +265,7 @@ public sealed class KeycloakMerchantManagement(
         // Never guess a role when Keycloak exposes overlapping memberships.
         // A partial role transition must fail closed until repaired.
         var activeRoles = roleGroups.Where(g =>
-            (g.Name is "ADMIN" or "OPERATOR" or "INACTIVE") &&
+            (g.Name is AdminRole or OperatorRole or InactiveRole) &&
             linkedGroups.Any(link => link.Id == g.Id)).ToArray();
         if (activeRoles.Length > 1)
             throw new HttpRequestException("Conflicting merchant memberships require reconciliation.");
@@ -280,9 +285,9 @@ public sealed class KeycloakMerchantManagement(
         var prefix = $"/merchants/{merchantId:D}/";
         var currentRoles = groups.Where(g => g.Path is not null &&
             g.Path.StartsWith(prefix, StringComparison.Ordinal) &&
-            (g.Path == prefix + "ADMIN" || g.Path == prefix + "OPERATOR" ||
-             g.Path == prefix + "INACTIVE")).Select(g => g.Path).Distinct().ToArray();
-        return currentRoles.Length == 1 && currentRoles[0] == prefix + "ADMIN";
+            (g.Path == prefix + AdminRole || g.Path == prefix + OperatorRole ||
+             g.Path == prefix + InactiveRole)).Select(g => g.Path).Distinct().ToArray();
+        return currentRoles.Length == 1 && currentRoles[0] == prefix + AdminRole;
     }
 
     public async Task<MerchantView> CreateAsync(string name, Guid ownerId, CancellationToken ct)
@@ -294,11 +299,11 @@ public sealed class KeycloakMerchantManagement(
             new { name = merchant.Name, attributes = new Dictionary<string, string[]> {
                 ["displayName"] = [name] } }, ct))
             update.EnsureSuccessStatusCode();
-        var admin = await GetOrCreateGroupAsync(merchant, "ADMIN", ct);
-        await GetOrCreateGroupAsync(merchant, "OPERATOR", ct);
-        await GetOrCreateGroupAsync(merchant, "INACTIVE", ct);
+        var admin = await GetOrCreateGroupAsync(merchant, AdminRole, ct);
+        await GetOrCreateGroupAsync(merchant, OperatorRole, ct);
+        await GetOrCreateGroupAsync(merchant, InactiveRole, ct);
         await AssignAsync(ownerId, admin.Id, ct);
-        return new MerchantView(id, name, "ADMIN");
+        return new MerchantView(id, name, AdminRole);
     }
 
     public async Task<MerchantView> CreateWithOperatorAsync(
@@ -310,7 +315,7 @@ public sealed class KeycloakMerchantManagement(
             throw new MerchantUsernameConflictException();
 
         var created = await CreateAsync(name, ownerId, ct);
-        var assigned = await AddMemberAsync(created.Id, username, password, "OPERATOR", ct);
+        var assigned = await AddMemberAsync(created.Id, username, password, OperatorRole, ct);
         if (!assigned)
             throw new HttpRequestException("Merchant operator provisioning incomplete.");
         return created;
@@ -324,7 +329,7 @@ public sealed class KeycloakMerchantManagement(
 
     public Task<bool> AddAdminAsync(Guid merchantId, string username,
         string? temporaryPassword, CancellationToken ct) =>
-        AddMemberAsync(merchantId, username, temporaryPassword, "ADMIN", ct);
+        AddMemberAsync(merchantId, username, temporaryPassword, AdminRole, ct);
 
     private async Task<bool> AddMemberAsync(Guid merchantId, string username,
         string? password, string role, CancellationToken ct)
@@ -344,7 +349,7 @@ public sealed class KeycloakMerchantManagement(
                 username, enabled = true,
                 credentials = new[] { new {
                     type = "password", value = password,
-                    temporary = role == "ADMIN"
+                    temporary = role == AdminRole
                 } }
             }, ct);
             if (created.StatusCode == HttpStatusCode.Conflict)
@@ -407,3 +412,5 @@ public sealed record MerchantMemberView(string Username, string Role);
 
 public sealed class MerchantUsernameConflictException : Exception { }
 public sealed class MerchantProtectedAccountException : Exception { }
+
+public sealed class MerchantUsernameChangeNotAllowedException : Exception { }

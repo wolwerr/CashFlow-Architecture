@@ -3,7 +3,6 @@ import { listMerchantMembers } from '../../api/cashflow';
 import { executeMerchantMutation } from './merchantMutations';
 import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
-import { merchantRoleLabel } from './merchantPresentation';
 import { merchantDirectoryRows } from './merchantDirectoryRows';
 import { MerchantMemberActions } from './MerchantMemberActions';
 
@@ -31,6 +30,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [feedbackAccount, setFeedbackAccount] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [editedName, setEditedName] = useState('');
@@ -67,6 +67,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
     if (!selected || !token || working) return;
     setError('');
     setMessage('');
+    setFeedbackAccount(account ?? '');
     setWorking(true);
     try {
       const changed = await executeMerchantMutation({
@@ -94,24 +95,27 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
 
   return <div className="merchant-directory">
     <h3>Comerciantes cadastrados</h3>
-    <p className="muted">Usuários das lojas e seus cargos. A conta técnica da plataforma não aparece nesta lista.</p>
+    <p className="muted">Cada loja pode ter vários usuários. Selecionar uma loja habilita as ações de seus usuários. A conta técnica não aparece.</p>
     {failed && <p className="muted" role="status">Não foi possível consultar todos os usuários vinculados.</p>}
+    {message && !feedbackAccount && <p role="status">{message}</p>}
+    {error && !feedbackAccount && <p role="alert">{error}</p>}
     {items.length === 0
       ? <p className="muted">Nenhum comerciante associado à sua conta.</p>
       : <div className="table-wrap">
         <table>
-          <thead><tr><th>Comerciante</th><th>Usuário da loja</th><th>Cargo</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Comerciante</th><th>Usuário da loja</th><th>Cargo</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
-            {merchantDirectoryRows(items, members).map(({ merchant: item, member: account, first, loading, unavailable }) =>
+            {merchantDirectoryRows(items, members).map(({ merchant: item, member: account, first, span, loading, unavailable }) =>
               <tr key={item.id + ':' + (account?.username ?? 'empty')}>
-                <td>{first ? item.name : ''}</td>
+                {first && <td rowSpan={span}>{item.name}</td>}
                 <td>{account?.username ?? (loading ? 'Carregando usuários...' :
                   unavailable ? 'Indisponível' : 'Sem usuário da loja')}</td>
-                <td>{account ? merchantRoleLabel(account.role) : '-'}</td>
+                <td>{account ? (account.role === 'ADMIN' ? 'ADMIN' : 'Comerciante') : '-'}</td>
+                <td>{account ? (account.role === 'INACTIVE' ? 'Inativo' : 'Ativo') : '-'}</td>
                 <td><div className="merchant-row-actions">
                   {first && <button type="button" className="outline"
                     disabled={item.id === selectedId || working}
-                    onClick={() => { onSelect(item.id); setError(''); setMessage(''); }}>
+                    onClick={() => { onSelect(item.id); setError(''); setMessage(''); setFeedbackAccount(''); setEditingAccount(''); setEditingUsername(''); }}>
                     {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
                   </button>}
                   {item.id === selectedId && account && <MerchantMemberActions
@@ -121,7 +125,8 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
                     onEditingAccount={setEditingAccount} onEditingUsername={setEditingUsername}
                     onAction={(action, user) => void perform(action, user)}
                   />}
-                  
+                  {account?.username === feedbackAccount && error && <p role="alert">{error}</p>}
+                  {account?.username === feedbackAccount && message && <p role="status">{message}</p>}
                 </div></td>
               </tr>)}
           </tbody>
@@ -152,7 +157,5 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
         </button>
       </form>
     </div>}
-    {message && <p role="status">{message}</p>}
-    {error && <p role="alert">{error}</p>}
   </div>;
 }
