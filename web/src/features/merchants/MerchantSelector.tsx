@@ -1,5 +1,5 @@
 import type { Merchant } from '../../api/cashflow';
-import { merchantLabel, selectedMerchant } from './merchantPresentation';
+import { selectedMerchant } from './merchantPresentation';
 
 type MerchantSelectorProps = {
   items: Merchant[];
@@ -15,7 +15,7 @@ export function MerchantSelector({ items, value, onChange, label, ariaLabel }: M
       onChange={event => onChange(event.target.value)}>
       <option value="">Selecione...</option>
       {items.map(item => <option key={item.id} value={item.id}>
-        {merchantLabel(item)}
+        {item.name}
       </option>)}
     </select>
   </label>;
