@@ -55,7 +55,7 @@ O desenho representa **dependências de código**, não chamadas de rede. Os com
 ### Estrutura inicial
 
 ```text
-web/src/
+Frontend/src/
   App.tsx
   features/
     app/
@@ -79,7 +79,7 @@ web/src/
   time.ts
 ```
 
-**Status da implementação:** a estrutura está no [PR #45](https://github.com/wolwerr/CashFlow-Architecture/pull/45) e será integrada à `main` por merge separado. **A aprovação desta ADR não atesta, por si, o merge ou a execução local das duas novas visões.** O detalhamento técnico e as convenções de manutenção ficam em [`web/ARCHITECTURE.md`](../../../web/ARCHITECTURE.md), disponibilizado pelo PR #45.
+**Status da implementação:** a estrutura está no [PR #45](https://github.com/wolwerr/CashFlow-Architecture/pull/45) e será integrada à `main` por merge separado. **A aprovação desta ADR não atesta, por si, o merge ou a execução local das duas novas visões.** O detalhamento técnico e as convenções de manutenção ficam em [`Frontend/ARCHITECTURE.md`](../../../Frontend/ARCHITECTURE.md), disponibilizado pelo PR #45.
 
 ## 4. Regras de arquitetura e limites
 
@@ -148,5 +148,5 @@ Revisar se o frontend ganhar muitos fluxos independentes, times autônomos, regr
 - [ADR-006: Keycloak e autorização](ADR-006-identity-and-access.md)
 - [ADR-007: React + TypeScript e sessão Web](ADR-007-clients-api-gateway.md)
 - [ADR-010: GitHub Actions](ADR-010-ci-cd-github-actions.md)
-- [Documentação da arquitetura frontend](../../../web/ARCHITECTURE.md), criada no PR #45
+- [Documentação da arquitetura frontend](../../../Frontend/ARCHITECTURE.md), criada no PR #45
 - [PR #45: Separação ADMIN/COMERCIANTE e refatoração do frontend](https://github.com/wolwerr/CashFlow-Architecture/pull/45)
