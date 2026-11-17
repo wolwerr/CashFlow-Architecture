@@ -121,7 +121,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
                     onEditingAccount={setEditingAccount} onEditingUsername={setEditingUsername}
                     onAction={(action, user) => void perform(action, user)}
                   />}
-                  </>}
+                  
                 </div></td>
               </tr>)}
           </tbody>
