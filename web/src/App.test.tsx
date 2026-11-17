@@ -267,7 +267,7 @@ describe('CashFlow dashboard and interactions', () => {
       { username: 'loja.campinas', role: 'OPERATOR' }
     ]);
     render();
-    const cleanup = mock.effects[3]();
+    const cleanup = mock.effects[4]();
     await vi.waitFor(() => {
       const map = mock.state[21] as Record<string, Array<{username: string; role: string}>>;
       expect(map[mock.state[3] as string]).toHaveLength(2);
@@ -285,7 +285,7 @@ describe('CashFlow dashboard and interactions', () => {
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
     vi.mocked(listMerchantMembers).mockRejectedValue(new Error('Keycloak unavailable'));
     render();
-    mock.effects[3]();
+    mock.effects[4]();
     await vi.waitFor(() => {
       const map = mock.state[21] as Record<string, unknown>;
       expect(map[mock.state[3] as string]).toBeNull();
@@ -300,7 +300,7 @@ describe('CashFlow dashboard and interactions', () => {
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
     vi.mocked(listMerchantMembers).mockResolvedValue([{ username: 'loja.campinas', role: 'OPERATOR' }]);
     render();
-    const cleanup = mock.effects[3]();
+    const cleanup = mock.effects[4]();
     if (typeof cleanup === 'function') cleanup();
     await Promise.resolve();
     await Promise.resolve();
