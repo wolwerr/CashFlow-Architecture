@@ -22,6 +22,18 @@ describe('merchant directory rows', () => {
     expect(rows.every(row => row.merchant.id === merchants[0].id)).toBe(true);
   });
 
+  it('orders stores alphabetically without changing their source array', () => {
+    const sample: Merchant[] = [
+      { id: '00000000-0000-4000-8000-000000000003', name: 'Loja Z', role: 'ADMIN' },
+      { id: '00000000-0000-4000-8000-000000000002', name: 'Árvore', role: 'ADMIN' },
+      { id: '00000000-0000-4000-8000-000000000001', name: 'loja A', role: 'ADMIN' }
+    ];
+    const originalNames = sample.map(item => item.name);
+    const ordered = merchantDirectoryRows(sample, {});
+    expect(ordered.map(row => row.merchant.name)).toEqual(['Árvore', 'loja A', 'Loja Z']);
+    expect(sample.map(item => item.name)).toEqual(originalNames);
+  });
+
   it('shows a placeholder when a shop has no visible account', () => {
     const rows = merchantDirectoryRows(merchants, {
       [merchants[0].id]: [{ username: 'cashflow.admin', role: 'ADMIN' }]
