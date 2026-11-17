@@ -123,7 +123,7 @@ public static class MerchantEndpoints
     }
 
     private static async Task<IResult> DeleteMemberAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
-        RemoveMerchantMemberRequest? request, HttpContext context, KeycloakMerchantManagement management,
+        [FromBody] RemoveMerchantMemberRequest? request, HttpContext context, KeycloakMerchantManagement management,
         IOptions<KeycloakManagementSettings> settings, CancellationToken ct)
     {
         if (Actor(context) == Guid.Empty) return Results.Unauthorized();
