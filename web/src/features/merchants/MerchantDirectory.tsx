@@ -12,7 +12,7 @@ type MerchantDirectoryProps = {
   onRefresh: () => Promise<void>;
 };
 
-type MerchantAction = 'add' | 'role' | 'remove' | 'rename';
+type MerchantAction = 'add' | 'role' | 'remove' | 'restore' | 'rename';
 
 export function MerchantDirectory({ items, selectedId, token, onSelect, onRefresh }: MerchantDirectoryProps) {
   const [members, setMembers] = useState<Record<string, MerchantMember[] | null>>({});
@@ -65,8 +65,10 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
         await updateMerchantMember(token, selectedId, account, nextRole);
         setEditingUsername('');
       } else if (action === 'remove' && account) {
-        if (!window.confirm(`Remover o acesso de ${account} à loja ${selected.name}? Os lançamentos não serão excluídos.`)) return;
+        if (!window.confirm(`Desativar ${account} na loja ${selected.name}? Será possível reativar sem perder histórico.`)) return;
         await removeMerchantMember(token, selectedId, account);
+      } else if (action === 'restore' && account) {
+        await updateMerchantMember(token, selectedId, account, 'OPERATOR');
       } else if (action === 'rename') {
         await renameMerchant(token, selectedId, editedName.trim());
         setEditedName('');
@@ -74,8 +76,8 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
       await onRefresh();
       setRevision(previous => previous + 1);
       setMessage(action === 'remove'
-        ? 'Acesso à loja removido. A conta Keycloak e os lançamentos foram preservados.'
-        : 'Alteração realizada.');
+        ? 'Usuário desativado nesta loja. É possível reativar sem perder o histórico.'
+        : action === 'restore' ? 'Comerciante reativado nesta loja.' : 'Alteração realizada.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Falha ao atualizar a loja.');
     } finally {
@@ -120,7 +122,10 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
                   </button>
                   {item.id === selectedId && visible.map(account =>
                     <div key={account.username} className="merchant-member-actions">
-                      {editingUsername === account.username ? <>
+                      {account.role === 'INACTIVE' ?
+                        <button type="button" className="outline" disabled={working}
+                          onClick={() => void perform('restore', account.username)}>Reativar</button>
+                      : editingUsername === account.username ? <>
                         <select aria-label={`Novo cargo de ${account.username}`} value={nextRole}
                           onChange={event => setNextRole(event.target.value as 'ADMIN' | 'OPERATOR')}>
                           <option value="OPERATOR">Comerciante</option>
@@ -136,7 +141,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
                           Editar cargo
                         </button>
                         <button type="button" className="outline" disabled={working}
-                          onClick={() => void perform('remove', account.username)}>Excluir acesso</button>
+                          onClick={() => void perform('remove', account.username)}>Desativar</button>
                       </>}
                     </div>)}
                 </div></td>
