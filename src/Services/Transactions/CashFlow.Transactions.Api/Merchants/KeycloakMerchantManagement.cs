@@ -292,11 +292,11 @@ public sealed class KeycloakMerchantManagement(
         var group = (await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct))
             .FirstOrDefault(g => g.Name == role);
         if (group is null) throw new HttpRequestException("Merchant role group missing.");
+
         var users = await UsersAsync(username, ct);
+        var createdByThisRequest = false;
         if (users.Count == 0 && !string.IsNullOrWhiteSpace(password))
         {
-            // New merchant credentials are usable immediately in the local MVP.
-            // Password strength and recovery hardening are deferred and documented.
             using var created = await SendAsync(HttpMethod.Post, "users", new
             {
                 username, enabled = true,
@@ -308,14 +308,45 @@ public sealed class KeycloakMerchantManagement(
             if (created.StatusCode == HttpStatusCode.Conflict)
                 throw new MerchantUsernameConflictException();
             created.EnsureSuccessStatusCode();
+            createdByThisRequest = true;
             users = await UsersAsync(username, ct);
         }
-        if (users.Count != 1) return false;
-        if (!string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (!Guid.TryParse(users[0].Id, out var userId)) return false;
-        await AssignAsync(userId, group.Id, ct);
+
+        if (users.Count != 1 ||
+            !string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase) ||
+            !Guid.TryParse(users[0].Id, out var userId))
+            throw new HttpRequestException("Keycloak user resolution ambiguous; manual reconciliation required.");
+
+        try
+        {
+            await AssignAsync(userId, group.Id, ct);
+        }
+        catch (HttpRequestException) when (createdByThisRequest)
+        {
+            // Only compensate a user created by this request. Never delete an
+            // existing realm account, even when the requested username matches.
+            await DeleteNewlyCreatedUserAsync(userId);
+            throw;
+        }
         return true;
+    }
+
+    private async Task DeleteNewlyCreatedUserAsync(Guid userId)
+    {
+        // A request may have been cancelled while the assignment failed.
+        // Attempt bounded cleanup without reusing its cancelled token.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            using var response = await SendAsync(HttpMethod.Delete,
+                $"users/{userId:D}", null, timeout.Token);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        {
+            throw new HttpRequestException(
+                "Keycloak provisioning compensation failed; manual reconciliation required.", ex);
+        }
     }
 
     private async Task<List<UserView>> UsersAsync(string username, CancellationToken ct)
