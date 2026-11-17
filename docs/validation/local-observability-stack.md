@@ -10,7 +10,9 @@ Esta stack agora faz parte do **compose.yaml principal** e sobe automaticamente 
 - Prometheus coleta métricas, Grafana recebe três datasources locais configurados automaticamente.
 - Ninguém precisa criar credenciais cloud. Grafana exige senha local única; porta 3000 acessível apenas via loopback.
 
-**Limites atuais:** os spans da publicação e do consumo devem ser comprovados em execução real. O vínculo com a requisição HTTP original ainda não é garantido, pois o contexto `traceparent` dessa requisição não é persistido no Outbox; os spans da publicação iniciam um novo trace. A coleta de métricas específicas dos workers ainda precisa ser implementada. Os exporters/consumidores de métricas de RabbitMQ, PostgreSQL e NGINX não estão incluídos nesta fase. Não marcar `observability` como PASS apenas porque os contêineres iniciaram. A coleta do Log da API via OTLP deve ser verificada no Loki, e o fluxo completo da transação até o consumidor precisa de prova independente.
+**Situação após a implementação desta PR:** o header W3C `traceparent` da requisição HTTP é salvo **na mesma transação PostgreSQL** que cria o lançamento e o registro de Outbox, usando a coluna nullable `outbox_messages.trace_parent`. A migração `202611170001_AddOutboxTraceParent` não altera lançamentos nem exige descarte dos volumes. O Outbox Publisher inicia seu span sob o contexto persistido e injeta o novo `traceparent` no RabbitMQ; o Consumer continua esse contexto. Linhas antigas, sem contexto, continuam publicáveis como traces independentes. A correlação de negócio permanece separada dos dados de tracing e nunca influencia autorização/idempotência.
+
+**Limites atuais:** o encadeamento completo **precisa ser verificado no Tempo depois da atualização local** e não constitui uma garantia sobre requisições passadas. Métricas específicas dos workers e exporters de métricas de RabbitMQ/PostgreSQL/NGINX não fazem parte deste escopo. Não marcar `observability` como PASS apenas porque os contêineres iniciaram.
 
 ## Subir o ambiente completo no Windows PowerShell
 
@@ -47,18 +49,30 @@ docker compose stop grafana prometheus loki tempo otel-collector
 
 Se precisar desabilitar temporariamente a exportação OTLP, defina `$env:CASHFLOW_OTEL_ENABLED = "false"` e recrie somente Transactions/Consolidation com `docker compose up -d --force-recreate --no-deps transactions consolidation`. Não execute `docker compose down --volumes` e não apague os volumes do CashFlow.
 
+## Homologação final, sem apagar dados
+
+1. Atualize a branch `main` após o merge e confira `git rev-parse HEAD`. Guarde esse SHA como **código da nova verificação**, não o atribua a ensaios antigos.
+2. Execute `docker compose up -d --build` (o Compose aplicará a migração de schema em Transactions). Não execute `down --volumes`.
+3. Em `docker compose ps`, confirme os 11 contêineres e confira em Grafana **Connections > Data sources** as fontes Prometheus, Loki e Tempo. Um datasource conectado não comprova ingestão.
+4. Em **Explore > Prometheus**, consulte `up` e `http_server_request_duration_seconds_count` (ou busque pelo prefixo `http_server` no seletor de métricas). Registre se há séries HTTP dos serviços. O nome exato depende da normalização do Collector.
+5. Em **Explore > Loki**, encontre logs recentes de `cashflow-transactions` e `cashflow-consolidation` pelo seletor de labels, sem copiar payloads, tokens ou dados pessoais.
+6. Em **Explore > Tempo > Search**, filtre por `cashflow-transactions`, e depois por `cashflow-consolidation`. Registre um resultado de trace HTTP e um de consumer, identificando o mesmo trace ID.
+7. Usando **uma loja descartável**, registre **um único lançamento** e confirme no Tempo o encadeamento esperado `HTTP POST -> rabbitmq publish transaction.recorded -> rabbitmq consume transaction.recorded` dentro do **mesmo trace ID**. Verifique também que o lançamento aparece uma vez no histórico e apenas uma vez no consolidado. Não repita POST diante de atraso da projeção.
+8. Com o coletor parado por poucos segundos (`docker compose stop otel-collector`), repita apenas com **outra operação de teste deliberada** e confirme que a API permanece disponível e registra corretamente, depois **sempre** restaure com `docker compose up -d otel-collector`. Não execute esse ensaio em dados reais; fazer a restauração mesmo se a verificação falhar. Se não desejar gravar uma segunda operação, deixe esse item pendente.
+9. Guarde evidência sanitizada com data, SHA, resultados de Tempo/Loki/Prometheus e disponibilidade durante falha do Collector. Somente então atualize `observability` no manifesto local de `NOT_RUN` para `PASS`, seguindo as regras de `.github/scripts/local_mvp_acceptance.py`. Não versionar `.env`, JWT ou dados dos comerciantes.
+
 ## Evidência para aceite
 
 Validar efetivamente:
 
-1. `Grafana` provisiona Prometheus, Loki e Tempo; os três estão saudáveis.
+1. `Grafana` provisiona Prometheus, Loki e Tempo; os três estão saudáveis e recebendo dados.
 2. Traces HTTP de Transactions e Consolidation são consultáveis no Tempo.
 3. Logs estruturados de ambas APIs são consultáveis no Loki.
 4. Métricas de RPS, latência e erro HTTP aparecem no Prometheus.
-5. Um lançamento identificado por correlação sanitizada pode ser seguido de Transactions, Outbox/RabbitMQ até Consolidation, sem dados sensíveis.
+5. Um lançamento de teste mantém **o mesmo trace ID** desde a requisição HTTP em Transactions, pela Outbox/RabbitMQ, até o consumidor em Consolidation, sem expor dados sensíveis.
 6. Indisponibilidade do Collector **não impede** registrar lançamento financeiro (teste controlado com comerciante descartável).
 7. Rastreabilidade do código testado e relatório sanitizado.
 
-**Não existe PASS automático** enquanto os itens acima não tiverem resultados reais e o manifesto continuar `observability: NOT_RUN`. A verificação deve ser realizada após CI verde. A alteração de dependências .NET e de imagens do Compose também precisa passar por build/testes antes do merge.
+**Não existe PASS automático** enquanto os itens acima não tiverem resultados reais e o manifesto continuar `observability: NOT_RUN`. A verificação deve ser realizada após CI verde e com os serviços realmente em execução. A aprovação de testes de integração não substitui essa homologação.
 
 **Nota de bootstrap:** o Grafana exige `CASHFLOW_GRAFANA_PASSWORD` no ambiente ou no `.env` local ignorado pelo Git. No primeiro bootstrap, as credenciais de serviço Keycloak exigidas pelas APIs também precisam estar configuradas conforme o README. Não rodar `docker compose down --volumes` sobre dados relevantes.
