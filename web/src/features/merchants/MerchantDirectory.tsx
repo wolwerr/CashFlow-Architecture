@@ -96,16 +96,16 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
   }
 
   return <div className="merchant-directory">
-    <h3>Comerciantes cadastrados</h3>
+    <h3>Lojas cadastradas</h3>
     <p className="muted">Cada loja pode ter vários usuários. Selecionar uma loja habilita as ações de seus usuários. A conta técnica não aparece.</p>
     {failed && <p className="muted" role="status">Não foi possível consultar todos os usuários vinculados.</p>}
     {message && !feedbackAccount && <p role="status">{message}</p>}
     {error && !feedbackAccount && <p role="alert">{error}</p>}
     {items.length === 0
-      ? <p className="muted">Nenhum comerciante associado à sua conta.</p>
+      ? <p className="muted">Nenhuma loja associada à sua conta.</p>
       : <div className="table-wrap">
         <table>
-          <thead><tr><th>Comerciante</th><th>Usuário da loja</th><th>Cargo</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Loja</th><th>Usuário da loja</th><th>Cargo</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
             {merchantDirectoryRows(items, members).map(({ merchant: item, member: account, first, span, loading, unavailable }) =>
               <tr key={item.id + ':' + (account?.username ?? 'empty')}>
