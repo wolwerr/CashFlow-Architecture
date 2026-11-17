@@ -345,7 +345,7 @@ describe('CashFlow dashboard and interactions', () => {
     await vi.waitFor(() => expect(mock.state[31]).toBe(''));
   });
 
-  it('shows username update failure next to that user's row, not after merchant forms', async () => {
+  it("shows username update failure next to that user's row, not after merchant forms", async () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
     mock.state[21] = { [mock.state[3] as string]: [
