@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions } from './cashflow';
+import { ApiError, createTransaction, dailyBalance, transactionHistory, validBrl, validMerchant, listMerchants, createMerchant, addMerchantAdmin, merchantPermissions, listMerchantMembers } from './cashflow';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('CashFlow API contracts', () => {
@@ -57,6 +57,25 @@ describe('CashFlow API contracts', () => {
     await expect(listMerchants('access')).resolves.toEqual(items);
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/merchants/');
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer access');
+  });
+  it('fetches real merchant usernames and roles with an authorized bearer token', async () => {
+    const members = [
+      { username: 'cashflow.admin', role: 'ADMIN' },
+      { username: 'loja.teste', role: 'OPERATOR' }
+    ];
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => members });
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await listMerchantMembers('admin-token', 'merchant-id')).toEqual(members);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/merchants/merchant-id/members');
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer admin-token');
+    expect(fetchMock.mock.calls[0][1].cache).toBe('no-store');
+  });
+  it('denies merchant member listings to operators', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, status: 403, json: async () => ({ title: 'Forbidden' })
+    }));
+    await expect(listMerchantMembers('operator', 'merchant-id'))
+      .rejects.toMatchObject({ status: 403 });
   });
   it('queries platform administration permission from the protected API', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
