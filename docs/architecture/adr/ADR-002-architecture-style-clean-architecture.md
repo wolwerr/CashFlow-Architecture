@@ -57,7 +57,7 @@ As regras de autorização por `merchant_id` devem ser verificadas no limite apr
 
 ```text
 CashFlow.sln
-src/
+Backend/src/
   Services/
     Transactions/
       CashFlow.Transactions.Domain/
@@ -69,7 +69,7 @@ src/
       CashFlow.Consolidation.Application/
       CashFlow.Consolidation.Infrastructure/
       CashFlow.Consolidation.Api/
-tests/
+Backend/tests/
   CashFlow.Transactions.UnitTests/
   CashFlow.Transactions.IntegrationTests/
   CashFlow.Consolidation.UnitTests/
