@@ -15,7 +15,7 @@ using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCashFlowTelemetry("cashflow-consolidation");
 builder.Services.AddHealthChecks();
-builder.Services.AddCashFlowSwagger(builder.Environment, "CashFlow Consolidation API");
+builder.Services.AddCashFlowSwagger(builder.Environment, builder.Configuration, "CashFlow Consolidation API");
 builder.Services.AddCashFlowAuthentication(builder.Configuration, builder.Environment);
 
 var authorization = builder.Configuration.GetSection(KeycloakAuthorizationSettings.SectionName)
