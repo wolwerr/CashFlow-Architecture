@@ -206,12 +206,64 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  validation:
+    name: Validation | Offline contracts and Compose
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validation | Validate local MVP end-to-end smoke contract (offline, no writes)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_e2e_mvp.py'
+
+      - name: Validation | Run local load probe unit tests (no live load in CI)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_load_probe.py'
+
+      - name: Validation | Verify local concurrent write probe safety (offline, no writes)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_write_load_probe.py'
+
+      - name: Validation | Validate complete LOCAL Compose schema (no containers)
+        env:
+          CASHFLOW_GRAFANA_PASSWORD: local-validation-only-not-a-secret
+        run: docker compose config --quiet
+
+      - name: Validation | Validate MVP acceptance evidence rules (offline, no live writes)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_mvp_acceptance.py'
+
+      - name: Validation | Validate manual UI evidence and observability inventory offline
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_manual_ui_and_observability.py'
+
+      - name: Validation | Verify read-only operational snapshot tests (no Docker in CI)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_operational_snapshot.py'
+
+      - name: Validation | Verify local recovery drill safety tests (no service disruption in CI)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_recovery_drill.py'
+
+      - name: Validation | Verify LOCAL financial resilience probe safety (offline, no Docker writes)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_resilience_e2e.py'
+
+      - name: Validation | Verify integrated broker-consumer recovery safety offline
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_integrated_recovery.py'
+
+      - name: Validation | Verify local backup and restore safety tests (no database changes in CI)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_backup_restore_check.py'
+
+      - name: Validation | Verify projection SLO probe tests (no financial writes in CI)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_projection_slo.py'
+
+      - name: Validation | Validate read-only audit inventory policy tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_audit_inventory.py'
+
+      - name: Validation | Run CI severity policy tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_sonar_severity_gate.py'
+
   sonar:
     name: Sonar | Backend and frontend
     permissions:
       contents: read
       pull-requests: read
-    needs: [backend, frontend]
+    needs: [backend, frontend, validation]
     # GitHub does not pass repository secrets to workflows triggered by fork PRs.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
@@ -312,50 +364,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
-
-      - name: Sonar | Validate local MVP end-to-end smoke contract (offline, no writes)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_e2e_mvp.py'
-
-      - name: Sonar | Run local load probe unit tests (no live load in CI)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_load_probe.py'
-
-      - name: Sonar | Verify local concurrent write probe safety (offline, no writes)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_write_load_probe.py'
-
-      - name: Sonar | Validate complete LOCAL Compose schema (no containers)
-        env:
-          CASHFLOW_GRAFANA_PASSWORD: local-validation-only-not-a-secret
-        run: docker compose config --quiet
-
-      - name: Sonar | Validate MVP acceptance evidence rules (offline, no live writes)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_mvp_acceptance.py'
-
-      - name: Sonar | Validate manual UI evidence and observability inventory offline
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_manual_ui_and_observability.py'
-
-      - name: Sonar | Verify read-only operational snapshot tests (no Docker in CI)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_operational_snapshot.py'
-
-      - name: Sonar | Verify local recovery drill safety tests (no service disruption in CI)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_recovery_drill.py'
-
-      - name: Sonar | Verify LOCAL financial resilience probe safety (offline, no Docker writes)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_resilience_e2e.py'
-
-      - name: Sonar | Verify integrated broker-consumer recovery safety offline
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_integrated_recovery.py'
-
-      - name: Sonar | Verify local backup and restore safety tests (no database changes in CI)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_backup_restore_check.py'
-
-      - name: Sonar | Verify projection SLO probe tests (no financial writes in CI)
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_projection_slo.py'
-
-      - name: Sonar | Validate read-only audit inventory policy tests
-        run: python3 -m unittest discover -s .github/scripts -p 'test_local_audit_inventory.py'
-
-      - name: Sonar | Run CI severity policy tests
-        run: python3 -m unittest discover -s .github/scripts -p 'test_sonar_severity_gate.py'
 
       - name: Sonar | Enforce High/Blocker issue policy and quality metrics
         env:
