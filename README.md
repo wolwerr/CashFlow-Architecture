@@ -320,14 +320,21 @@ cd ..
 
 ### 9.3. Aceite funcional, falha e desempenho
 
-Para preparar o manifesto dos **14 cenários de homologação** (com Python 3 instalado):
+O script `local_mvp_acceptance.py` **não executa testes**, não acessa Docker e não valida as APIs. Ele apenas cria ou lê um **manifesto de evidências** para 14 cenários que deverão ser executados e comprovados separadamente. Para criar o manifesto na primeira utilização (Python 3):
 
 ```powershell
 python .github/scripts/local_mvp_acceptance.py --init local-acceptance.json
+```
+
+**Se `local-acceptance.json` já existir, pule o comando acima.** Ele usa criação exclusiva e retorna `Acceptance report failed: FileExistsError` se o arquivo já existe. Isso evita sobrescrever registros e **não indica falha dos testes da aplicação**. Para apenas consultar o manifesto existente:
+
+```powershell
 python .github/scripts/local_mvp_acceptance.py --manifest local-acceptance.json
 ```
 
-A primeira execução cria um manifesto com 14 cenários `NOT_RUN`; a segunda retorna `NOT_ACCEPTED` até haver evidências reais. Execute `--init` **uma única vez**, pois ele não sobrescreve arquivos existentes. Os relatórios locais são ignorados pelo Git.
+O resultado inicial esperado é `outcome: NOT_ACCEPTED`, `NOT_RUN: 14` e `PASS: 0`; o script retorna código 1 até que os 14 cenários estejam marcados como `PASS`, tenham referências de evidência e o manifesto registre o SHA do commit. **Não marque PASS sem executar o cenário correspondente e guardar evidência real.** O manifesto não inspeciona a veracidade do conteúdo das evidências, apenas sua estrutura e, quando aplicável, a existência de arquivos. Os relatórios locais são ignorados pelo Git.
+
+Para verificar apenas os containers e filas, execute o diagnóstico abaixo. O resultado `outcome: OBSERVED` significa que os serviços foram encontrados em execução e as filas puderam ser consultadas, **não que os testes funcionais tenham passado**.
 
 **Diagnóstico somente de leitura:**
 
