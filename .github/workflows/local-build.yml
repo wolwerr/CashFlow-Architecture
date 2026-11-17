@@ -328,6 +328,9 @@ jobs:
       - name: Sonar | Verify local recovery drill safety tests (no service disruption in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_recovery_drill.py'
 
+      - name: Sonar | Verify LOCAL financial resilience probe safety (offline, no Docker writes)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_resilience_e2e.py'
+
       - name: Sonar | Verify local backup and restore safety tests (no database changes in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_backup_restore_check.py'
 
