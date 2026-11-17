@@ -5,11 +5,12 @@ Esta stack estende o Compose do CashFlow **sem substituir os seis serviços do M
 ## O que a implementação entrega
 
 - Instrumentação OpenTelemetry opt-in nas APIs Transactions e Consolidation: traces HTTP, chamadas HTTP de saída, métricas HTTP e logs de `ILogger` via OTLP.
+- Span de publicação do Outbox e span de consumo do Consolidation conectados pelo header W3C `traceparent` no RabbitMQ. Ambos registram apenas `correlation_id` no formato UUID nos logs, sem payload financeiro.
 - Collector recebe OTLP gRPC/HTTP, exporta traces ao Tempo, logs ao Loki e métricas no formato Prometheus.
 - Prometheus coleta métricas, Grafana recebe três datasources locais configurados automaticamente.
 - Ninguém precisa criar credenciais cloud. Grafana exige senha local única; porta 3000 acessível apenas via loopback.
 
-**Limites atuais:** a instrumentação dos workers Outbox/Consumer e a propagação W3C de `traceparent` por RabbitMQ ainda devem ser demonstradas/integradas. Os exporters/consumidores de métricas de RabbitMQ, PostgreSQL e NGINX não estão incluídos nesta fase. Não marcar `observability` como PASS apenas porque os contêineres iniciaram. A coleta do Log da API via OTLP deve ser verificada no Loki, e o fluxo completo da transação até o consumidor precisa de prova independente.
+**Limites atuais:** os spans da publicação e do consumo devem ser comprovados em execução real. O vínculo com a requisição HTTP original ainda não é garantido, pois o contexto `traceparent` dessa requisição não é persistido no Outbox; os spans da publicação iniciam um novo trace. A coleta de métricas específicas dos workers ainda precisa ser implementada. Os exporters/consumidores de métricas de RabbitMQ, PostgreSQL e NGINX não estão incluídos nesta fase. Não marcar `observability` como PASS apenas porque os contêineres iniciaram. A coleta do Log da API via OTLP deve ser verificada no Loki, e o fluxo completo da transação até o consumidor precisa de prova independente.
 
 ## Iniciar opcionalmente no Windows PowerShell
 
