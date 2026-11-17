@@ -66,7 +66,9 @@ describe('CashFlow API contracts', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => members });
     vi.stubGlobal('fetch', fetchMock);
     expect(await listMerchantMembers('admin-token', '68a5baac-d97f-45b4-9119-b4c5b9de7c9b')).toEqual(members);
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/merchants/68a5baac-d97f-45b4-9119-b4c5b9de7c9b/members');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/merchants/members');
+    expect(fetchMock.mock.calls[0][1].headers['X-Merchant-ID'])
+      .toBe('68a5baac-d97f-45b4-9119-b4c5b9de7c9b');
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer admin-token');
     expect(fetchMock.mock.calls[0][1].cache).toBe('no-store');
   });
