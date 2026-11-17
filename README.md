@@ -8,19 +8,39 @@ Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débit
 
 ## 1. Arquitetura em poucas palavras
 
+O desenho separa **escrita assíncrona** de **leitura síncrona**. O `Consolidation` não recebe lançamentos por HTTP. O navegador usa a API do Consolidation **somente para consultar o saldo**.
+
+**Fluxo A, registrar lançamentos (POST):**
+
 ```text
-Navegador (React + OIDC PKCE) ---> Keycloak (login)
-              |
-              v
-         NGINX :8080
-         /           \
-Transactions API   Consolidation API
-      |                    |
- PostgreSQL            PostgreSQL
-      |                    ^
- Transactional Outbox     |
-      +----> RabbitMQ ----+ (consumer idempotente)
+React -> NGINX -> Transactions API
+                       |
+                       v
+              PostgreSQL Transactions
+              (Transaction + Outbox)
+                       |
+              Outbox Publisher
+                       |
+                       v
+                    RabbitMQ
+                       |
+                       v
+             Consolidation Consumer
+                       |
+                       v
+              PostgreSQL Consolidation
 ```
+
+**Fluxo B, consultar saldo já projetado (GET):**
+
+```text
+React -> NGINX -> Consolidation API -> PostgreSQL Consolidation
+               GET /api/v1/consolidation/daily
+```
+
+**Autenticação/autorização:** React faz login no Keycloak via OIDC Authorization Code + PKCE. Cada API valida JWT e consulta no Keycloak o vínculo atual do usuário com a loja. O NGINX apenas encaminha as requisições.
+
+**Falha de Consolidation:** Transactions não depende da API nem do consumer de Consolidation para persistir e confirmar lançamentos. Se Consolidation estiver indisponível, o histórico em Transactions continua acessível, enquanto a consulta de saldo pode falhar ou ficar desatualizada. Quando o consumer voltar, processará os eventos pendentes sem duplicidade, comportamento que deve ser comprovado na homologação local.
 
 Os bancos lógicos são `cashflow_transactions`, `cashflow_consolidation` e `cashflow_keycloak` no PostgreSQL local. O **Keycloak** é a fonte de usuários, grupos e permissões por comerciante; não existe quarto banco de autorização. O POST de lançamento confirma a transação e a Outbox antes de responder, **sem aguardar** o Consolidation. O saldo é atualizado assincronamente.
 
