@@ -9,16 +9,22 @@ import datetime as dt
 import json
 from pathlib import Path
 
-PROJECT_ROOT = Path.cwd().resolve()
+MANIFEST_FILE = Path("local-acceptance.json")
+EVIDENCE_FILES = {
+    "browser_oidc": Path("evidence/browser-oidc-manual.json"),
+    "merchant_management": Path("evidence/merchant-management-manual.json"),
+}
 
-def allowed_manifest(raw):
-    """Restrict operator file writes to the current local project or test workspace."""
-    target = Path(raw).resolve()
-    if target.name != "local-acceptance.json" or not target.is_relative_to(PROJECT_ROOT):
-        raise ValueError("Manifest must be local-acceptance.json inside the workspace")
-    if not target.is_file() or target.is_symlink():
+
+def validate_manifest_argument(raw):
+    """Fail closed: never use a CLI-derived file path for reads or writes."""
+    if str(raw) != "local-acceptance.json":
+        raise ValueError("Use only local-acceptance.json in the current working directory")
+    if MANIFEST_FILE.is_symlink() or not MANIFEST_FILE.is_file():
         raise ValueError("Expected a regular local acceptance manifest")
-    return target
+    evidence_dir = Path("evidence")
+    if evidence_dir.is_symlink():
+        raise ValueError("Evidence directory must not be a symlink")
 
 
 CHECKS = {
@@ -36,15 +42,14 @@ CHECKS = {
 }
 
 
-def record(manifest_path):
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+def record():
+    manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8-sig"))
     from local_mvp_acceptance import validate_metadata
     validate_metadata(manifest)
-    root = manifest_path.parent
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     for scenario, checks in CHECKS.items():
-        ref = "evidence/" + scenario.replace("_", "-") + "-manual.json"
-        destination = root / ref
+        destination = EVIDENCE_FILES[scenario]
+        ref = destination.as_posix()
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(json.dumps({
             "scenario": scenario,
@@ -59,7 +64,7 @@ def record(manifest_path):
         manifest["scenarios"][scenario] = {
             "status": "PASS", "evidence": [ref], "metrics": {}
         }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n",
+    MANIFEST_FILE.write_text(json.dumps(manifest, indent=2) + "\n",
                              encoding="utf-8")
 
 
@@ -73,10 +78,10 @@ def main(argv=None):
         print("No manifest changes. Use --confirm-seven-checks only after successful manual UI test.")
         return 0
     try:
-        safe_path = allowed_manifest(args.manifest)
+        validate_manifest_argument(args.manifest)
     except ValueError as error:
         parser.error(str(error))
-    record(safe_path)
+    record()
     print("Recorded two operator-confirmed UI scenarios in local acceptance manifest.")
     return 0
 
