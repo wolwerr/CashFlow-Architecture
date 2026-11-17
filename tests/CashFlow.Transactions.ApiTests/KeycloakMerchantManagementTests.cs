@@ -307,6 +307,80 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task RenamingMemberPreservesIdentityAndMembership()
+    {
+        var changes = 0;
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (request.Method == HttpMethod.Get &&
+                path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(request.RequestUri!.Query.Contains("loja.nova", StringComparison.Ordinal)
+                    ? Array.Empty<object>() : new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Operator() });
+            if (request.Method == HttpMethod.Put &&
+                path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal))
+            {
+                using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
+                Assert.Equal("loja.nova", body.RootElement.GetProperty("username").GetString());
+                changes++;
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).RenameMemberAsync(MerchantId, "loja.teste",
+            "loja.nova", "cashflow.admin", CancellationToken.None));
+        Assert.Equal(1, changes);
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "POST" &&
+            call.Path.EndsWith("/users", StringComparison.Ordinal));
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "DELETE");
+    }
+
+    [Fact]
+    public async Task RenamingMemberToExistingRealmUsernameIsRejected()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (request.Method == HttpMethod.Get && path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(request.RequestUri!.Query.Contains("loja.nova", StringComparison.Ordinal)
+                    ? new[] { new { id = Guid.NewGuid().ToString("D"), username = "loja.nova" } }
+                    : new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Operator() });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<MerchantUsernameConflictException>(() =>
+            Create(fake).RenameMemberAsync(MerchantId, "loja.teste", "loja.nova",
+                "cashflow.admin", CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "PUT");
+    }
+
+    [Fact]
+    public async Task BootstrapUsernameCannotBeEditedOrReassigned()
+    {
+        var fake = new FakeHandler(_ => throw new InvalidOperationException("No Keycloak calls expected"));
+        await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
+            Create(fake).RenameMemberAsync(MerchantId, "cashflow.admin", "new.admin",
+                "cashflow.admin", CancellationToken.None));
+        await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
+            Create(fake).RenameMemberAsync(MerchantId, "loja.teste", "cashflow.admin",
+                "cashflow.admin", CancellationToken.None));
+        Assert.Empty(fake.Calls);
+    }
+
+    [Fact]
     public async Task BootstrapAdministratorCannotBeRemovedOrDemoted()
     {
         var fake = new FakeHandler(_ => throw new InvalidOperationException("Should not call Keycloak."));
