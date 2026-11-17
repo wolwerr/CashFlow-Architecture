@@ -120,10 +120,8 @@ def verify_records(before_ids, rows, expected_ids, credits, debits):
             "Incorrect amounts in history")
 
 
-def execute(tokens, merchant, day, credits, debits, workers, timeout, call=transport):
-    membership(tokens, merchant, call)
-    before = snapshot(tokens, merchant, day, call)
-    old_ids = {r["id"] for r in history(tokens, merchant, call)}
+def concurrent_writes(tokens, merchant, day, credits, debits, workers, call):
+    """Submit each financial POST once; never retry ambiguous writes."""
     jobs = [(kind, str(uuid.uuid4())) for kind, count in
             (("CREDIT", credits), ("DEBIT", debits)) for _ in range(count)]
     results = []
@@ -138,14 +136,23 @@ def execute(tokens, merchant, day, credits, debits, workers, timeout, call=trans
                 results.append(response)
                 by_key[futures[future]] = response
             except (OSError, ValueError, KeyError):
-                raise VerificationError("Ambiguous POST: stop and inspect history; never retry automatically") from None
+                raise VerificationError(
+                    "Ambiguous POST: stop and inspect history; never retry automatically") from None
     elapsed = time.perf_counter() - start
-    # Do not retry a POST if any response is unexpected.
     require(all(status == 201 and isinstance(body, dict) and body.get("id")
                 for status, body, _ in results),
             "Unexpected write response; inspect history before any new attempt")
     ids = [body["id"] for _, body, _ in results]
     require(len(ids) == len(set(ids)), "Different keys created duplicate transaction IDs")
+    return jobs, results, by_key, ids, elapsed
+
+
+def execute(tokens, merchant, day, credits, debits, workers, timeout, call=transport):
+    membership(tokens, merchant, call)
+    before = snapshot(tokens, merchant, day, call)
+    old_ids = {r["id"] for r in history(tokens, merchant, call)}
+    jobs, results, by_key, ids, elapsed = concurrent_writes(
+        tokens, merchant, day, credits, debits, workers, call)
     require(set(ids).isdisjoint(old_ids), "Generated transaction overlaps baseline")
     # Exercise idempotent replay using only confirmed 201 operations.
     replay_kind, replay_key = jobs[0]

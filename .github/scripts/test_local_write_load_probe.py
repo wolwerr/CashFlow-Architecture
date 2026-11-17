@@ -34,6 +34,21 @@ class FinancialWriteProbeTests(unittest.TestCase):
                 {"id": "b", "type": "DEBIT", "amount": "1.00"}]
         subject.verify_records(set(), rows, {"a", "b"}, 1, 1)
 
+    def test_concurrent_writes_does_not_retry_ambiguous_post(self):
+        class Token:
+            def get(self):
+                return "test-only-token"
+
+        attempts = []
+        def failed_call(*args):
+            attempts.append(args)
+            raise OSError("simulated connection failure")
+
+        with self.assertRaises(subject.VerificationError):
+            subject.concurrent_writes(Token(), "merchant", "2026-01-01",
+                                      credits=1, debits=0, workers=1, call=failed_call)
+        self.assertEqual(len(attempts), 1)
+
     def test_no_financial_write_without_execute(self):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
