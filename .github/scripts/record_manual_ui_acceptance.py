@@ -9,6 +9,18 @@ import datetime as dt
 import json
 from pathlib import Path
 
+PROJECT_ROOT = Path.cwd().resolve()
+
+def allowed_manifest(raw):
+    """Restrict operator file writes to the current local project or test workspace."""
+    target = Path(raw).resolve()
+    if target.name != "local-acceptance.json" or not target.is_relative_to(PROJECT_ROOT):
+        raise ValueError("Manifest must be local-acceptance.json inside the workspace")
+    if not target.is_file() or target.is_symlink():
+        raise ValueError("Expected a regular local acceptance manifest")
+    return target
+
+
 CHECKS = {
     "browser_oidc": [
         "keycloak_login_redirect",
@@ -60,9 +72,11 @@ def main(argv=None):
     if not args.confirm_seven_checks:
         print("No manifest changes. Use --confirm-seven-checks only after successful manual UI test.")
         return 0
-    if not args.manifest.is_file():
-        parser.error("Existing acceptance manifest required")
-    record(args.manifest)
+    try:
+        safe_path = allowed_manifest(args.manifest)
+    except ValueError as error:
+        parser.error(str(error))
+    record(safe_path)
     print("Recorded two operator-confirmed UI scenarios in local acceptance manifest.")
     return 0
 
