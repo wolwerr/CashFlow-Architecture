@@ -40,7 +40,7 @@ Pré-condições: executar **na raiz do repositório** com Docker Compose aponta
 
 - Constantes internas para grupos `ADMIN`, `OPERATOR`, `INACTIVE` e rota de membros.
 - Regex de username com limite de tempo explícito e remoção de operadores null-forgiving redundantes.
-- Actions do workflow atualizadas para versões com runtime Node.js 24 (checkout v5, setup-dotnet v5, setup-node v5, setup-java v5, upload/download-artifact v6). A imagem `ubuntu-latest` pode mudar independentemente; considerar versão de runner fixa em etapa posterior.
+- Actions do workflow atualizadas para versões com runtime Node.js 24 (checkout v5, setup-dotnet v5, setup-node v5, setup-java v5, upload/download-artifact v6). Os três jobs ficam fixados em `ubuntu-24.04` para evitar migração implícita de `ubuntu-latest`; atualizar mediante teste dedicado quando houver necessidade.
 - Testes unitários offline do snapshot incorporados à mesma política de CI e Sonar.
 
 **Pendente para considerar a Trilha 07 homologada:** relatórios locais reais dos drills, da carga, de projeção, da restauração e da integridade financeira. O CI verde valida os scripts e o build, não a recuperação e os SLOs.
