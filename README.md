@@ -302,6 +302,22 @@ Confira os resultados mais recentes no [GitHub Actions](https://github.com/wolwe
 
 O selo acima reflete o **estado atual da pipeline da branch `main`**, não um resultado de teste manual. Clique nele para abrir o GitHub Actions, selecione a execução mais recente e confira os jobs **Backend | Build and tests**, **Frontend | Build and tests**, **Validation | Offline contracts and Compose** e **Sonar | Backend and frontend**. É possível verificar cada passo, os relatórios de testes e a geração dos relatórios de cobertura na própria execução, sem necessidade de capturas estáticas no README. Um selo verde indica sucesso da execução, mas não comprova sozinho os cenários de falha e carga descritos abaixo.
 
+### Cobertura de código, evidência por execução
+
+A pipeline publica a **cobertura efetivamente medida** nos resumos dos jobs **Backend | Build and tests** e **Frontend | Build and tests**, usando os mesmos relatórios OpenCover e LCOV enviados ao Sonar. Clique no [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml), abra a execução desejada e consulte **Job summary**, **Backend .NET Coverage Report** e **Frontend Coverage Report**. Os XMLs OpenCover e o `lcov.info` também são disponibilizados como artifacts temporários dessa execução.
+
+| Área | Cobertura / política | Evidência |
+| --- | --- | --- |
+| Transactions: Domain | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
+| Transactions: Application | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
+| Transactions: Infrastructure | Limite mínimo **80% de linhas** na CI | OpenCover + integração PostgreSQL/RabbitMQ |
+| Consolidation: Domain | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
+| Consolidation: Application | Limite mínimo **80% de linhas** na CI | OpenCover + teste de threshold |
+| Consolidation: Integration e APIs | Relatórios gerados, **sem alegação de threshold por camada** | OpenCover por suíte |
+| Frontend | **88,30% de linhas** na execução local informada em 17/11/2026 | Vitest; a medição atualizada é exibida no Actions com base no LCOV |
+
+**Como interpretar:** as linhas do backend acima indicam **limites de cobertura exigidos**, não percentuais exatos inventados. O novo resumo da CI mostra a porcentagem real de pontos de sequência por relatório OpenCover. Um mesmo assembly pode aparecer em várias suítes, então **não somamos percentuais dos relatórios para afirmar cobertura global**. A cobertura de linhas do frontend é calculada diretamente a partir de `LH/LF` do LCOV. O percentual histórico de 88,30% não deve ser apresentado como o resultado de uma execução futura sem consultá-la.
+
 ### 9.2. Resultado documentado de execução local do backend
 
 Na execução local de **17/11/2026**, em Windows PowerShell com **.NET 10**, o terminal apresentou os seguintes resultados para `dotnet test Backend/CashFlow.slnx -c Release --no-build` (após configurar bancos PostgreSQL exclusivos de teste):
@@ -336,7 +352,7 @@ O build `tsc -b && vite build` também concluiu com sucesso em **Vite 6.4.6**. O
 
 **Total backend + frontend:** **392 testes aprovados**, 0 falhas, em execuções locais separadas. Os 223 testes .NET e os 169 testes Vitest passaram, mas **100% de aprovação de testes não significa 100% de cobertura de código**. Estes números são provenientes das saídas de terminal compartilhadas pelo responsável pelo projeto; para evidência auditável, incluir a captura real, os relatórios e o SHA correspondente.
 
-**Pontos de atenção:** `src/features/app/useCashFlowController.ts` apresentou **76,07% de cobertura de linhas** após a migração do Vitest 3 para 5, abaixo de 80% individualmente, embora as quatro métricas globais estejam acima de 80%. A atualização também alterou os percentuais de cobertura (antes eram 95,48% de linhas); isso não significa, por si só, perda de testes. O `npm audit` anterior apontava 7 vulnerabilidades (5 moderadas e 2 críticas), mas a nova verificação local informou 0. **O repositório ainda precisa receber o `Frontend/package.json` e o `Frontend/package-lock.json` alterados, e a CI precisa validar essas versões antes de considerar a correção integrada.**
+**Pontos de atenção:** `src/features/app/useCashFlowController.ts` apresentou **76,07% de cobertura de linhas** após a migração do Vitest 3 para 5, abaixo de 80% individualmente, embora as quatro métricas globais estejam acima de 80%. A atualização também alterou os percentuais de cobertura (antes eram 95,48% de linhas); isso não significa, por si só, perda de testes. O `npm audit` anterior apontava 7 vulnerabilidades (5 moderadas e 2 críticas), mas a nova verificação local informou 0. **As porcentagens locais registradas devem ser distinguidas das medições produzidas por cada execução da CI.**
 
 ### 9.4. Rodar os testes automatizados localmente
 
