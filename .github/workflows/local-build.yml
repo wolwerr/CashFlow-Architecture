@@ -319,6 +319,9 @@ jobs:
       - name: Sonar | Run local load probe unit tests (no live load in CI)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_load_probe.py'
 
+      - name: Sonar | Verify local concurrent write probe safety (offline, no writes)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_local_write_load_probe.py'
+
       - name: Sonar | Validate MVP acceptance evidence rules (offline, no live writes)
         run: python3 -m unittest discover -s .github/scripts -p 'test_local_mvp_acceptance.py'
 
