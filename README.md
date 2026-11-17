@@ -297,7 +297,24 @@ O selo acima reflete o **estado atual da pipeline da branch `main`**, não um re
 
 **Não adicione uma captura de execução antiga ou uma imagem gerada artificialmente para representar testes atuais.** O link para o GitHub Actions deve permanecer para que o avaliador confirme a execução.
 
-### 9.2. Rodar os testes automatizados localmente
+### 9.2. Resultado documentado de execução local do backend
+
+Na execução local de **17/11/2026**, em Windows PowerShell com **.NET 10**, o terminal apresentou os seguintes resultados para `dotnet test Backend/CashFlow.slnx -c Release --no-build` (após configurar bancos PostgreSQL exclusivos de teste):
+
+| Projeto de testes | Aprovados | Falhas |
+| --- | ---: | ---: |
+| CashFlow.Transactions.ApiTests | 103 | 0 |
+| CashFlow.Transactions.UnitTests | 38 | 0 |
+| CashFlow.Transactions.IntegrationTests | 26 | 0 |
+| CashFlow.Consolidation.ApiTests | 5 | 0 |
+| CashFlow.Consolidation.UnitTests | 12 | 0 |
+| CashFlow.Consolidation.IntegrationTests | 23 | 0 |
+| CashFlow.ArchitectureTests | 16 | 0 |
+| **Total** | **223** | **0** |
+
+**Resultado:** 223 testes executados e aprovados, 0 falhas, 0 ignorados, código de saída 0, conforme saída do terminal compartilhada pelo responsável pelo projeto. Esta tabela é um **registro de execução local informado**, não um relatório de CI vinculado a commit e não uma medição de cobertura de código. Para evidência auditável, associe a captura real, o log da execução e o SHA do commit testado.
+
+### 9.3. Rodar os testes automatizados localmente
 
 Para executar os testes .NET, com o SDK .NET 10 instalado e os serviços de integração necessários disponíveis:
 
@@ -318,7 +335,7 @@ cd ..
 
 **Alternativa sem SDK .NET e Node.js instalados localmente:** acompanhe o build, os testes, a cobertura e os Docker builds pelo [GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml). O Docker Compose serve para executar o sistema, não substitui automaticamente os testes da CI. Testes de integração podem exigir PostgreSQL e RabbitMQ, que são provisionados especificamente no workflow de CI.
 
-### 9.3. Aceite funcional, falha e desempenho
+### 9.4. Aceite funcional, falha e desempenho
 
 O script `local_mvp_acceptance.py` **não executa testes**, não acessa Docker e não valida as APIs. Ele apenas cria ou lê um **manifesto de evidências** para 14 cenários que deverão ser executados e comprovados separadamente. Para criar o manifesto na primeira utilização (Python 3):
 
