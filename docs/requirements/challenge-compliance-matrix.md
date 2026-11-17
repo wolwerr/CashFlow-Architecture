@@ -6,8 +6,8 @@ Legenda: **Documentado** = há decisão/artefato rastreável; **Implementado, n�
 
 | Página e exigência | Atendimento técnico / referência | Estado e comprovação necessária |
 | --- | --- | --- |
-| p. 3: serviço de controle de lançamentos | [RF-01/RF-02](functional-requirements.md), Transactions API, PostgreSQL, Outbox | Implementado, não homologado; confirmar POST de crédito e débito |
-| p. 3: serviço de consolidado diário | [RF-03](functional-requirements.md), Consolidation API, projeção por RabbitMQ | Implementado, não homologado; confirmar totais e saldo |
+| p. 3: serviço de controle de lançamentos | [RF-01/RF-02](functional-requirements.md), Transactions API, PostgreSQL, Outbox | **PASS local informado em 17/11/2026**: 12 créditos e 8 débitos concorrentes HTTP 201, IDs únicos. [Evidência](../validation/local-write-load-test.md). Isolamento entre comerciantes ainda depende de evidência separada |
+| p. 3: serviço de consolidado diário | [RF-03](functional-requirements.md), Consolidation API, projeção por RabbitMQ | **PASS local informado em 17/11/2026**: projeção de 12 créditos e 8 débitos, variação líquida +R$ 4,00, confirmada estável. [Evidência](../validation/local-write-load-test.md) |
 | p. 2: domínios funcionais e capacidades de negócio | [Domínios e contexto](../domain/business-capabilities-and-context-map.md), [casos de uso](../architecture/use-cases.md) | Documentado |
 | p. 2: levantamento refinado de requisitos funcionais e não funcionais | [Requisitos funcionais](functional-requirements.md), [não funcionais](non-functional-requirements.md), [premissas e riscos](priorities-assumptions-risks.md) | Documentado; premissas externas não validadas indicadas |
 | p. 2: desenho completo da arquitetura alvo | [C4 e componentes](../architecture/building-block-view.md), [Deployment View](../architecture/deployment-view.md), [sequências](../architecture/sequence-diagrams.md), [modelo de dados](../architecture/data-model.md) | Documentado; revisar PNGs versus fontes PlantUML antes da apresentação |
