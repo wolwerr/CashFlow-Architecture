@@ -194,6 +194,8 @@ public sealed class KeycloakMerchantManagement(
             $"users/{member.Value.UserId:D}", new { username = nextUsername }, ct);
         if (response.StatusCode == HttpStatusCode.Conflict)
             throw new MerchantUsernameConflictException();
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+            throw new MerchantUsernameChangeNotAllowedException();
         response.EnsureSuccessStatusCode();
         return true;
     }
@@ -410,3 +412,5 @@ public sealed record MerchantMemberView(string Username, string Role);
 
 public sealed class MerchantUsernameConflictException : Exception { }
 public sealed class MerchantProtectedAccountException : Exception { }
+
+public sealed class MerchantUsernameChangeNotAllowedException : Exception { }
