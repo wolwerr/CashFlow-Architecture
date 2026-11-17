@@ -2,7 +2,7 @@
 
 [![GitHub Actions](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml/badge.svg)](https://github.com/wolwerr/CashFlow-Architecture/actions/workflows/local-build.yml)
 
-Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débitos** e consulta do **saldo diário consolidado**. Este repositório contém código, testes, decisões, diagramas e procedimentos locais. O desafio exige independência entre lançamentos e consolidado, além de **50 consultas/segundo** com **no máximo 5% de falhas**. A conformidade operacional desses limites ainda depende de evidências de homologação, não apenas da CI.
+Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débitos** e consulta do **saldo diário consolidado**. Este repositório contém código, testes, decisões, diagramas e procedimentos locais. O desafio exige independência entre lançamentos e consolidado, além de **50 consultas/segundo** com **no máximo 5% de falhas**. Os limites foram avaliados em ensaios locais informados pelo operador; a [auditoria final](docs/validation/final-delivery-evidence.md) documenta os resultados e limitações de rastreabilidade.
 
 > **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. Além dos seis serviços financeiros/de infraestrutura originais, o Compose principal inclui cinco serviços de observabilidade: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A instrumentação OTLP é habilitada por padrão no Compose local. A coleta OTLP e propagação de trace foram validadas funcionalmente pelo operador no ambiente local, sem SHA contemporâneo registrado.
 
