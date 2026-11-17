@@ -18,6 +18,8 @@ import urllib.request
 import uuid
 
 BASE = "http://127.0.0.1:8080"
+TRANSACTIONS_PATH = "/api/v1/transactions"
+MERCHANTS_PATH = "/api/v1/merchants/"
 
 
 class VerificationError(Exception):
@@ -63,7 +65,7 @@ def current_balance(transport, token, merchant, day):
 def create(transport, token, merchant, day, kind, amount, key):
     payload = {"merchant_id": merchant, "reference_date": day,
                "type": kind, "amount": amount}
-    return transport("POST", "/api/v1/transactions", token, payload,
+    return transport("POST", TRANSACTIONS_PATH, token, payload,
                      {"Idempotency-Key": key, "X-Correlation-ID": str(uuid.uuid4())})
 
 
@@ -72,7 +74,7 @@ def history(transport, token, merchant):
     entries = []
     for page in range(1, 21):
         status, body = transport("GET",
-            query("/api/v1/transactions", merchant_id=merchant, page=page, page_size=100), token)
+            query(TRANSACTIONS_PATH, merchant_id=merchant, page=page, page_size=100), token)
         require(status == 200 and isinstance(body, dict), "Merchant history unavailable")
         entries.extend(body["items"])
         if not body["has_more"]:
@@ -80,45 +82,34 @@ def history(transport, token, merchant):
     raise VerificationError("History exceeds 20 pages; use a fresh disposable merchant")
 
 
-def run_flow(transport, token, other_token, merchant, other_merchant, day,
-             sleep=time.sleep, timeout=30):
-    """Run the full local test; only call after explicit opt-in and token checks."""
-    steps = []
-
-    def passed(name):
-        steps.append(name)
-
-    status, _ = transport("GET", "/api/v1/merchants/")
+def verify_memberships(transport, token, other_token, merchant, other_merchant):
+    status, _ = transport("GET", MERCHANTS_PATH)
     require(status == 401, "Unauthenticated merchant directory must return 401")
-    passed("unauthenticated_denied")
 
-    status, merchants = transport("GET", "/api/v1/merchants/", token)
+    status, merchants = transport("GET", MERCHANTS_PATH, token)
     require(status == 200 and isinstance(merchants, list) and
             any(item["id"].lower() == merchant for item in merchants),
             "Primary token must have current membership in primary merchant")
-    status, other_merchants = transport("GET", "/api/v1/merchants/", other_token)
+    status, other_merchants = transport("GET", MERCHANTS_PATH, other_token)
     require(status == 200 and isinstance(other_merchants, list) and
             any(item["id"].lower() == other_merchant for item in other_merchants),
             "Second token must have membership in other merchant")
     require(not any(item["id"].lower() == merchant for item in other_merchants),
             "Second token is also a member of primary merchant; isolation is untestable")
-    passed("two_distinct_merchants")
 
+
+def verify_cross_merchant_denied(transport, other_token, merchant, day):
     status, _ = transport("GET",
-        query("/api/v1/transactions", merchant_id=merchant), other_token)
+        query(TRANSACTIONS_PATH, merchant_id=merchant), other_token)
     require(status == 403, "Cross-merchant history must return 403")
     status, _ = transport("GET",
         query("/api/v1/consolidation/daily", merchant_id=merchant, date=day), other_token)
     require(status == 403, "Cross-merchant balance must return 403")
     status, _ = create(transport, other_token, merchant, day, "CREDIT", "1.00", str(uuid.uuid4()))
     require(status == 403, "Cross-merchant transaction must return 403")
-    passed("cross_merchant_denied")
 
-    baseline = current_balance(transport, token, merchant, day)
-    old_history = history(transport, token, merchant)
-    old_ids = {item["id"] for item in old_history}
-    passed("baseline_recorded")
 
+def verify_financial_writes(transport, token, merchant, day):
     key = str(uuid.uuid4())
     status, credit = create(transport, token, merchant, day, "CREDIT", "100.00", key)
     require(status == 201 and isinstance(credit, dict) and credit.get("id"),
@@ -128,15 +119,14 @@ def run_flow(transport, token, other_token, merchant, other_merchant, day,
             "Idempotent replay must return the original transaction")
     status, _ = create(transport, token, merchant, day, "DEBIT", "100.00", key)
     require(status == 409, "Reused key with a different payload must return 409")
-    passed("credit_and_http_idempotency")
 
     status, debit = create(transport, token, merchant, day, "DEBIT", "25.00", str(uuid.uuid4()))
     require(status == 201 and isinstance(debit, dict) and debit.get("id"),
             "DEBIT creation must return 201; stop on ambiguous write")
-    passed("debit_created")
+    return credit, debit
 
-    expected_ids = {credit["id"], debit["id"]}
-    deadline = time.monotonic() + timeout
+
+def wait_for_history(transport, token, merchant, expected_ids, old_ids, deadline, sleep):
     while True:
         rows = history(transport, token, merchant)
         added = [row for row in rows if row["id"] in expected_ids]
@@ -145,24 +135,50 @@ def run_flow(transport, token, other_token, merchant, other_merchant, day,
             require({(row["type"], row["amount"]) for row in added} ==
                     {("CREDIT", "100.00"), ("DEBIT", "25.00")},
                     "History data does not match confirmed transactions")
-            passed("history_has_two_unique_transactions")
-            break
+            return
         if time.monotonic() >= deadline:
             raise VerificationError("New transactions are missing from the authorized history")
         sleep(0.5)
 
+
+def projected_delta_matches(after, baseline):
+    changes = {
+        "credit_total": Decimal("100.00"), "debit_total": Decimal("25.00"),
+        "net_amount": Decimal("75.00"), "closing_balance": Decimal("75.00")
+    }
+    return all(after[key] == baseline[key] + delta for key, delta in changes.items())
+
+
+def wait_for_projection(transport, token, merchant, day, baseline, deadline, sleep):
     while True:
         after = current_balance(transport, token, merchant, day)
-        if (after["credit_total"] == baseline["credit_total"] + Decimal("100.00") and
-                after["debit_total"] == baseline["debit_total"] + Decimal("25.00") and
-                after["net_amount"] == baseline["net_amount"] + Decimal("75.00") and
-                after["closing_balance"] == baseline["closing_balance"] + Decimal("75.00")):
-            passed("rabbitmq_consolidation_and_balance")
-            break
+        if projected_delta_matches(after, baseline):
+            return
         if time.monotonic() >= deadline:
             raise VerificationError("Consolidation did not reflect CREDIT=100 and DEBIT=25 within timeout")
         sleep(0.5)
-    return steps
+
+
+def run_flow(transport, token, other_token, merchant, other_merchant, day,
+             sleep=time.sleep, timeout=30):
+    """Verify independent Keycloak identities, authorized writes and async projection."""
+    verify_memberships(transport, token, other_token, merchant, other_merchant)
+    verify_cross_merchant_denied(transport, other_token, merchant, day)
+
+    baseline = current_balance(transport, token, merchant, day)
+    old_ids = {item["id"] for item in history(transport, token, merchant)}
+    credit, debit = verify_financial_writes(transport, token, merchant, day)
+
+    deadline = time.monotonic() + timeout
+    wait_for_history(transport, token, merchant, {credit["id"], debit["id"]},
+                     old_ids, deadline, sleep)
+    wait_for_projection(transport, token, merchant, day, baseline, deadline, sleep)
+    return [
+        "unauthenticated_denied", "two_distinct_merchants",
+        "cross_merchant_denied", "baseline_recorded",
+        "credit_and_http_idempotency", "debit_created",
+        "history_has_two_unique_transactions", "rabbitmq_consolidation_and_balance"
+    ]
 
 
 def main(argv=None):
