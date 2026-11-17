@@ -368,6 +368,33 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task CannotRenameUserSharedWithAnotherMerchant()
+    {
+        var otherMerchant = Guid.NewGuid();
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (request.Method == HttpMethod.Get && path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new object[] { Operator(), new {
+                    id = "other-id", name = "OPERATOR",
+                    path = $"/merchants/{otherMerchant:D}/OPERATOR"
+                } });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
+            Create(fake).RenameMemberAsync(MerchantId, "loja.teste", "loja.nova",
+                "cashflow.admin", CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "PUT");
+    }
+
+    [Fact]
     public async Task BootstrapUsernameCannotBeEditedOrReassigned()
     {
         var fake = new FakeHandler(_ => throw new InvalidOperationException("No Keycloak calls expected"));
