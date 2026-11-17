@@ -11,6 +11,7 @@ public static class MerchantEndpoints
         var routes = app.MapGroup("/api/v1/merchants").RequireAuthorization();
         routes.MapGet("/", ListAsync);
         routes.MapGet("/permissions", Permissions);
+        routes.MapGet("/{merchantId:guid}/members", MembersAsync);
         routes.MapPost("/", CreateAsync);
         routes.MapPost("/{merchantId:guid}/admins", AddAdminAsync);
         return app;
@@ -37,6 +38,25 @@ public static class MerchantEndpoints
         if (Actor(context) == Guid.Empty) return Results.Unauthorized();
         try { return Results.Ok(await management.ListAsync(Actor(context), ct)); }
         catch (HttpRequestException) { return Results.Problem(statusCode: 503, title: "Merchant directory unavailable."); }
+    }
+
+    private static async Task<IResult> MembersAsync(Guid merchantId, HttpContext context,
+        KeycloakMerchantManagement management, CancellationToken ct)
+    {
+        var actor = Actor(context);
+        if (actor == Guid.Empty) return Results.Unauthorized();
+        if (merchantId == Guid.Empty) return Results.BadRequest();
+        try
+        {
+            // Membership details must never be disclosed to another merchant.
+            if (!await management.IsAdminAsync(actor, merchantId, ct))
+                return Results.Forbid();
+            return Results.Ok(await management.ListMembersAsync(merchantId, ct));
+        }
+        catch (HttpRequestException)
+        {
+            return Results.Problem(statusCode: 503, title: "Merchant members unavailable.");
+        }
     }
 
     private static async Task<IResult> CreateAsync(CreateMerchantRequest? request,
