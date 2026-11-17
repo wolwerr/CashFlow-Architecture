@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CashFlow.Transactions.Api.Merchants;
 
@@ -11,7 +12,7 @@ public static class MerchantEndpoints
         var routes = app.MapGroup("/api/v1/merchants").RequireAuthorization();
         routes.MapGet("/", ListAsync);
         routes.MapGet("/permissions", Permissions);
-        routes.MapGet("/{merchantId:guid}/members", MembersAsync);
+        routes.MapGet("/members", MembersAsync);
         routes.MapPost("/", CreateAsync);
         routes.MapPost("/{merchantId:guid}/admins", AddAdminAsync);
         return app;
@@ -40,7 +41,7 @@ public static class MerchantEndpoints
         catch (HttpRequestException) { return Results.Problem(statusCode: 503, title: "Merchant directory unavailable."); }
     }
 
-    private static async Task<IResult> MembersAsync(Guid merchantId, HttpContext context,
+    private static async Task<IResult> MembersAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId, HttpContext context,
         KeycloakMerchantManagement management, CancellationToken ct)
     {
         var actor = Actor(context);
