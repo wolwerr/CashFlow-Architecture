@@ -316,20 +316,22 @@ Na execução local de **17/11/2026**, em Windows PowerShell com **.NET 10**, o 
 
 ### 9.3. Resultado documentado de execução local do frontend
 
-Na execução local de **17/11/2026**, em Windows PowerShell, Node.js/npm e Vitest 3.2.7, o comando `npm run test:coverage` em `Frontend/` apresentou:
+Na execução local de **17/11/2026**, em Windows PowerShell, Node.js 24.21.0/npm e Vitest 5.1.0, o comando `npm run test:coverage` em `Frontend/` apresentou:
 
 | Indicador | Resultado |
 | --- | ---: |
 | Arquivos de teste | 9 aprovados |
 | Testes | **169 aprovados, 0 falhas** |
-| Cobertura de linhas | **95,48%** |
-| Cobertura de instruções | 95,48% |
-| Cobertura de ramificações | 90,16% |
-| Cobertura de funções | 88,99% |
+| Cobertura de linhas | **88,30%** |
+| Cobertura de instruções | 84,51% |
+| Cobertura de ramificações | 84,22% |
+| Cobertura de funções | 80,83% |
+
+O build `tsc -b && vite build` também concluiu com sucesso em **Vite 6.4.6**. O `npm audit` e `npm audit --omit=dev` informaram **0 vulnerabilidades** no ambiente local após a atualização das dependências.
 
 **Total backend + frontend:** **392 testes aprovados**, 0 falhas, em execuções locais separadas. Os 223 testes .NET e os 169 testes Vitest passaram, mas **100% de aprovação de testes não significa 100% de cobertura de código**. Estes números são provenientes das saídas de terminal compartilhadas pelo responsável pelo projeto; para evidência auditável, incluir a captura real, os relatórios e o SHA correspondente.
 
-**Pontos de atenção:** `src/features/app/useCashFlowController.ts` apresentou **79,91% de cobertura de linhas**, abaixo de 80% naquele arquivo, apesar da cobertura global de 95,48%. Durante `npm ci`, o npm informou **7 vulnerabilidades em dependências (5 moderadas, 2 críticas)**. A aprovação dos testes não elimina esses alertas. Investigar com `npm audit` e não executar `npm audit fix --force` sem avaliar impactos e mudanças incompatíveis.
+**Pontos de atenção:** `src/features/app/useCashFlowController.ts` apresentou **76,07% de cobertura de linhas** após a migração do Vitest 3 para 5, abaixo de 80% individualmente, embora as quatro métricas globais estejam acima de 80%. A atualização também alterou os percentuais de cobertura (antes eram 95,48% de linhas); isso não significa, por si só, perda de testes. O `npm audit` anterior apontava 7 vulnerabilidades (5 moderadas e 2 críticas), mas a nova verificação local informou 0. **O repositório ainda precisa receber o `Frontend/package.json` e o `Frontend/package-lock.json` alterados, e a CI precisa validar essas versões antes de considerar a correção integrada.**
 
 ### 9.4. Rodar os testes automatizados localmente
 
