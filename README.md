@@ -137,9 +137,68 @@ A importação automática de `infra/local/keycloak/cashflow-realm.json` cria o 
 
 **Importante:** existem duas contas diferentes: `admin` no realm `master` (administra Keycloak) e `cashflow.admin` no realm `cashflow` (usuário da aplicação com bootstrap local). A senha da primeira vem do `.env`; a segunda é criada nesta etapa e fica armazenada no Keycloak.
 
-**B. Cliente de autorização, apenas leitura.** Em **Clients > cashflow-authorization-service > Credentials**, copie o **Client secret**. Em **Service account roles**, atribua no cliente `realm-management` somente **`view-users`** (e acesso de consulta estritamente necessário caso sua versão do Keycloak o exija). Esse cliente não pode gerenciar usuários ou grupos.
+**B. Configurar o cliente de autorização (`cashflow-authorization-service`), somente leitura.**
 
-**C. Cliente de gestão.** Em **Clients > cashflow-management-service > Credentials**, copie o **Client secret**. Em **Service account roles**, atribua, no cliente `realm-management`, **`manage-realm`**, **`manage-users`**, **`view-users`** e **`query-users`** conforme o contrato local de provisionamento. Essas permissões são amplas e **apenas de desenvolvimento**, nunca devem ser dadas à SPA.
+Esse cliente é usado pelas APIs **Transactions** e **Consolidation** para consultar o vínculo atual entre usuário, comerciante e grupo no Keycloak. Ele **não** deve receber permissões para criar, alterar ou excluir usuários.
+
+**B.1. Abrir o cliente e copiar seu secret**
+
+1. Confirme que o realm selecionado no Keycloak é **cashflow**.
+2. No menu esquerdo, abra **Clients** e clique em **cashflow-authorization-service**. O cliente já deve existir após a importação do realm; não crie outro.
+3. Abra a aba **Credentials**, localize **Client secret** e copie o valor usando o botão de copiar.
+4. Abra o arquivo `.env` na raiz do repositório e preencha **somente** esta variável com o secret copiado:
+
+   ```dotenv
+   KEYCLOAK_AUTHZ_CLIENT_SECRET=COLE_AQUI_O_SECRET_DE_AUTORIZACAO
+   ```
+
+5. Salve o arquivo. Substitua o marcador pelo valor real, sem aspas. Não divulgue o secret nem versione o `.env`.
+
+**B.2. Atribuir a permissão de leitura**
+
+1. Volte à página de **Clients > cashflow-authorization-service**.
+2. Abra a aba **Service account roles**. Se essa aba não aparecer, confira em **Settings** se **Client authentication** e **Service accounts roles** estão habilitados para o cliente confidencial.
+3. Clique em **Assign role** e, na janela aberta, escolha o filtro **Filter by clients** (a descrição pode variar conforme a interface).
+4. Localize as roles pertencentes ao cliente **realm-management**.
+5. Selecione **view-users** e clique em **Assign**.
+6. Confira que `realm-management / view-users` aparece na lista de permissões da Service Account. Caso alguma consulta de usuários/grupos seja negada na homologação, investigue o retorno do Keycloak antes de ampliar privilégios.
+
+**Resultado esperado:** o cliente de autorização possui um secret próprio no `.env` e apenas as permissões de consulta necessárias. **Não atribua `manage-users` ou `manage-realm` a esse cliente.**
+
+**C. Configurar o cliente de gerenciamento (`cashflow-management-service`).**
+
+Esse cliente é usado pela API **Transactions** para cadastrar lojas, criar usuários e administrar grupos, cargos e desativações no Keycloak. Por isso tem permissões administrativas **somente para o ambiente local de desenvolvimento**.
+
+**C.1. Abrir o cliente e copiar seu secret**
+
+1. Ainda no realm **cashflow**, abra **Clients > cashflow-management-service**.
+2. Abra **Credentials** e copie o **Client secret** desse cliente, que é **diferente** do cliente de autorização.
+3. No mesmo arquivo `.env`, preencha:
+
+   ```dotenv
+   KEYCLOAK_MGMT_CLIENT_SECRET=COLE_AQUI_O_SECRET_DE_GESTAO
+   ```
+
+4. Salve o `.env`. Não reutilize o secret de `cashflow-authorization-service`.
+
+**C.2. Atribuir as permissões de gerenciamento**
+
+1. Na página **Clients > cashflow-management-service**, abra **Service account roles**.
+2. Clique em **Assign role** e escolha **Filter by clients**.
+3. Localize as roles do cliente **realm-management**, selecione as quatro abaixo e confirme em **Assign**:
+
+   | Role | Para que serve no bootstrap local |
+   | --- | --- |
+   | `manage-realm` | Operações administrativas de configuração e gerenciamento de grupos do realm |
+   | `manage-users` | Criar e atualizar usuários e administrar seus vínculos |
+   | `view-users` | Consultar usuários existentes |
+   | `query-users` | Pesquisar e localizar usuários |
+
+4. Volte à lista **Service account roles** e confirme que as quatro roles estão atribuídas ao cliente correto.
+
+**Resultado esperado:** `cashflow-management-service` possui seu próprio secret no `.env` e as quatro roles listadas. Essas permissões **não** devem ser atribuídas ao cliente público `cashflow-spa` nem aos usuários comerciantes.
+
+**Antes de continuar:** confirme que copiou um secret diferente para cada variável e que ambos foram salvos no `.env`. Não inicie Transactions e Consolidation até concluir esses passos.
 
 **D. Completar o `.env`.** Sem incluir aspas e sem publicar valores:
 
