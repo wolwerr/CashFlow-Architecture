@@ -3,7 +3,6 @@ import { listMerchantMembers } from '../../api/cashflow';
 import { executeMerchantMutation } from './merchantMutations';
 import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
-import { merchantRoleLabel } from './merchantPresentation';
 import { merchantDirectoryRows } from './merchantDirectoryRows';
 import { MerchantMemberActions } from './MerchantMemberActions';
 
