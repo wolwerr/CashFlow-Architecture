@@ -29,6 +29,12 @@
 
 O PDF explicita que nem todas as premissas de arquitetura precisam estar codificadas: decisões e representações arquiteturais são válidas. Por isso o escopo Azure, transição e recomendações de HA são documentados como **desenho**, não implantação real.
 
+## Evidências de cobertura
+
+A [seção 9 do README](../../README.md#9-testes-automatizados-e-evidências-do-desafio) descreve os limites por camada do backend e os percentuais históricos do frontend. A cobertura atual é calculada **a cada execução do GitHub Actions** por [`.github/scripts/ci_coverage_summary.py`](../../.github/scripts/ci_coverage_summary.py) usando os XMLs OpenCover e o LCOV gerados pelos testes.
+
+Os job summaries **Backend .NET Coverage Report** e **Frontend Coverage Report** exibem os números observados nessa execução, além de links para os artifacts com os arquivos originais. Os relatórios do backend podem ter sobreposição e não são somados para declarar uma cobertura global. Os percentuais históricos do README não substituem os resultados medidos na CI mais recente.
+
 ## Evidências de execução e rastreabilidade
 
 **CI auditável, executada no GitHub:** [run #577](https://github.com/wolwerr/CashFlow-Architecture/actions/runs/44163593607) aprovou os quatro jobs; os logs e artefatos dessa execução são a fonte dos resultados automatizados.

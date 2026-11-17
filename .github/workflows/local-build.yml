@@ -167,6 +167,9 @@ jobs:
           cp Backend/tests/CashFlow.Consolidation.IntegrationTests/TestResults/sonar/coverage.consolidation-integration.opencover.xml sonar-reports/backend/
           cp Backend/tests/CashFlow.Consolidation.ApiTests/TestResults/sonar/coverage.consolidation-api.opencover.xml sonar-reports/backend/
 
+      - name: Backend | Publish measured coverage summary
+        run: python3 .github/scripts/ci_coverage_summary.py backend
+
       - name: Backend | Upload OpenCover
         uses: actions/upload-artifact@v6
         with:
@@ -197,6 +200,9 @@ jobs:
       - name: Frontend | Vitest and coverage (min 80%)
         working-directory: Frontend
         run: npm run test:coverage
+
+      - name: Frontend | Publish measured coverage summary
+        run: python3 .github/scripts/ci_coverage_summary.py frontend
 
       - name: Frontend | Upload LCOV
         uses: actions/upload-artifact@v6
