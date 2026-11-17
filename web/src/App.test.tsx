@@ -321,7 +321,7 @@ describe('CashFlow dashboard and interactions', () => {
       'novo.operador', 'senha-operador-nova'));
     expect(createMerchant).not.toHaveBeenCalled();
     expect(mock.state[28]).toBe('');
-    expect(mock.state[30]).toBe('');
+    expect(mock.state[29]).toBe('');
     await vi.waitFor(() => expect(mock.state[23]).toBe(1));
   });
 
@@ -398,7 +398,7 @@ describe('CashFlow dashboard and interactions', () => {
     expect(renameMerchant).toHaveBeenCalledWith('access-token',
       mock.state[3], 'Loja Campinas Atualizada');
     await vi.waitFor(() => expect((mock.state[12] as Array<{ name: string }>)[0].name).toBe('Loja Campinas Atualizada'));
-    expect(mock.state[29]).toBe('');
+    expect(mock.state[30]).toBe('');
   });
 
   it('selects a registered merchant by name for consultation and clears previous balances', () => {
