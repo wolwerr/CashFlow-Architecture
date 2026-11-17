@@ -128,6 +128,14 @@ export function useCashFlowController() {
     return () => { active = false; };
   }, [pendingProjection, currentToken]);
 
+  async function refreshMerchants(): Promise<void> {
+    if (!currentToken) return;
+    const items = await listMerchants(currentToken);
+    setMerchants(items);
+    setMerchant(previous => items.some(item => item.id === previous)
+      ? previous : items[0]?.id ?? '');
+  }
+
   async function registerMerchant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!currentToken || !canManageMerchants || !newMerchantName.trim() ||
@@ -246,7 +254,7 @@ export function useCashFlowController() {
     setNewMerchantName, setAdminUsername, setAdminPassword,
     setMerchantUsername, setMerchantPassword, setDate, setType,
     changeMerchant, changeInput, clearFinancialData,
-    registerMerchant, registerAdmin, showBalance, submitTransaction
+    registerMerchant, registerAdmin, refreshMerchants, showBalance, submitTransaction
   };
 }
 

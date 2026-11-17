@@ -30,11 +30,11 @@ vi.mock('./api/cashflow', async importOriginal => {
   const original = await importOriginal<typeof import('./api/cashflow')>();
   return {
     ...original, createTransaction: vi.fn(), dailyBalance: vi.fn(),
-    transactionHistory: vi.fn(), listMerchants: vi.fn(), listMerchantMembers: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
+    transactionHistory: vi.fn(), listMerchants: vi.fn(), listMerchantMembers: vi.fn(), addMerchantOperator: vi.fn(), updateMerchantMember: vi.fn(), removeMerchantMember: vi.fn(), renameMerchant: vi.fn(), createMerchant: vi.fn(), addMerchantAdmin: vi.fn(), merchantPermissions: vi.fn()
   };
 });
 import App from './App';
-import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, listMerchantMembers, merchantPermissions } from './api/cashflow';
+import { createTransaction, dailyBalance, transactionHistory, createMerchant, addMerchantAdmin, listMerchants, listMerchantMembers, merchantPermissions, addMerchantOperator, updateMerchantMember, removeMerchantMember, renameMerchant } from './api/cashflow';
 import { beginLogin, logout } from './auth/oidc';
 import type { ReactElement } from 'react';
 
@@ -250,9 +250,10 @@ describe('CashFlow dashboard and interactions', () => {
     expect(nodes.some(n => n.type === 'h3' && n.props.children === 'Comerciantes cadastrados')).toBe(true);
     expect(nodes.some(n => n.type === 'td' && n.props.children === 'Loja Teste')).toBe(true);
     expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
-    expect(nodes.some(n => n.type === 'span' && n.props.children === 'ADMIN')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'ADMIN')).toBe(false);
     expect(nodes.some(n => n.type === 'span' && n.props.children === 'loja.teste')).toBe(true);
-    expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo do usuário')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(false);
+    expect(nodes.some(n => n.type === 'th' && n.props.children === 'Cargo')).toBe(true);
     expect(nodes.some(n => n.type === 'input' && n.props['aria-label'] === 'ID do comerciante')).toBe(false);
     expect(nodes.some(n => n.type === 'select' && n.props['aria-label'] === 'Comerciante da consulta')).toBe(true);
   });
@@ -305,6 +306,99 @@ describe('CashFlow dashboard and interactions', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(mock.state[21]).toEqual({});
+  });
+
+  it('adds an operator to an existing selected shop without creating another merchant', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[27] = 'novo.operador';
+    mock.state[28] = 'senha-operador-nova';
+    vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    const form = render().filter(n => n.type === 'form')
+      .find(n => walk(n).some(child => child.props['aria-label'] === 'Novo usuário da loja'))!;
+    await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    await vi.waitFor(() => expect(addMerchantOperator).toHaveBeenCalledWith('access-token', mock.state[3],
+      'novo.operador', 'senha-operador-nova'));
+    expect(createMerchant).not.toHaveBeenCalled();
+    expect(mock.state[27]).toBe('');
+    expect(mock.state[28]).toBe('');
+    await vi.waitFor(() => expect(mock.state[23]).toBe(1));
+  });
+
+  it('changes an operator role only when the administrator selects that user', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'cashflow.admin', role: 'ADMIN' },
+      { username: 'loja.campinas', role: 'OPERATOR' }
+    ] };
+    vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    const edit = find('button', 'Editar cargo');
+    (edit.props.onClick as () => void)();
+    expect(mock.state[30]).toBe('loja.campinas');
+    const role = find('select', 'Novo cargo de loja.campinas');
+    (role.props.onChange as (event: unknown) => void)({ target: { value: 'ADMIN' } });
+    const save = find('button', 'Salvar cargo');
+    await (save.props.onClick as () => Promise<void>)();
+    expect(updateMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
+      'loja.campinas', 'ADMIN');
+    await vi.waitFor(() => expect(mock.state[30]).toBe(''));
+  });
+
+  it('requires confirmation and removes only the member link, never the bootstrap account', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'cashflow.admin', role: 'ADMIN' },
+      { username: 'loja.campinas', role: 'OPERATOR' }
+    ] };
+    vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    const confirm = vi.fn().mockReturnValue(false);
+    vi.stubGlobal('window', { confirm });
+    const remove = find('button', 'Desativar');
+    await (remove.props.onClick as () => Promise<void>)();
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(removeMerchantMember).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    await (remove.props.onClick as () => Promise<void>)();
+    await vi.waitFor(() => expect(removeMerchantMember).toHaveBeenCalledWith('access-token',
+      mock.state[3], 'loja.campinas'));
+    expect(render().some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('shows soft-deleted accounts as inactive and permits reactivation', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'cashflow.admin', role: 'ADMIN' },
+      { username: 'loja.campinas', role: 'INACTIVE' }
+    ] };
+    vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Inativo')).toBe(true);
+    expect(nodes.some(n => n.type === 'button' && n.props.children === 'Reativar')).toBe(true);
+    expect(nodes.some(n => n.type === 'button' && n.props.children === 'Desativar')).toBe(false);
+    const activate = find('button', 'Reativar');
+    await (activate.props.onClick as () => Promise<void>)();
+    expect(updateMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
+      'loja.campinas', 'OPERATOR');
+  });
+
+  it('renames a shop without replacing its merchant UUID or transactions', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[29] = 'Loja Campinas Atualizada';
+    vi.mocked(listMerchants).mockResolvedValue([
+      { id: mock.state[3] as string, name: 'Loja Campinas Atualizada', role: 'ADMIN' }
+    ]);
+    const form = render().filter(n => n.type === 'form')
+      .find(n => walk(n).some(child => child.props['aria-label'] === 'Novo nome da loja'))!;
+    await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    expect(renameMerchant).toHaveBeenCalledWith('access-token',
+      mock.state[3], 'Loja Campinas Atualizada');
+    await vi.waitFor(() => expect((mock.state[12] as Array<{ name: string }>)[0].name).toBe('Loja Campinas Atualizada'));
+    expect(mock.state[29]).toBe('');
   });
 
   it('selects a registered merchant by name for consultation and clears previous balances', () => {
@@ -493,7 +587,7 @@ describe('CashFlow dashboard and interactions', () => {
     const admin = find('input', 'Usuário administrador');
     (admin.props.onChange as (event: unknown) => void)({ target: { value: 'new.admin' } });
     const forms = render().filter(n => n.type === 'form');
-    await (forms[1].props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
+    await (forms[3].props.onSubmit as (event: unknown) => Promise<void>)({ preventDefault: vi.fn() });
     expect(addMerchantAdmin).toHaveBeenCalledWith('access-token',
       '68a5baac-d97f-45b4-9119-b4c5b9de7c9b', 'new.admin', undefined);
   });

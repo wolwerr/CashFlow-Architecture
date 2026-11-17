@@ -13,6 +13,10 @@ public static class MerchantEndpoints
         routes.MapGet("/", ListAsync);
         routes.MapGet("/permissions", Permissions);
         routes.MapGet("/members", MembersAsync);
+        routes.MapPost("/members", AddOperatorAsync);
+        routes.MapPut("/members", UpdateMemberAsync);
+        routes.MapDelete("/members", DeleteMemberAsync);
+        routes.MapPut("/details", RenameAsync);
         routes.MapPost("/", CreateAsync);
         routes.MapPost("/{merchantId:guid}/admins", AddAdminAsync);
         return app;
@@ -58,6 +62,82 @@ public static class MerchantEndpoints
         {
             return Results.Problem(statusCode: 503, title: "Merchant members unavailable.");
         }
+    }
+
+    private static bool ValidUsername(string? username) => username is not null &&
+        Regex.IsMatch(username, "^[a-zA-Z][a-zA-Z0-9._-]{2,63}$");
+
+    private static async Task<IResult> RenameAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
+        RenameMerchantRequest? request, HttpContext context, KeycloakMerchantManagement management,
+        CancellationToken ct)
+    {
+        if (Actor(context) == Guid.Empty) return Results.Unauthorized();
+        if (merchantId == Guid.Empty || string.IsNullOrWhiteSpace(request?.Name) ||
+            request.Name.Trim().Length > 100) return Results.BadRequest();
+        try
+        {
+            if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
+                return Results.Forbid();
+            return await management.RenameMerchantAsync(merchantId, request.Name.Trim(), ct)
+                ? Results.NoContent() : Results.NotFound();
+        }
+        catch (HttpRequestException) { return Results.Problem(statusCode: 503); }
+    }
+
+    private static async Task<IResult> AddOperatorAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
+        NewMerchantMemberRequest? request, HttpContext context, KeycloakMerchantManagement management,
+        CancellationToken ct)
+    {
+        if (Actor(context) == Guid.Empty) return Results.Unauthorized();
+        if (merchantId == Guid.Empty || !ValidUsername(request?.Username) ||
+            request?.Password is null || request.Password.Length is < 12 or > 128)
+            return Results.BadRequest();
+        try
+        {
+            if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
+                return Results.Forbid();
+            return await management.AddOperatorAsync(merchantId, request!.Username!, request.Password, ct)
+                ? Results.NoContent() : Results.NotFound();
+        }
+        catch (MerchantUsernameConflictException) { return Results.Conflict(new { title = "Username already exists." }); }
+        catch (HttpRequestException) { return Results.Problem(statusCode: 503); }
+    }
+
+    private static async Task<IResult> UpdateMemberAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
+        ChangeMerchantMemberRequest? request, HttpContext context, KeycloakMerchantManagement management,
+        IOptions<KeycloakManagementSettings> settings, CancellationToken ct)
+    {
+        if (Actor(context) == Guid.Empty) return Results.Unauthorized();
+        if (merchantId == Guid.Empty || !ValidUsername(request?.Username) ||
+            request?.Role is not ("ADMIN" or "OPERATOR")) return Results.BadRequest();
+        try
+        {
+            if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
+                return Results.Forbid();
+            return await management.ChangeMemberRoleAsync(merchantId, request!.Username!,
+                request.Role, settings.Value.BootstrapUsername, ct)
+                ? Results.NoContent() : Results.NotFound();
+        }
+        catch (MerchantProtectedAccountException) { return Results.Conflict(new { title = "Bootstrap account is protected." }); }
+        catch (HttpRequestException) { return Results.Problem(statusCode: 503); }
+    }
+
+    private static async Task<IResult> DeleteMemberAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
+        [FromBody] RemoveMerchantMemberRequest? request, HttpContext context, KeycloakMerchantManagement management,
+        IOptions<KeycloakManagementSettings> settings, CancellationToken ct)
+    {
+        if (Actor(context) == Guid.Empty) return Results.Unauthorized();
+        if (merchantId == Guid.Empty || !ValidUsername(request?.Username)) return Results.BadRequest();
+        try
+        {
+            if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
+                return Results.Forbid();
+            return await management.DeactivateMemberAsync(merchantId, request!.Username!,
+                settings.Value.BootstrapUsername, ct)
+                ? Results.NoContent() : Results.NotFound();
+        }
+        catch (MerchantProtectedAccountException) { return Results.Conflict(new { title = "Bootstrap account is protected." }); }
+        catch (HttpRequestException) { return Results.Problem(statusCode: 503); }
     }
 
     private static async Task<IResult> CreateAsync(CreateMerchantRequest? request,
@@ -123,3 +203,8 @@ public static class MerchantEndpoints
 
 public sealed record CreateMerchantRequest(string Name, string? Username, string? Password);
 public sealed record AddMerchantAdminRequest(string Username, string? TemporaryPassword);
+
+public sealed record RenameMerchantRequest(string Name);
+public sealed record NewMerchantMemberRequest(string? Username, string? Password);
+public sealed record ChangeMerchantMemberRequest(string? Username, string? Role);
+public sealed record RemoveMerchantMemberRequest(string? Username);

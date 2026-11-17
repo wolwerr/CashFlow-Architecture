@@ -1,6 +1,7 @@
-import type { Merchant } from '../../api/cashflow';
+import type { Merchant, MerchantMember } from '../../api/cashflow';
 
-export function merchantRoleLabel(role: Merchant['role']): string {
+export function merchantRoleLabel(role: Merchant['role'] | MerchantMember['role']): string {
+  if (role === 'INACTIVE') return 'Inativo';
   return role === 'ADMIN' ? 'ADMIN' : 'Comerciante';
 }
 

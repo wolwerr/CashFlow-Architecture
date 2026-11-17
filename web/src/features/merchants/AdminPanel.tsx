@@ -12,7 +12,7 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
     merchantUsername, setMerchantUsername, merchantPassword, setMerchantPassword,
     registerMerchant, registerAdmin, adminUsername, setAdminUsername,
     adminPassword, setAdminPassword, busy, date, setDate, clearFinancialData,
-    showBalance, currentToken } = controller;
+    showBalance, currentToken, refreshMerchants } = controller;
   return <>
       <section className="panel">
         <h2>Gestão de comerciantes</h2>
@@ -21,7 +21,7 @@ export function AdminPanel({ controller }: { controller: CashFlowController }) {
             onChange={changeMerchant} label="Selecione um comerciante"
             ariaLabel="Selecionar comerciante" />
         </div>
-        <MerchantDirectory items={merchants} selectedId={merchant} token={currentToken ?? ''} onSelect={changeMerchant} />
+        <MerchantDirectory items={merchants} selectedId={merchant} token={currentToken ?? ''} onSelect={changeMerchant} onRefresh={refreshMerchants} />
         <form className="merchant-action" onSubmit={registerMerchant}>
           <label>Nome do novo comerciante
             <input aria-label="Nome do comerciante" maxLength={100} placeholder="Ex.: Loja Campinas"

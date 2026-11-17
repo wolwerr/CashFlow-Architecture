@@ -68,7 +68,7 @@ export function listMerchants(token: string): Promise<Merchant[]> {
   return call('/api/v1/merchants/', token);
 }
 
-export type MerchantMember = { username: string; role: 'ADMIN' | 'OPERATOR' };
+export type MerchantMember = { username: string; role: 'ADMIN' | 'OPERATOR' | 'INACTIVE' };
 
 export function listMerchantMembers(token: string, merchantId: string): Promise<MerchantMember[]> {
   // The request target is a constant same-origin path. Never interpolate a
@@ -79,6 +79,45 @@ export function listMerchantMembers(token: string, merchantId: string): Promise<
   return call('/api/v1/merchants/members', token, {
     headers: { 'X-Merchant-ID': merchantId }
   });
+}
+
+async function mutateMerchant(token: string, merchantId: string, method: 'POST' | 'PUT' | 'DELETE',
+  path: '/api/v1/merchants/members' | '/api/v1/merchants/details', data: object): Promise<void> {
+  if (!validMerchant(merchantId)) throw new ApiError(400, 'Identificador de comerciante inválido.');
+  const response = await fetch(path, {
+    method, cache: 'no-store',
+    headers: {
+      Authorization: 'Bearer ' + token, 'Content-Type': 'application/json',
+      'X-Merchant-ID': merchantId
+    },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) {
+    const problem = await response.json().catch(() => ({})) as { title?: string };
+    throw new ApiError(response.status, problem.title || 'Não foi possível atualizar o comerciante.');
+  }
+}
+
+export function addMerchantOperator(token: string, merchantId: string,
+  username: string, password: string): Promise<void> {
+  return mutateMerchant(token, merchantId, 'POST', '/api/v1/merchants/members',
+    { username, password });
+}
+
+export function updateMerchantMember(token: string, merchantId: string,
+  username: string, role: 'ADMIN' | 'OPERATOR'): Promise<void> {
+  return mutateMerchant(token, merchantId, 'PUT', '/api/v1/merchants/members',
+    { username, role });
+}
+
+export function removeMerchantMember(token: string, merchantId: string, username: string): Promise<void> {
+  return mutateMerchant(token, merchantId, 'DELETE', '/api/v1/merchants/members',
+    { username });
+}
+
+export function renameMerchant(token: string, merchantId: string, name: string): Promise<void> {
+  return mutateMerchant(token, merchantId, 'PUT', '/api/v1/merchants/details',
+    { name });
 }
 
 export function merchantPermissions(token: string): Promise<{can_manage_merchants: boolean}> {

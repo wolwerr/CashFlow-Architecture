@@ -2,3 +2,5 @@
 .merchant-directory{margin:16px 0 24px}.merchant-directory h3{font-size:1rem;margin:0 0 8px}.merchant-directory td:last-child{text-align:right}.merchant-directory td button{font-size:.85rem;padding:7px 12px}.merchant-directory th:last-child{text-align:right}
 
 .merchant-accounts{display:flex;flex-direction:column;gap:9px;min-height:20px}.merchant-accounts span{line-height:1.4}
+
+.merchant-row-actions,.merchant-member-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.merchant-member-actions select{width:auto;min-width:125px}.merchant-directory-tools{display:grid;gap:16px;margin-top:20px}.merchant-directory-tools form{display:grid;gap:10px;max-width:680px}.merchant-directory-tools h3{margin:0}.merchant-row-actions button{font-size:.8rem;padding:7px 10px}.merchant-directory [role=alert]{color:#d12f45}

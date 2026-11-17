@@ -154,7 +154,7 @@ public sealed class KeycloakMerchantManagementTests
         var fake = new FakeHandler(req => TokenOr(req, request =>
         {
             var path = Path(request);
-            if (path.EndsWith("/groups", StringComparison.Ordinal)) return JsonResponse(new[] { Root() });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
             if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
                 return JsonResponse(new[] { Merchant() });
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
@@ -163,6 +163,134 @@ public sealed class KeycloakMerchantManagementTests
         }));
         await Assert.ThrowsAsync<HttpRequestException>(() =>
             Create(fake).ListMembersAsync(MerchantId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task BootstrapAdministratorCannotBeRemovedOrDemoted()
+    {
+        var fake = new FakeHandler(_ => throw new InvalidOperationException("Should not call Keycloak."));
+        var service = Create(fake);
+        await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
+            service.DeactivateMemberAsync(MerchantId, "cashflow.admin", "cashflow.admin", CancellationToken.None));
+        await Assert.ThrowsAsync<MerchantProtectedAccountException>(() =>
+            service.ChangeMemberRoleAsync(MerchantId, "cashflow.admin", "OPERATOR",
+                "cashflow.admin", CancellationToken.None));
+        Assert.Empty(fake.Calls);
+    }
+
+    [Fact]
+    public async Task RenamingMerchantPreservesExistingAttributesAndUuid()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id", StringComparison.Ordinal) &&
+                request.Method == HttpMethod.Put)
+            {
+                using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
+                Assert.Equal(MerchantId.ToString("D"), body.RootElement.GetProperty("name").GetString());
+                Assert.Equal("Loja Nova", body.RootElement.GetProperty("attributes")
+                    .GetProperty("displayName")[0].GetString());
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).RenameMerchantAsync(MerchantId, "Loja Nova", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RemovingOperatorOnlyRevokesMerchantGroupMembership()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator(), new {
+                    id = "inactive-id", name = "INACTIVE", path = $"/merchants/{MerchantId:D}/INACTIVE" } });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Operator() });
+            if (request.Method == HttpMethod.Put && path.EndsWith($"/users/{UserId:D}/groups/inactive-id",
+                StringComparison.Ordinal)) return new HttpResponseMessage(HttpStatusCode.NoContent);
+            if (request.Method == HttpMethod.Delete &&
+                path.EndsWith($"/users/{UserId:D}/groups/operator-id", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).DeactivateMemberAsync(MerchantId,
+            "loja.teste", "cashflow.admin", CancellationToken.None));
+        Assert.Contains(fake.Calls, c => c.Method == "DELETE" && c.Path.Contains("operator-id"));
+        Assert.DoesNotContain(fake.Calls, c => c.Method == "DELETE" &&
+            c.Path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SoftDeletedOperatorCanBeReactivatedWithoutCreatingAnotherUser()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new object[] { Admin(), Operator(), new {
+                    id = "inactive-id", name = "INACTIVE", path = $"/merchants/{MerchantId:D}/INACTIVE" } });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { new {
+                    id = "inactive-id", name = "INACTIVE", path = $"/merchants/{MerchantId:D}/INACTIVE" } });
+            if (path.Contains($"/users/{UserId:D}/groups/", StringComparison.Ordinal) &&
+                (request.Method == HttpMethod.Delete || request.Method == HttpMethod.Put))
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).ChangeMemberRoleAsync(
+            MerchantId, "loja.teste", "OPERATOR", "cashflow.admin", CancellationToken.None));
+        var changes = fake.Calls.Where(c => c.Path.Contains($"/users/{UserId:D}/groups/")).ToList();
+        Assert.Equal("PUT", changes[0].Method);
+        Assert.EndsWith("/operator-id", changes[0].Path);
+        Assert.Equal("DELETE", changes[1].Method);
+        Assert.EndsWith("/inactive-id", changes[1].Path);
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "POST" &&
+            call.Path.EndsWith("/users", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task UpdateRoleAssignsNewRoleBeforeRemovingOldRole()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "loja.teste" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups", StringComparison.Ordinal))
+                return JsonResponse(new[] { Operator() });
+            if (path.EndsWith($"/users/{UserId:D}/groups/admin-id", StringComparison.Ordinal) ||
+                path.EndsWith($"/users/{UserId:D}/groups/operator-id", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        Assert.True(await Create(fake).ChangeMemberRoleAsync(
+            MerchantId, "loja.teste", "ADMIN", "cashflow.admin", CancellationToken.None));
+        var changes = fake.Calls.Where(c => c.Path.Contains($"/users/{UserId:D}/groups/")).ToList();
+        Assert.Equal("PUT", changes[0].Method);
+        Assert.EndsWith("/admin-id", changes[0].Path);
+        Assert.Equal("DELETE", changes[1].Method);
+        Assert.EndsWith("/operator-id", changes[1].Path);
     }
 
     [Fact]
@@ -245,6 +373,7 @@ public sealed class KeycloakMerchantManagementTests
         var merchantCreated = false;
         var adminCreated = false;
         var operatorCreated = false;
+        var inactiveCreated = false;
         var userCreated = false;
         var assignedAdmin = false;
         var assignedOperator = false;
@@ -291,13 +420,17 @@ public sealed class KeycloakMerchantManagementTests
                     id = "admin-id", name = "ADMIN", path = "/merchants/" + generatedId + "/ADMIN" });
                 if (operatorCreated) roles.Add(new {
                     id = "operator-id", name = "OPERATOR", path = "/merchants/" + generatedId + "/OPERATOR" });
+                if (inactiveCreated) roles.Add(new {
+                    id = "inactive-id", name = "INACTIVE", path = "/merchants/" + generatedId + "/INACTIVE" });
                 return JsonResponse(roles);
             }
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal) && method == HttpMethod.Post)
             {
                 using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
-                if (body.RootElement.GetProperty("name").GetString() == "ADMIN") adminCreated = true;
-                else operatorCreated = true;
+                var role = body.RootElement.GetProperty("name").GetString();
+                if (role == "ADMIN") adminCreated = true;
+                else if (role == "OPERATOR") operatorCreated = true;
+                else if (role == "INACTIVE") inactiveCreated = true;
                 return new HttpResponseMessage(HttpStatusCode.Created);
             }
             if (method == HttpMethod.Put && path.EndsWith("/groups/admin-id", StringComparison.Ordinal))

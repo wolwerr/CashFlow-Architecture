@@ -114,7 +114,7 @@ public sealed class KeycloakMerchantManagement(
         if (merchant is null) return [];
         var roles = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
         var members = new List<MerchantMemberView>();
-        foreach (var role in roles.Where(g => g.Name is "ADMIN" or "OPERATOR"))
+        foreach (var role in roles.Where(g => g.Name is "ADMIN" or "OPERATOR" or "INACTIVE"))
         {
             // Keycloak is the source of truth for the actual accounts, not the role
             // of the platform administrator querying the merchant directory.
@@ -125,6 +125,103 @@ public sealed class KeycloakMerchantManagement(
             members.AddRange(users.Select(u => new MerchantMemberView(u.Username, role.Name)));
         }
         return members.Distinct().OrderBy(m => m.Role).ThenBy(m => m.Username).ToArray();
+    }
+
+    public async Task<bool> RenameMerchantAsync(Guid merchantId, string displayName, CancellationToken ct)
+    {
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return false;
+        var attributes = merchant.Attributes is null
+            ? new Dictionary<string, string[]>()
+            : new Dictionary<string, string[]>(merchant.Attributes);
+        attributes["displayName"] = [displayName];
+        using var response = await SendAsync(HttpMethod.Put, $"groups/{merchant.Id}",
+            new { name = merchant.Name, attributes }, ct);
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<bool> AddOperatorAsync(Guid merchantId, string username,
+        string password, CancellationToken ct)
+    {
+        // Do not silently attach an existing realm user to a different merchant.
+        if ((await UsersAsync(username, ct)).Count > 0)
+            throw new MerchantUsernameConflictException();
+        return await AddMemberAsync(merchantId, username, password, "OPERATOR", ct);
+    }
+
+    public async Task<bool> ChangeMemberRoleAsync(Guid merchantId, string username,
+        string nextRole, string bootstrapUsername, CancellationToken ct)
+    {
+        if (string.Equals(username, bootstrapUsername, StringComparison.OrdinalIgnoreCase))
+            throw new MerchantProtectedAccountException();
+        var member = await LookupMembershipAsync(merchantId, username, ct);
+        if (member is null) return false;
+        if (member.Value.Role.Name == nextRole) return true;
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return false;
+        // A dormant account retains its Keycloak identity and can be reactivated.
+        var destination = await GetOrCreateGroupAsync(merchant, nextRole, ct);
+        // Assign first, then remove the old group. If removal fails, undo the new role.
+        await AssignAsync(member.Value.UserId, destination.Id, ct);
+        try
+        {
+            await UnassignAsync(member.Value.UserId, member.Value.Role.Id, ct);
+        }
+        catch
+        {
+            await UnassignAsync(member.Value.UserId, destination.Id, ct);
+            throw;
+        }
+        return true;
+    }
+
+    public async Task<bool> DeactivateMemberAsync(Guid merchantId, string username,
+        string bootstrapUsername, CancellationToken ct)
+    {
+        if (string.Equals(username, bootstrapUsername, StringComparison.OrdinalIgnoreCase))
+            throw new MerchantProtectedAccountException();
+        var member = await LookupMembershipAsync(merchantId, username, ct);
+        if (member is null) return false;
+        if (member.Value.Role.Name == "INACTIVE") return true;
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return false;
+        var inactive = await GetOrCreateGroupAsync(merchant, "INACTIVE", ct);
+        // Assign a non-privileged state before revoking the active group.
+        await AssignAsync(member.Value.UserId, inactive.Id, ct);
+        try
+        {
+            await UnassignAsync(member.Value.UserId, member.Value.Role.Id, ct);
+        }
+        catch
+        {
+            await UnassignAsync(member.Value.UserId, inactive.Id, ct);
+            throw;
+        }
+        return true;
+    }
+
+    private async Task<(Guid UserId, GroupView Role)?> LookupMembershipAsync(
+        Guid merchantId, string username, CancellationToken ct)
+    {
+        var users = await UsersAsync(username, ct);
+        if (users.Count != 1 || !Guid.TryParse(users[0].Id, out var userId) ||
+            !string.Equals(users[0].Username, username, StringComparison.OrdinalIgnoreCase))
+            return null;
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return null;
+        var roleGroups = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
+        var linkedGroups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
+        var role = roleGroups.FirstOrDefault(g => (g.Name is "ADMIN" or "OPERATOR" or "INACTIVE") &&
+            linkedGroups.Any(link => link.Id == g.Id));
+        return role is null ? null : (userId, role);
+    }
+
+    private async Task UnassignAsync(Guid userId, string groupId, CancellationToken ct)
+    {
+        using var response = await SendAsync(HttpMethod.Delete,
+            $"users/{userId:D}/groups/{groupId}", null, ct);
+        response.EnsureSuccessStatusCode();
     }
 
     public async Task<bool> IsAdminAsync(Guid userId, Guid merchantId, CancellationToken ct)
@@ -144,6 +241,7 @@ public sealed class KeycloakMerchantManagement(
             update.EnsureSuccessStatusCode();
         var admin = await GetOrCreateGroupAsync(merchant, "ADMIN", ct);
         await GetOrCreateGroupAsync(merchant, "OPERATOR", ct);
+        await GetOrCreateGroupAsync(merchant, "INACTIVE", ct);
         await AssignAsync(ownerId, admin.Id, ct);
         return new MerchantView(id, name, "ADMIN");
     }
@@ -218,3 +316,4 @@ public sealed record MerchantView(Guid Id, string Name, string Role);
 public sealed record MerchantMemberView(string Username, string Role);
 
 public sealed class MerchantUsernameConflictException : Exception { }
+public sealed class MerchantProtectedAccountException : Exception { }

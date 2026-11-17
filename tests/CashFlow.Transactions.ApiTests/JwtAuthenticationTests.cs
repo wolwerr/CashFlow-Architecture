@@ -305,6 +305,43 @@ public sealed class JwtAuthenticationTests : IDisposable
         Assert.Equal(0, _registration.Calls);
     }
 
+    [Theory]
+    [InlineData("PUT", "/api/v1/merchants/details", "{\"name\":\"  \"}")]
+    [InlineData("POST", "/api/v1/merchants/members", "{\"username\":\"x\",\"password\":\"a-secure-password\"}")]
+    [InlineData("PUT", "/api/v1/merchants/members", "{\"username\":\"x\",\"role\":\"ADMIN\"}")]
+    [InlineData("DELETE", "/api/v1/merchants/members", "{\"username\":\"x\"}")]
+    public async Task InvalidMerchantMutationIsRejectedBeforeKeycloak(
+        string method, string path, string payload)
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", Token());
+        using var request = new HttpRequestMessage(new HttpMethod(method), path)
+        {
+            Content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("X-Merchant-ID", Guid.NewGuid().ToString("D"));
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("GET", "/api/v1/merchants/members")]
+    [InlineData("POST", "/api/v1/merchants/members")]
+    [InlineData("PUT", "/api/v1/merchants/members")]
+    [InlineData("DELETE", "/api/v1/merchants/members")]
+    [InlineData("PUT", "/api/v1/merchants/details")]
+    public async Task ProtectedMerchantManagementRequiresJwt(string method, string path)
+    {
+        using var client = _factory.CreateClient();
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        if (method is "POST" or "PUT" or "DELETE")
+            request.Content = JsonContent.Create(new { username = "loja.teste", role = "ADMIN", name = "Loja" });
+        request.Headers.Add("X-Merchant-ID", Guid.NewGuid().ToString("D"));
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     [Fact]
     public async Task MerchantDirectoryWithoutJwtIsUnauthorized()
     {
