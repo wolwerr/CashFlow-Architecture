@@ -373,6 +373,7 @@ public sealed class KeycloakMerchantManagementTests
         var merchantCreated = false;
         var adminCreated = false;
         var operatorCreated = false;
+        var inactiveCreated = false;
         var userCreated = false;
         var assignedAdmin = false;
         var assignedOperator = false;
@@ -419,13 +420,17 @@ public sealed class KeycloakMerchantManagementTests
                     id = "admin-id", name = "ADMIN", path = "/merchants/" + generatedId + "/ADMIN" });
                 if (operatorCreated) roles.Add(new {
                     id = "operator-id", name = "OPERATOR", path = "/merchants/" + generatedId + "/OPERATOR" });
+                if (inactiveCreated) roles.Add(new {
+                    id = "inactive-id", name = "INACTIVE", path = "/merchants/" + generatedId + "/INACTIVE" });
                 return JsonResponse(roles);
             }
             if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal) && method == HttpMethod.Post)
             {
                 using var body = JsonDocument.Parse(request.Content!.ReadAsStringAsync().Result);
-                if (body.RootElement.GetProperty("name").GetString() == "ADMIN") adminCreated = true;
-                else operatorCreated = true;
+                var role = body.RootElement.GetProperty("name").GetString();
+                if (role == "ADMIN") adminCreated = true;
+                else if (role == "OPERATOR") operatorCreated = true;
+                else if (role == "INACTIVE") inactiveCreated = true;
                 return new HttpResponseMessage(HttpStatusCode.Created);
             }
             if (method == HttpMethod.Put && path.EndsWith("/groups/admin-id", StringComparison.Ordinal))
