@@ -203,7 +203,7 @@ describe('CashFlow dashboard and interactions', () => {
     const nodes = render();
     expect(nodes.some(n => n.type === 'span' &&
       Array.isArray(n.props.children) && n.props.children.join('') === 'Olá, loja.campinas')).toBe(true);
-    expect(nodes.some(n => n.type === 'td' && n.props.children === 'Comerciante')).toBe(true);
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Comerciante')).toBe(true);
   });
 
   it('does not reveal an empty username as a fake administrator identity', () => {
