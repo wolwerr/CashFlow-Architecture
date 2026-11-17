@@ -88,7 +88,7 @@ public sealed class KeycloakMerchantAuthorizationTests
     {
         var merchant = Guid.NewGuid();
         var gateway = Create(req => req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal)
-            ? Json("{\\\"access_token\\\":\\\"service-token\\\",\\\"expires_in\\\":300}")
+            ? Json("{\"access_token\":\"service-token\",\"expires_in\":300}")
             : Json($@"[{{""path"":""/merchants/{merchant:D}/{first}""}},
                       {{""path"":""/merchants/{merchant:D}/{second}""}}]"));
         Assert.False(await gateway.CanCreateAsync(Guid.NewGuid(), merchant, default));
@@ -102,7 +102,7 @@ public sealed class KeycloakMerchantAuthorizationTests
         var gateway = Create(req =>
         {
             if (req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal))
-                return Json("{\\\"access_token\\\":\\\"service-token\\\",\\\"expires_in\\\":300}");
+                return Json("{\"access_token\":\"service-token\",\"expires_in\":300}");
             pages++;
             if (pages == 1)
             {
