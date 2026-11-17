@@ -355,7 +355,7 @@ describe('CashFlow dashboard and interactions', () => {
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
     const confirm = vi.fn().mockReturnValue(false);
     vi.stubGlobal('window', { confirm });
-    const remove = find('button', 'Excluir acesso');
+    const remove = find('button', 'Desativar');
     await (remove.props.onClick as () => Promise<void>)();
     expect(confirm).toHaveBeenCalledOnce();
     expect(removeMerchantMember).not.toHaveBeenCalled();
@@ -365,6 +365,24 @@ describe('CashFlow dashboard and interactions', () => {
       mock.state[3], 'loja.campinas'));
     expect(render().some(n => n.type === 'span' && n.props.children === 'cashflow.admin')).toBe(false);
     vi.unstubAllGlobals();
+  });
+
+  it('shows soft-deleted accounts as inactive and permits reactivation', async () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    mock.state[21] = { [mock.state[3] as string]: [
+      { username: 'cashflow.admin', role: 'ADMIN' },
+      { username: 'loja.campinas', role: 'INACTIVE' }
+    ] };
+    vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    const nodes = render();
+    expect(nodes.some(n => n.type === 'span' && n.props.children === 'Inativo')).toBe(true);
+    expect(nodes.some(n => n.type === 'button' && n.props.children === 'Reativar')).toBe(true);
+    expect(nodes.some(n => n.type === 'button' && n.props.children === 'Desativar')).toBe(false);
+    const activate = find('button', 'Reativar');
+    await (activate.props.onClick as () => Promise<void>)();
+    expect(updateMerchantMember).toHaveBeenCalledWith('access-token', mock.state[3],
+      'loja.campinas', 'OPERATOR');
   });
 
   it('renames a shop without replacing its merchant UUID or transactions', async () => {
