@@ -63,6 +63,12 @@
 
 **Implementação:** [Runbook da Trilha 08](trilha-08-local-acceptance.md), `.github/scripts/local_mvp_acceptance.py` e testes offline integrados à CI. **Execução real e aceite do MVP local permanecem pendentes** até coleta e revisão dos relatórios; o pipeline não inventa evidências nem realiza testes disruptivos.
 
+## Trilha 09 | Fechamento técnico e prontidão para aceite local
+
+**Pacote:** consolidar o status das nove trilhas e as pendências reais, reconciliar documentos com a ADR-006 (três bancos lógicos, Keycloak como fonte dos vínculos), criar relatório técnico de encerramento e backlog pós-MVP, sem provisionar Azure.
+
+**Implementação:** [Trilha 09, relatório de fechamento](trilha-09-mvp-closeout.md). Código e documentação integrados não equivalem a aceite funcional: a homologação real da Trilha 08 permanece **NOT RUN** enquanto não forem entregues o manifesto com 14 PASS e as evidências correspondentes. Uma inconsistência histórica na legenda do diagrama Deployment View precisa de renderização sincronizada e continua explicitamente pendente.
+
 ## Regra de trabalho
 
 - Criar **uma branch e um PR por trilha**, com testes e documentação juntos.
