@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { addMerchantOperator, listMerchantMembers, removeMerchantMember,
-  renameMerchant, updateMerchantMember } from '../../api/cashflow';
+import { listMerchantMembers } from '../../api/cashflow';
+import { executeMerchantMutation } from './merchantMutations';
+import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
 import { merchantRoleLabel } from './merchantPresentation';
 
@@ -11,8 +12,6 @@ type MerchantDirectoryProps = {
   onSelect: (merchantId: string) => void;
   onRefresh: () => Promise<void>;
 };
-
-type MerchantAction = 'add' | 'role' | 'remove' | 'restore' | 'rename';
 
 export function MerchantDirectory({ items, selectedId, token, onSelect, onRefresh }: MerchantDirectoryProps) {
   const [members, setMembers] = useState<Record<string, MerchantMember[] | null>>({});
@@ -57,22 +56,18 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
     setMessage('');
     setWorking(true);
     try {
+      const changed = await executeMerchantMutation({
+        action, token, merchantId: selectedId, merchantName: selected.name, account,
+        username, password, editedName, nextRole,
+        confirmDeactivate: message => window.confirm(message)
+      });
+      if (!changed) return;
       if (action === 'add') {
-        await addMerchantOperator(token, selectedId, username.trim(), password);
         setUsername('');
         setPassword('');
-      } else if (action === 'role' && account) {
-        await updateMerchantMember(token, selectedId, account, nextRole);
-        setEditingUsername('');
-      } else if (action === 'remove' && account) {
-        if (!window.confirm(`Desativar ${account} na loja ${selected.name}? Será possível reativar sem perder histórico.`)) return;
-        await removeMerchantMember(token, selectedId, account);
-      } else if (action === 'restore' && account) {
-        await updateMerchantMember(token, selectedId, account, 'OPERATOR');
-      } else if (action === 'rename') {
-        await renameMerchant(token, selectedId, editedName.trim());
-        setEditedName('');
       }
+      if (action === 'role') setEditingUsername('');
+      if (action === 'rename') setEditedName('');
       await onRefresh();
       setRevision(previous => previous + 1);
       setMessage(action === 'remove'
