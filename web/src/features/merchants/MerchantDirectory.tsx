@@ -137,7 +137,7 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
                           onClick={() => setEditingUsername('')}>Cancelar</button>
                       </> : <>
                         <button type="button" className="outline" disabled={working}
-                          onClick={() => { setEditingUsername(account.username); setNextRole(account.role); }}>
+                          onClick={() => { setEditingUsername(account.username); setNextRole(account.role === 'ADMIN' ? 'ADMIN' : 'OPERATOR'); }}>
                           Editar cargo
                         </button>
                         <button type="button" className="outline" disabled={working}
