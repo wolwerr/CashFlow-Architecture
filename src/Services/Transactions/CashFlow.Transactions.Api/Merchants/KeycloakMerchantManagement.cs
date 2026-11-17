@@ -108,6 +108,25 @@ public sealed class KeycloakMerchantManagement(
         return merchants.DistinctBy(x => x.Id).ToArray();
     }
 
+    public async Task<IReadOnlyList<MerchantMemberView>> ListMembersAsync(Guid merchantId, CancellationToken ct)
+    {
+        var merchant = await MerchantGroupAsync(merchantId, ct);
+        if (merchant is null) return [];
+        var roles = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
+        var members = new List<MerchantMemberView>();
+        foreach (var role in roles.Where(g => g.Name is "ADMIN" or "OPERATOR"))
+        {
+            // Keycloak is the source of truth for the actual accounts, not the role
+            // of the platform administrator querying the merchant directory.
+            using var response = await SendAsync(HttpMethod.Get,
+                $"groups/{role.Id}/members?first=0&max=100", null, ct);
+            response.EnsureSuccessStatusCode();
+            var users = await response.Content.ReadFromJsonAsync<List<UserView>>(cancellationToken: ct) ?? [];
+            members.AddRange(users.Select(u => new MerchantMemberView(u.Username, role.Name)));
+        }
+        return members.Distinct().OrderBy(m => m.Role).ThenBy(m => m.Username).ToArray();
+    }
+
     public async Task<bool> IsAdminAsync(Guid userId, Guid merchantId, CancellationToken ct)
     {
         var groups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
@@ -196,5 +215,6 @@ public sealed class KeycloakMerchantManagement(
 }
 
 public sealed record MerchantView(Guid Id, string Name, string Role);
+public sealed record MerchantMemberView(string Username, string Role);
 
 public sealed class MerchantUsernameConflictException : Exception { }

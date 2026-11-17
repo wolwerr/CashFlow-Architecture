@@ -68,6 +68,19 @@ export function listMerchants(token: string): Promise<Merchant[]> {
   return call('/api/v1/merchants/', token);
 }
 
+export type MerchantMember = { username: string; role: 'ADMIN' | 'OPERATOR' };
+
+export function listMerchantMembers(token: string, merchantId: string): Promise<MerchantMember[]> {
+  // The request target is a constant same-origin path. Never interpolate a
+  // merchant identifier into a fetch URL: carry it as validated request data.
+  if (!validMerchant(merchantId)) {
+    return Promise.reject(new ApiError(400, 'Identificador de comerciante inválido.'));
+  }
+  return call('/api/v1/merchants/members', token, {
+    headers: { 'X-Merchant-ID': merchantId }
+  });
+}
+
 export function merchantPermissions(token: string): Promise<{can_manage_merchants: boolean}> {
   return call('/api/v1/merchants/permissions', token);
 }
