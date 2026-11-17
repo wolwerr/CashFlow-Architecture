@@ -22,6 +22,15 @@ Pré-condições: executar **na raiz do repositório** com Docker Compose aponta
 5. **Backup:** executar o [verificador de backup/restauração PostgreSQL](local-postgres-backup-verification.md) apenas na instância local descartável; conferir registros e saldos restaurados sem sobrescrever a base original.
 6. **Carga e projeção:** executar o [probe de carga](local-hardening-load.md), no máximo 50 RPS/5 min, e o [medidor de projeção](local-slo-observability.md), com no mínimo 20 amostras, em cenário isolado e explicitamente autorizado. Não executar carga/POST em CI ou contra dados de usuário.
 
+## Ajustes adicionais de gestão de comerciantes
+
+- A tabela agrupa visualmente os usuários de uma mesma loja por célula `rowSpan`. A seleção representa **a loja inteira**, enquanto cada linha mantém ações independentes de usuário. Não são três comerciantes diferentes quando três usernames aparecem sob `Teste`.
+- A coluna **Status** apresenta `Ativo` para ADMIN/OPERATOR e `Inativo` para INACTIVE, mantendo a coluna Cargo separada.
+- Mensagens de atualização de usuário aparecem na mesma linha da ação. Mensagens gerais aparecem junto ao cabeçalho da listagem, não depois dos formulários.
+- A edição de username depende da configuração do realm Keycloak. Para **novos ambientes descartáveis**, o import `infra/local/keycloak/cashflow-realm.json` define `editUsernameAllowed=true`. Para um **realm local já inicializado**, alterar manualmente no console administrativo: `Realm settings > Login > Edit username` (a posição pode mudar conforme a versão). Salvar e repetir a edição. **Não remover volumes e não importar novamente sobrescrevendo identidades.**
+- A API distingue o retorno HTTP 400 do Keycloak durante alteração de username como conflito de configuração (`409` com mensagem orientativa). Outros erros, inclusive ausência de permissão do service account e indisponibilidade, ainda precisam de análise pelos logs do container `transactions`, sem expor credenciais.
+- O registro `Teste5` do print é uma **loja diferente**, enquanto `teste`, `teste3` e `teste4` são usuários da loja `Teste`. O banco financeiro PostgreSQL **não** é a fonte desses cadastros, que estão nos grupos e usuários do Keycloak. Nenhuma exclusão automática é feita, para não quebrar vínculos ou histórico. Conferir UUID, vínculos e existência de transações antes de planejar qualquer limpeza de dados descartáveis.
+
 ## Critérios a comprovar
 
 | Dimensão | Critério | Evidência necessária |
