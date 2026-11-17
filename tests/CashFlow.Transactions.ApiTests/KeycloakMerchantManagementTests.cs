@@ -283,6 +283,30 @@ public sealed class KeycloakMerchantManagementTests
     }
 
     [Fact]
+    public async Task FailedAssignmentNeverDeletesExistingRealmUser()
+    {
+        var fake = new FakeHandler(req => TokenOr(req, request =>
+        {
+            var path = Path(request);
+            if (path.EndsWith("/users", StringComparison.Ordinal))
+                return JsonResponse(new[] { new { id = UserId.ToString("D"), username = "manager" } });
+            if (path == "/admin/realms/cashflow/groups") return JsonResponse(new[] { Root() });
+            if (path.EndsWith("/groups/root-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Merchant() });
+            if (path.EndsWith("/groups/merchant-group-id/children", StringComparison.Ordinal))
+                return JsonResponse(new[] { Admin(), Operator() });
+            if (request.Method == HttpMethod.Put &&
+                path.EndsWith($"/users/{UserId:D}/groups/admin-id", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            Create(fake).AddAdminAsync(MerchantId, "manager", null, CancellationToken.None));
+        Assert.DoesNotContain(fake.Calls, call => call.Method == "DELETE" &&
+            call.Path.EndsWith($"/users/{UserId:D}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task BootstrapAdministratorCannotBeRemovedOrDemoted()
     {
         var fake = new FakeHandler(_ => throw new InvalidOperationException("Should not call Keycloak."));
