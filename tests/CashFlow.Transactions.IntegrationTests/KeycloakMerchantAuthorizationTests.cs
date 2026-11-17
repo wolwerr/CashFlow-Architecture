@@ -80,6 +80,43 @@ public sealed class KeycloakMerchantAuthorizationTests
         Assert.Equal(1, tokens); // Service credential cache only, not permissions.
     }
 
+    [Theory]
+    [InlineData("ADMIN", "INACTIVE")]
+    [InlineData("OPERATOR", "INACTIVE")]
+    [InlineData("ADMIN", "OPERATOR")]
+    public async Task ConflictingMerchantRolesNeverGrantFinancialAccess(string first, string second)
+    {
+        var merchant = Guid.NewGuid();
+        var gateway = Create(req => req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal)
+            ? Json("{\\\"access_token\\\":\\\"service-token\\\",\\\"expires_in\\\":300}")
+            : Json($@"[{{""path"":""/merchants/{merchant:D}/{first}""}},
+                      {{""path"":""/merchants/{merchant:D}/{second}""}}]"));
+        Assert.False(await gateway.CanCreateAsync(Guid.NewGuid(), merchant, default));
+    }
+
+    [Fact]
+    public async Task InactiveGroupOnLaterPageOverridesEarlierActiveRole()
+    {
+        var merchant = Guid.NewGuid();
+        var pages = 0;
+        var gateway = Create(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/token", StringComparison.Ordinal))
+                return Json("{\\\"access_token\\\":\\\"service-token\\\",\\\"expires_in\\\":300}");
+            pages++;
+            if (pages == 1)
+            {
+                var groups = Enumerable.Range(0, 99)
+                    .Select(index => $@"{{""path"":""/unrelated/{index}""}}")
+                    .Prepend($@"{{""path"":""/merchants/{merchant:D}/OPERATOR""}}");
+                return Json("[" + string.Join(",", groups) + "]");
+            }
+            return Json($@"[{{""path"":""/merchants/{merchant:D}/INACTIVE""}}]");
+        });
+        Assert.False(await gateway.CanCreateAsync(Guid.NewGuid(), merchant, default));
+        Assert.Equal(2, pages);
+    }
+
     [Fact]
     public async Task KeycloakUnavailableFailsClosed()
     {
