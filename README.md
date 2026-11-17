@@ -378,6 +378,24 @@ Para verificar apenas os containers e filas, execute o diagnóstico abaixo. O re
 python .github/scripts/local_operational_snapshot.py --execute
 ```
 
+**Teste ponta a ponta de resiliência financeira (LOCAL, opt-in):** o script `.github/scripts/local_resilience_e2e.py` combina uma interrupção real do container Consolidation com um registro financeiro autenticado em Transactions e a verificação da projeção após a restauração. **Ele grava um crédito real de R$ 1,00, permanente no histórico financeiro**, portanto use apenas uma loja de testes descartável, nunca dados reais/produção. O teste exige um JWT válido para esse comerciante, definido somente na variável local `CASHFLOW_RESILIENCE_TOKEN`. Não cole o token em issues, prints ou commits. A execução não usa Azure.
+
+Na raiz do repositório, em PowerShell, substitua o UUID pelo de um **comerciante de teste já cadastrado** e a data por hoje ou outra data válida:
+
+```powershell
+# Visualização segura: não exige token, não altera containers nem banco.
+python .github/scripts/local_resilience_e2e.py --merchant-id "UUID-DO-COMERCIANTE-DE-TESTE" --date "2026-11-17"
+
+# Na mesma janela PowerShell, configure o JWT do usuário autorizado de teste sem salvá-lo no histórico:
+$env:CASHFLOW_RESILIENCE_TOKEN = Read-Host "Cole o JWT do usuário de teste"
+python .github/scripts/local_resilience_e2e.py --merchant-id "UUID-DO-COMERCIANTE-DE-TESTE" --date "2026-11-17" --outage-seconds 15 --recovery-timeout 90 --execute
+Remove-Item Env:CASHFLOW_RESILIENCE_TOKEN
+```
+
+A execução confirma (1) membership e saldo antes da interrupção, (2) Consolidation realmente parado, (3) HTTP `201` em Transactions durante a falha, (4) restauração no bloco `finally`, (5) uma única transação no histórico, e (6) incremento exato de R$ 1,00 no saldo após a recuperação. O relatório local é salvo em `reports/resilience-local.json`, sem token ou IDs; execute **apenas no projeto Compose local**. O status `PASS` só é emitido após essas verificações. Este teste não substitui o teste de carga nem prova disponibilidade contínua por períodos maiores.
+
+**Evidência local relatada em 17/11/2026 (UTC 14:55:28):** execução com `--execute` retornou código `0` e `outcome: PASS`. O relatório exibido confirmou saldo inicial consultado, Consolidation parado durante um `POST` que retornou HTTP `201`, restauração do container, unicidade da transação no histórico e incremento exato do saldo. Janela solicitada: 15 segundos. Trata-se de resultado observado e fornecido pelo executor local, **não de um teste destrutivo realizado pela CI**; o JSON original permanece no ambiente local em `reports/resilience-local.json`.
+
 **Resiliência e carga:** o desafio impõe que uma falha apenas de Consolidation **não indisponibilize** o registro em Transactions e que o consolidado suporte **50 requisições/segundo com até 5% sem resposta útil**. Para testar esses requisitos, consulte:
 
 - Simulação de falha de Consolidation e recuperação do RabbitMQ: scripts `.github/scripts/local_recovery_drill.py` (somente com `--execute` e dados locais descartáveis).
