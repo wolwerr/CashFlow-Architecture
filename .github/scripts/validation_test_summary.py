@@ -26,6 +26,7 @@ SUITES = (
     ("Projection SLO", "test_local_projection_slo.py"),
     ("Audit inventory", "test_local_audit_inventory.py"),
     ("Sonar severity policy", "test_sonar_severity_gate.py"),
+    ("Coverage evidence summary", "test_ci_coverage_summary.py"),
     ("Validation summary report", "test_validation_test_summary.py"),
 )
 
