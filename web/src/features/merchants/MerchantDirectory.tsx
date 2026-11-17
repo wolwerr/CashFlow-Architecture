@@ -109,17 +109,22 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
           <tbody>
             {merchantDirectoryRows(items, members).map(({ merchant: item, member: account, first, span, loading, unavailable }) =>
               <tr key={item.id + ':' + (account?.username ?? 'empty')}>
-                {first && <td rowSpan={span}>{item.name}</td>}
+                {first && <td rowSpan={span}>
+                  <div className="merchant-row-actions">
+                    <strong>{item.name}</strong>
+                    <button type="button" className="outline"
+                      aria-label={`Selecionar loja ${item.name}`}
+                      disabled={item.id === selectedId || working}
+                      onClick={() => { onSelect(item.id); setError(''); setMessage(''); setFeedbackAccount(''); setEditingAccount(''); setEditingUsername(''); setActiveTool(null); }}>
+                      {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
+                    </button>
+                  </div>
+                </td>}
                 <td>{account?.username ?? (loading ? 'Carregando usuários...' :
                   unavailable ? 'Indisponível' : 'Sem usuário da loja')}</td>
                 <td>{account ? (account.role === 'ADMIN' ? 'ADMIN' : 'Comerciante') : '-'}</td>
                 <td>{account ? (account.role === 'INACTIVE' ? 'Inativo' : 'Ativo') : '-'}</td>
                 <td><div className="merchant-row-actions">
-                  {first && <button type="button" className="outline"
-                    disabled={item.id === selectedId || working}
-                    onClick={() => { onSelect(item.id); setError(''); setMessage(''); setFeedbackAccount(''); setEditingAccount(''); setEditingUsername(''); setActiveTool(null); }}>
-                    {item.id === selectedId ? 'Selecionado' : 'Selecionar'}
-                  </button>}
                   {item.id === selectedId && account && <MerchantMemberActions
                     account={account} working={working} editingAccount={editingAccount}
                     editingUsername={editingUsername} newUsername={newUsername} nextRole={nextRole}
@@ -160,14 +165,16 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
         <label>Usuário
           <input aria-label="Novo usuário da loja" value={username} maxLength={64}
             autoComplete="off" onChange={event => setUsername(event.target.value)} />
-          <small className="muted">De 3 a 64 caracteres, começando por uma letra. Sem espaços; use letras, números, ponto, hífen ou _.</small>
+          {username && !validMerchantUsername(username) &&
+            <small role="alert">Nome de usuário inválido. Use 3 a 64 caracteres, começando por uma letra, sem espaços. Permitidos: letras, números, ponto, hífen e _.</small>}
+          <small className="muted">Ex.: teste3 ou loja.a. Sem espaços; 3 a 64 caracteres, começando por uma letra.</small>
         </label>
         <label>Senha inicial
           <input aria-label="Senha do novo usuário" type="password" value={password}
             minLength={12} maxLength={128} autoComplete="new-password"
             onChange={event => setPassword(event.target.value)} />
         </label>
-        <button type="submit" disabled={working || !validMerchantUsername(username.trim()) || password.length < 12 || password.length > 128}>
+        <button type="submit" disabled={working || !validMerchantUsername(username) || password.length < 12 || password.length > 128}>
           Adicionar usuário
         </button>
       </form>}
