@@ -137,11 +137,7 @@ A importação automática de `infra/local/keycloak/cashflow-realm.json` cria o 
 
 **Importante:** existem duas contas diferentes: `admin` no realm `master` (administra Keycloak) e `cashflow.admin` no realm `cashflow` (usuário da aplicação com bootstrap local). A senha da primeira vem do `.env`; a segunda é criada nesta etapa e fica armazenada no Keycloak.
 
-**B. Configurar o cliente de autorização (`cashflow-authorization-service`), somente leitura.**
-
-Esse cliente é usado pelas APIs **Transactions** e **Consolidation** para consultar o vínculo atual entre usuário, comerciante e grupo no Keycloak. Ele **não** deve receber permissões para criar, alterar ou excluir usuários.
-
-**B.1. Abrir o cliente e copiar seu secret**
+**B. Abrir o cliente e copiar seu secret**
 
 1. Confirme que o realm selecionado no Keycloak é **cashflow**.
 2. No menu esquerdo, abra **Clients** e clique em **cashflow-authorization-service**. O cliente já deve existir após a importação do realm; não crie outro.
