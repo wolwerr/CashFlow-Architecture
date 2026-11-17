@@ -29,9 +29,9 @@ SUITES = (
     ("Validation summary report", "test_validation_test_summary.py"),
 )
 
-RUN_RE = re.compile(r"Ran (\\d+) tests? in ([0-9.]+)s")
-FAIL_RE = re.compile(r"(failures|errors|skipped)=(\\d+)")
-SKIP_OK_RE = re.compile(r"OK \\(skipped=(\\d+)\\)")
+RUN_RE = re.compile(r"Ran (\d+) tests? in ([0-9.]+)s")
+FAIL_RE = re.compile(r"(failures|errors|skipped)=(\d+)")
+SKIP_OK_RE = re.compile(r"OK \(skipped=(\d+)\)")
 SUITE_TIMEOUT = 120
 
 
@@ -68,11 +68,11 @@ def one_suite(label, filename, runner=subprocess.run):
         skipped = int(skip_ok.group(1))
     failures = count.get("failures", 0) + count.get("errors", 0)
     # A suite is successful only when unittest explicitly prints OK and exits 0.
-    succeeded = execution.returncode == 0 and re.search(r"(?m)^OK(?: \\(skipped=\\d+\\))?\\s*$", final)
+    succeeded = execution.returncode == 0 and re.search(r"(?m)^OK(?: \(skipped=\d+\))?\s*$", final)
     status = "PASS" if succeeded else "FAIL"
     if not succeeded:
         # Offline test traceback stays in CI logs, not the sanitized summary artifact.
-        print(f"Validation failure in {filename}:\\n{execution.stderr[-10000:]}",
+        print(f"Validation failure in {filename}:\n{execution.stderr[-10000:]}",
               file=sys.stderr)
     return dict(label=label, status=status, total=total,
                 passed=max(0, total-failures-skipped), failed=failures,
