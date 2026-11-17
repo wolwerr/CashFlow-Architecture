@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCashFlowTelemetry("cashflow-transactions");
 builder.Services.AddHealthChecks();
-builder.Services.AddCashFlowSwagger(builder.Environment, "CashFlow Transactions API");
+builder.Services.AddCashFlowSwagger(builder.Environment, builder.Configuration, "CashFlow Transactions API");
 builder.Services.AddCashFlowAuthentication(builder.Configuration, builder.Environment);
 
 var authz = builder.Configuration.GetSection(KeycloakAuthorizationSettings.SectionName)
