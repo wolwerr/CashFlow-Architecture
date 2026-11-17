@@ -73,6 +73,14 @@ public sealed class KeycloakMerchantManagement(
         var createPath = parent is null ? "groups" : $"groups/{parent.Id}/children";
         using var response = await SendAsync(HttpMethod.Post, createPath,
             new { name }, ct);
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            // A competing request may have created the exact same group.
+            // Accept only the group read back at its expected hierarchical path.
+            var winner = (await GroupsAsync(listPath, ct))
+                .FirstOrDefault(g => g.Name == name && g.Path == expectedPath);
+            return winner ?? throw new HttpRequestException("Group conflict without an identifiable winner.");
+        }
         if (response.StatusCode != HttpStatusCode.Created)
             response.EnsureSuccessStatusCode();
         // A subsequent read is intentionally authoritative: never infer a Keycloak group ID.
@@ -212,9 +220,14 @@ public sealed class KeycloakMerchantManagement(
         if (merchant is null) return null;
         var roleGroups = await GroupsAsync($"groups/{merchant.Id}/children?max=100", ct);
         var linkedGroups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
-        var role = roleGroups.FirstOrDefault(g => (g.Name is "ADMIN" or "OPERATOR" or "INACTIVE") &&
-            linkedGroups.Any(link => link.Id == g.Id));
-        return role is null ? null : (userId, role);
+        // Never guess a role when Keycloak exposes overlapping memberships.
+        // A partial role transition must fail closed until repaired.
+        var activeRoles = roleGroups.Where(g =>
+            (g.Name is "ADMIN" or "OPERATOR" or "INACTIVE") &&
+            linkedGroups.Any(link => link.Id == g.Id)).ToArray();
+        if (activeRoles.Length > 1)
+            throw new HttpRequestException("Conflicting merchant memberships require reconciliation.");
+        return activeRoles.Length == 0 ? null : (userId, activeRoles[0]);
     }
 
     private async Task UnassignAsync(Guid userId, string groupId, CancellationToken ct)
@@ -292,6 +305,8 @@ public sealed class KeycloakMerchantManagement(
                     temporary = role == "ADMIN"
                 } }
             }, ct);
+            if (created.StatusCode == HttpStatusCode.Conflict)
+                throw new MerchantUsernameConflictException();
             created.EnsureSuccessStatusCode();
             users = await UsersAsync(username, ct);
         }
