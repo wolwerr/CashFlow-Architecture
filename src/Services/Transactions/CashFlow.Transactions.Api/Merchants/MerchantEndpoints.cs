@@ -15,6 +15,7 @@ public static class MerchantEndpoints
         routes.MapGet("/members", MembersAsync);
         routes.MapPost("/members", AddOperatorAsync);
         routes.MapPut("/members", UpdateMemberAsync);
+        routes.MapPut("/members/username", RenameMemberAsync);
         routes.MapDelete("/members", DeleteMemberAsync);
         routes.MapPut("/details", RenameAsync);
         routes.MapPost("/", CreateAsync);
@@ -122,6 +123,32 @@ public static class MerchantEndpoints
         catch (HttpRequestException) { return Results.Problem(statusCode: 503); }
     }
 
+    private static async Task<IResult> RenameMemberAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
+        RenameMerchantMemberRequest? request, HttpContext context, KeycloakMerchantManagement management,
+        IOptions<KeycloakManagementSettings> settings, CancellationToken ct)
+    {
+        if (Actor(context) == Guid.Empty) return Results.Unauthorized();
+        if (merchantId == Guid.Empty || !ValidUsername(request?.Username) ||
+            !ValidUsername(request?.NewUsername)) return Results.BadRequest();
+        try
+        {
+            if (!await management.IsAdminAsync(Actor(context), merchantId, ct))
+                return Results.Forbid();
+            return await management.RenameMemberAsync(merchantId, request!.Username!,
+                request.NewUsername!, settings.Value.BootstrapUsername, ct)
+                ? Results.NoContent() : Results.NotFound();
+        }
+        catch (MerchantProtectedAccountException)
+        {
+            return Results.Conflict(new { title = "Bootstrap account is protected." });
+        }
+        catch (MerchantUsernameConflictException)
+        {
+            return Results.Conflict(new { title = "Username already exists." });
+        }
+        catch (HttpRequestException) { return Results.Problem(statusCode: 503); }
+    }
+
     private static async Task<IResult> DeleteMemberAsync([FromHeader(Name = "X-Merchant-ID")] Guid merchantId,
         [FromBody] RemoveMerchantMemberRequest? request, HttpContext context, KeycloakMerchantManagement management,
         IOptions<KeycloakManagementSettings> settings, CancellationToken ct)
@@ -208,3 +235,4 @@ public sealed record RenameMerchantRequest(string Name);
 public sealed record NewMerchantMemberRequest(string? Username, string? Password);
 public sealed record ChangeMerchantMemberRequest(string? Username, string? Role);
 public sealed record RemoveMerchantMemberRequest(string? Username);
+public sealed record RenameMerchantMemberRequest(string? Username, string? NewUsername);
