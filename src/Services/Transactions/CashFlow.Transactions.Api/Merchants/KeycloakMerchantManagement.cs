@@ -113,7 +113,10 @@ public sealed class KeycloakMerchantManagement(
             var name = merchantGroup.Attributes?.GetValueOrDefault("displayName")?.FirstOrDefault();
             merchants.Add(new MerchantView(id, name ?? id.ToString("D"), parts[2]));
         }
-        return merchants.DistinctBy(x => x.Id).ToArray();
+        // Conflicting role-group snapshots cannot grant access through the directory.
+        return merchants.GroupBy(x => x.Id)
+            .Where(group => group.Select(member => member.Role).Distinct().Count() == 1)
+            .Select(group => group.First()).ToArray();
     }
 
     public async Task<IReadOnlyList<MerchantMemberView>> ListMembersAsync(Guid merchantId, CancellationToken ct)
@@ -240,7 +243,12 @@ public sealed class KeycloakMerchantManagement(
     public async Task<bool> IsAdminAsync(Guid userId, Guid merchantId, CancellationToken ct)
     {
         var groups = await GroupsAsync($"users/{userId:D}/groups?max=1000", ct);
-        return groups.Any(g => g.Path == $"/merchants/{merchantId:D}/ADMIN");
+        var prefix = $"/merchants/{merchantId:D}/";
+        var currentRoles = groups.Where(g => g.Path is not null &&
+            g.Path.StartsWith(prefix, StringComparison.Ordinal) &&
+            (g.Path == prefix + "ADMIN" || g.Path == prefix + "OPERATOR" ||
+             g.Path == prefix + "INACTIVE")).Select(g => g.Path).Distinct().ToArray();
+        return currentRoles.Length == 1 && currentRoles[0] == prefix + "ADMIN";
     }
 
     public async Task<MerchantView> CreateAsync(string name, Guid ownerId, CancellationToken ct)
