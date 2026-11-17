@@ -308,12 +308,28 @@ describe('CashFlow dashboard and interactions', () => {
     expect(mock.state[21]).toEqual({});
   });
 
+  it('hides optional shop management forms until an explicit action is selected', () => {
+    setupSignedIn();
+    mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
+    let nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo usuário da loja')).toBe(false);
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo nome da loja')).toBe(false);
+    (find('button', 'Adicionar usuário à loja').props.onClick as () => void)();
+    nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo usuário da loja')).toBe(true);
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo nome da loja')).toBe(false);
+    (find('button', 'Cancelar novo usuário').props.onClick as () => void)();
+    nodes = render();
+    expect(nodes.some(n => n.props['aria-label'] === 'Novo usuário da loja')).toBe(false);
+  });
+
   it('adds an operator to an existing selected shop without creating another merchant', async () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
     mock.state[28] = 'novo.operador';
     mock.state[29] = 'senha-operador-nova';
     vi.mocked(listMerchants).mockResolvedValue(mock.state[12] as never);
+    (find('button', 'Adicionar usuário à loja').props.onClick as () => void)();
     const form = render().filter(n => n.type === 'form')
       .find(n => walk(n).some(child => child.props['aria-label'] === 'Novo usuário da loja'))!;
     await (form.props.onSubmit as (e: unknown) => Promise<void>)({ preventDefault: vi.fn() });
@@ -426,6 +442,7 @@ describe('CashFlow dashboard and interactions', () => {
     setupSignedIn();
     mock.state[12] = [{ id: mock.state[3], name: 'Loja Campinas', role: 'ADMIN' }];
     mock.state[30] = 'Loja Campinas Atualizada';
+    (find('button', 'Alterar nome da loja').props.onClick as () => void)();
     vi.mocked(listMerchants).mockResolvedValue([
       { id: mock.state[3] as string, name: 'Loja Campinas Atualizada', role: 'ADMIN' }
     ]);
