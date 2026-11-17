@@ -1,5 +1,4 @@
 """Offline tests for deterministic coverage summaries, no build or network."""
-import contextlib
 from pathlib import Path
 import tempfile
 import unittest
@@ -24,8 +23,8 @@ class CoverageSummaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             report = Path(directory) / "lcov.info"
             report.write_text(
-                "SF:a.ts\\nLF:20\\nLH:17\\nend_of_record\\n"
-                "SF:b.ts\\nLF:10\\nLH:8\\nend_of_record\\n",
+                "SF:a.ts\nLF:20\nLH:17\nend_of_record\n"
+                "SF:b.ts\nLF:10\nLH:8\nend_of_record\n",
                 encoding="utf-8")
             self.assertEqual((25, 30), coverage.parse_lcov(report))
 
