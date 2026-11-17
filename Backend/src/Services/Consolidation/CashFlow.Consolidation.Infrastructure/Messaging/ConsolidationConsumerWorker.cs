@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using CashFlow.Consolidation.Application.UseCases.ProcessTransaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +18,8 @@ public sealed class ConsolidationConsumerWorker(
     IServiceScopeFactory scopes, IOptions<RabbitMqConsumerSettings> config,
     ILogger<ConsolidationConsumerWorker> logger) : BackgroundService
 {
+    private static readonly ActivitySource Traces = new("CashFlow.Consolidation.Consumer");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var settings = config.Value;
@@ -60,6 +64,25 @@ public sealed class ConsolidationConsumerWorker(
                 var consumer = new AsyncEventingBasicConsumer(channel);
                 consumer.ReceivedAsync += async (_, delivery) =>
                 {
+                    string? parentId = null;
+                    if (delivery.BasicProperties.Headers?.TryGetValue("traceparent", out var header) == true)
+                    {
+                        parentId = header switch
+                        {
+                            byte[] bytes => Encoding.UTF8.GetString(bytes),
+                            ReadOnlyMemory<byte> memory => Encoding.UTF8.GetString(memory.Span),
+                            string value => value,
+                            _ => null
+                        };
+                    }
+                    // RabbitMQ delivery headers are untrusted. Invalid traceparent values
+                    // simply create a new root span rather than changing authorization.
+                    if (parentId is not null && !ActivityContext.TryParse(parentId, null, out _))
+                        parentId = null;
+                    using var activity = Traces.StartActivity(
+                        "rabbitmq consume transaction.recorded", ActivityKind.Consumer, parentId);
+                    activity?.SetTag("messaging.system", "rabbitmq");
+                    activity?.SetTag("messaging.destination.name", settings.Queue);
                     var body = delivery.Body.ToArray();
                     TransactionRecorded message;
                     try
