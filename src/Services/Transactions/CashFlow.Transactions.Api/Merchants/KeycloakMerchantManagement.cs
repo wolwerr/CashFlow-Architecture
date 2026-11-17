@@ -171,6 +171,15 @@ public sealed class KeycloakMerchantManagement(
         if (member is null) return false;
         if (string.Equals(username, nextUsername, StringComparison.Ordinal))
             return true;
+        // A merchant administrator may not rename a shared account used by
+        // another merchant: username is realm-global, not merchant-scoped.
+        var assignedGroups = await GroupsAsync(
+            $"users/{member.Value.UserId:D}/groups?max=1000", ct);
+        var ownPrefix = $"/merchants/{merchantId:D}/";
+        if (assignedGroups.Any(group => group.Path is not null &&
+            group.Path.StartsWith("/merchants/", StringComparison.Ordinal) &&
+            !group.Path.StartsWith(ownPrefix, StringComparison.Ordinal)))
+            throw new MerchantProtectedAccountException();
         if ((await UsersAsync(nextUsername, ct)).Count > 0)
             throw new MerchantUsernameConflictException();
 
