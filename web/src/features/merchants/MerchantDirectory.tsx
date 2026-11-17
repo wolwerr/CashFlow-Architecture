@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { listMerchantMembers } from '../../api/cashflow';
+import { listMerchantMembers, validMerchantUsername } from '../../api/cashflow';
 import { executeMerchantMutation } from './merchantMutations';
 import type { MerchantAction } from './merchantMutations';
 import type { Merchant, MerchantMember } from '../../api/cashflow';
@@ -160,13 +160,14 @@ export function MerchantDirectory({ items, selectedId, token, onSelect, onRefres
         <label>Usuário
           <input aria-label="Novo usuário da loja" value={username} maxLength={64}
             autoComplete="off" onChange={event => setUsername(event.target.value)} />
+          <small className="muted">De 3 a 64 caracteres, começando por uma letra. Sem espaços; use letras, números, ponto, hífen ou _.</small>
         </label>
         <label>Senha inicial
           <input aria-label="Senha do novo usuário" type="password" value={password}
             minLength={12} maxLength={128} autoComplete="new-password"
             onChange={event => setPassword(event.target.value)} />
         </label>
-        <button type="submit" disabled={working || username.trim().length < 3 || password.length < 12}>
+        <button type="submit" disabled={working || !validMerchantUsername(username.trim()) || password.length < 12 || password.length > 128}>
           Adicionar usuário
         </button>
       </form>}
