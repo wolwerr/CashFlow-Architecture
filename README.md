@@ -7,6 +7,8 @@ Aplicação de fluxo de caixa multicomerciante: registro de **créditos e débit
 > **Ambiente desta entrega:** Docker Compose em máquina local. A arquitetura Azure AKS é **plano futuro**, não infraestrutura provisionada. O Compose inclui os seis serviços principais e cinco serviços de observabilidade. O teste funcional de observabilidade foi confirmado pelo operador localmente, sem SHA contemporâneo registrado.
 
 
+**Documentação interativa das APIs (Swagger UI, ambiente local):** [Transactions](http://localhost:8080/swagger/transactions/) · [Consolidation](http://localhost:8080/swagger/consolidation/). Ambas permitem autenticação automática no Keycloak pelo botão **Authorize → KeycloakOAuth2**, usando Authorization Code + PKCE, sem copiar JWT. Disponíveis após iniciar o Docker Compose em Development. [Veja como testar](#documentação-interativa-das-apis-swagger-ui).
+
 ## Índice
 
 - [Entrega para avaliação](#entrega-para-avaliação)
@@ -177,6 +179,8 @@ Neste estágio, **somente** `postgres`, `rabbitmq` e `keycloak` precisam estar a
 | PostgreSQL | localhost:5432 | Sim; usuário `cashflow` e senha `POSTGRES_PASSWORD` |
 | CashFlow/NGINX | http://localhost:8080 | **Ainda não**, só depois da etapa 7 |
 | Grafana | [http://localhost:3000](http://localhost:3000) | **Ainda não**; após a etapa 7 e inicialização do Compose completo, login `admin` com `CASHFLOW_GRAFANA_PASSWORD` |
+| Swagger UI Transactions | [http://localhost:8080/swagger/transactions/](http://localhost:8080/swagger/transactions/) | **Ainda não**; após a etapa 7 e Compose completo, somente em Development |
+| Swagger UI Consolidation | [http://localhost:8080/swagger/consolidation/](http://localhost:8080/swagger/consolidation/) | **Ainda não**; após a etapa 7 e Compose completo, somente em Development |
 
 ## 7. Bootstrap obrigatório no Keycloak, ambiente zerado
 
@@ -322,6 +326,18 @@ Para configurar o Keycloak do zero e diagnosticar falhas de permissões, siga as
 5. Conferir competência anterior e dia sem lançamentos, histórico paginado, bloqueio de data futura, valor zero/negativo, autorização e idempotência. Não refazer POST por atraso do saldo.
 
 Para homologar, teste dois usuários de lojas diferentes, confirme o isolamento de dados e registre os resultados. Os requisitos estão na [matriz de atendimento](docs/requirements/challenge-compliance-matrix.md).
+
+### Documentação interativa das APIs, Swagger UI
+
+Com o ambiente completo iniciado após o bootstrap do Keycloak, abra **[Transactions Swagger](http://localhost:8080/swagger/transactions/)** ou **[Consolidation Swagger](http://localhost:8080/swagger/consolidation/)**. Cada UI usa um documento OpenAPI gerado **a partir dos endpoints reais da API .NET**. No botão **Authorize**, escolha **KeycloakOAuth2**, mantenha o escopo `openid` marcado e clique em **Authorize**. A tela de login do Keycloak será aberta; entre com seu usuário de teste do realm `cashflow`. Ao concluir, o Swagger recebe automaticamente o **access token** pelo fluxo **Authorization Code + PKCE (S256)** e envia o cabeçalho `Authorization: Bearer <token>` ao executar `Try it out`. **Não é necessário copiar o JWT nem informar senha ou client secret no Swagger.**
+
+O fluxo utiliza o cliente público `cashflow-spa` já configurado no Keycloak, com redirecionamento local para `/swagger/transactions/oauth2-redirect.html` ou `/swagger/consolidation/oauth2-redirect.html`. O cliente permite `http://localhost:8080/*` e origem `http://localhost:8080`; **ambas as UIs devem ser abertas por esse endereço exato**, evitando trocar por `127.0.0.1`. Se o realm existente foi personalizado, confirme no cliente `cashflow-spa` os redirect URIs e Web Origins; não é preciso apagar o volume do Keycloak. Para teste manual, a opção **Bearer** ainda aceita um access token sem o prefixo `Bearer`.
+
+**Verificação rápida:** clique em **Authorize**, faça login no Keycloak e execute `GET /api/v1/consolidation/daily` com um `merchant_id` do usuário autenticado e uma data. Um token válido sem vínculo com o comerciante continua recebendo **403**, pois OAuth2 autentica o usuário, mas não substitui as regras de autorização da API. O token é mantido somente no navegador durante a sessão Swagger, sem ser salvo no README ou no repositório.
+
+A interface é habilitada **apenas em `ASPNETCORE_ENVIRONMENT=Development`**. Como o NGINX está vinculado a `127.0.0.1:8080`, as URLs acima são acessíveis somente no computador local. Não exponha essas interfaces publicamente nem reutilize tokens reais em demonstrações. Os endpoints de escrita realmente gravam lançamentos financeiros e exigem um comerciante de testes. A autenticação e a autorização de comerciantes continuam sendo validadas pelas APIs e pelo Keycloak.
+
+O arquivo [`docs/architecture/contracts/cashflow-openapi.yaml`](docs/architecture/contracts/cashflow-openapi.yaml) permanece como **contrato arquitetural de referência (draft)**; não é carregado na UI, pois pode divergir de endpoints já implementados. Para consulta executável e atualizada dos endpoints, use os documentos gerados pelas APIs. Os testes automatizados verificam as rotas e a definição de segurança.
 
 ## 9. Testes automatizados e evidências do desafio
 
@@ -500,6 +516,7 @@ As versões abaixo foram conferidas nos arquivos de configuração do repositór
 | Backend e APIs REST | C# / ASP.NET Core / .NET | **10.0** (`net10.0`) | Projetos `Backend/**/*.csproj`; Docker SDK/runtime `10.0` |
 | ORM e driver PostgreSQL | EF Core via `Npgsql.EntityFrameworkCore.PostgreSQL` | **10.0.3** | Projetos Infrastructure |
 | Integração RabbitMQ | `RabbitMQ.Client` | **7.2.2** | Projetos Infrastructure |
+| Documentação das APIs | Swashbuckle.AspNetCore / Swagger UI e OpenAPI | **10.3.1** | `CashFlow.Security.csproj`; habilitado apenas em Development |
 | Autenticação JWT no backend | `Microsoft.AspNetCore.Authentication.JwtBearer` | **10.0.15** | Projeto `CashFlow.Security` |
 | Telemetria .NET | OpenTelemetry SDK, OTLP, ASP.NET Core e HTTP Instrumentation | **1.20.1** | Projeto `CashFlow.Security` |
 | Testes backend | xUnit / xUnit Runner | **2.9.3 / 3.1.5** | Projetos de testes .NET |

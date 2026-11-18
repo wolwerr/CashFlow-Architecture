@@ -83,6 +83,36 @@ public sealed class JwtAuthenticationTests : IDisposable
     }
 
     [Fact]
+    public async Task SwaggerDocumentsCurrentTransactionsEndpointsAndBearerSecurity()
+    {
+        using var client = _factory.CreateClient();
+        using var response = await client.GetAsync("/swagger/v1/swagger.json");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("/api/v1/transactions", body);
+        Assert.Contains("/api/v1/merchants", body);
+        Assert.Contains("\"Bearer\"", body);
+        Assert.Contains("\"security\"", body);
+        Assert.Contains("\"bearer\"", body);
+        Assert.Contains("\"KeycloakOAuth2\"", body);
+        Assert.Contains("\"authorizationCode\"", body);
+        Assert.Contains("http://localhost:8081/realms/cashflow/protocol/openid-connect/auth", body);
+        Assert.Contains("http://localhost:8081/realms/cashflow/protocol/openid-connect/token", body);
+        Assert.Contains("\"openid\"", body);
+    }
+
+    [Fact]
+    public async Task SwaggerUiIsAvailableInDevelopment()
+    {
+        using var client = _factory.CreateClient();
+        using var response = await client.GetAsync("/swagger/index.html");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("text/html", response.Content.Headers.ContentType?.MediaType);
+        using var redirect = await client.GetAsync("/swagger/oauth2-redirect.html");
+        Assert.Equal(HttpStatusCode.OK, redirect.StatusCode);
+    }
+
+    [Fact]
     public async Task HealthIsPublic()
     {
         using var client = _factory.CreateClient();
