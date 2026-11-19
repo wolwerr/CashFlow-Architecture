@@ -50,16 +50,6 @@ Falha antes do commit implica rollback e reentrega possível. Falha após commit
 - **RN-07 decidida:** valores de lançamento são `decimal` no código e `numeric(19,2)` no PostgreSQL, em BRL, estritamente positivos, com até duas casas decimais. Rejeitar precisão excessiva antes de gravar ou publicar, sem arredondamento silencioso. `CREDIT`/`DEBIT` determina o efeito contábil; totais líquidos podem ser negativos. **RN-04 decidida:** a competência vem da data informada pelo comerciante e o instante de criação é registrado em UTC.
 - Não criar uma segunda fonte de verdade no consumidor: o consolidado é uma projeção, não o livro de lançamentos.
 
-## Complemento do MVP, 15/11/2026
-
-- **Idempotência HTTP:** header `Idempotency-Key` obrigatório no registro; vincular comerciante/rota/chave e hash do payload a resultado estável, com persistência transacional. Reutilização da mesma chave com payload diferente deve produzir conflito. O prazo de retenção da chave e os detalhes de concorrência serão fechados no contrato/implementação.
-- **Eventos:** envelope JSON com `event_id`, `event_type`, `schema_version`, `correlation_id` e dados financeiros/competência, garantindo identificador estável sob reentregas.
-- **Falhas:** retentativas **limitadas** com backoff, DLQ, alerta e replay controlado. Configurações de contagem e intervalos ainda não foram determinadas; não ACK antes de persistência segura.
-- **Retenção:** Outbox e ProcessedEvent com políticas configuráveis, expurgo seguro e reconciliação; impedir perda da capacidade de deduplicar mensagens tardias.
-- **Frescor:** SLO aprovado de 95% dos registros refletidos em até 30 segundos em operação saudável, **a testar**.
-
-[Decisões consolidadas do MVP](../mvp-decisions.md).
-
 ## Semântica de garantias
 
 | Propriedade | O que é prometido |
