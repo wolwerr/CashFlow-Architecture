@@ -1,9 +1,5 @@
 # Registro de decisões arquiteturais (ADRs)
 
-> **Issue #7 · Milestone M2** | **Status:** decisões documentadas  
-> **Arquitetura-alvo:** [Building Block View](../building-block-view.md)  
-> **Requisitos:** [funcionais](../../requirements/functional-requirements.md) e [não funcionais](../../requirements/non-functional-requirements.md)
-
 ## Objetivo
 
 Justificar decisões do CashFlow com **contexto, alternativas, benefícios, riscos e consequências operacionais**. O desenho-alvo contempla cliente Web, Keycloak e proxy NGINX incluído no MVP; Gateway dedicado e BFF são evoluções futuras, mas o desafio exige principalmente dois serviços financeiros, registro independente do consolidado e processamento sob carga. Não confundir capacidades propostas com funcionalidades obrigatórias para o MVP.
