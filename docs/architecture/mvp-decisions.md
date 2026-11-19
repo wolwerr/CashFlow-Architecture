@@ -1,12 +1,5 @@
 # CashFlow | Decisões consolidadas do MVP
 
-> **Status:** 24 decisões aprovadas pelo responsável pelo projeto em 15/11/2026  
-> **Natureza:** premissas **adotadas pelo CashFlow**, não novas exigências do enunciado do desafio  
-> **Escopo:** complementar RN-02/03/04/07/09 e as ADR-001 a ADR-010 sem substituir a arquitetura aprovada  
-> **Evidência:** esta página é o registro de decisões; implementações e testes ainda precisam ser produzidos
-
-> **Leitura de estado (Trilha 09):** este documento é o registro histórico das decisões aprovadas. A frase original sobre implementações pendentes refere-se ao momento da decisão, não ao estado de código após as Trilhas 01–08. Para os critérios do desafio e as evidências ainda necessárias, consulte a [matriz de atendimento](../requirements/challenge-compliance-matrix.md) e o [README de execução local](../../README.md). A decisão vigente de autorização é **Keycloak Groups sem quarto banco lógico**, conforme ADR-006; referências antigas ao banco de autorização foram substituídas.
-
 ## Baseline já aprovado
 
 - **Tecnologia:** .NET 10 / C#, React SPA/TypeScript, PostgreSQL/EF Core, RabbitMQ, Keycloak/OIDC, NGINX como proxy, OpenTelemetry e GitHub Actions.
@@ -100,17 +93,13 @@ O Keycloak concentra identidade, vínculos por comerciante e papéis para o MVP.
 - `AuditEvent`: ação confirmada vinculada a transação e ator, append-only no aplicativo, retenção inicial de 365 dias.
 - Vínculos e papéis ADMIN/OPERATOR por comerciante: Keycloak Groups; sem banco lógico adicional de autorização no MVP. Identificadores de comerciantes usados nos serviços financeiros não conferem autorização por si sós.
 
-## Estratégia de execução, definida após as decisões\n\n**Fase atual: LOCAL exclusivamente.** Construir e testar React, NGINX, APIs .NET, bancos lógicos de Transactions, Consolidation e Keycloak no PostgreSQL, RabbitMQ, Keycloak e telemetria usando Docker Compose. A homologação inicial ocorrerá por testes locais com evidências registradas. **Não implantar Azure agora.** O cenário AKS DEV/HOM/PROD, custos, GitHub Environments para PROD e políticas cloud são planejamento futuro, não tarefas bloqueadoras do desenvolvimento local.\n\n## O que ainda requer especificação e implementação
+## Estratégia de execução, definida após as decisões
 
-Decisões aprovadas **não** significam contratos executáveis, schema físico, deploy, testes ou homologação. Ficam pendentes:
+**Fase atual: LOCAL exclusivamente.** 
+Construir e testar React, NGINX, APIs .NET, bancos lógicos de Transactions, Consolidation e Keycloak no PostgreSQL, RabbitMQ, Keycloak e telemetria usando Docker Compose. A homologação inicial ocorrerá por testes locais com evidências registradas. 
 
-1. **Contratos OpenAPI e eventos:** paths específicos de histórico, criação/consulta, `Location`, payloads, HTTP 400/401/403/409/422, JSON Schema, `schema_version`, esquema de erro e `Idempotency-Key`/retenção.
-2. **Autorização:** implementar integração segura com Keycloak Groups para ADMIN/OPERATOR por comerciante, provisionamento controlado, consulta de vínculo atual por operação, revogação, indisponibilidade fail closed e testes de isolamento; cache positivo somente se houver invalidação/revogação comprovada.
-3. **Dados:** migrations EF Core, modelos físicos, índices, constraints e consistência monetária; custo/índices para soma de totais na leitura sob 50 RPS; política de histórico e auditoria.
-4. **Mensageria:** filas/exchanges, flags durable/mandatory, confirmações e retornos, retry/backoff com limites específicos, DLQ, regras de expurgo seguro, reconciliação, manutenção de `ProcessedEvent`.
-5. **Qualidade:** executar teste de 50 RPS/5 min, sucesso ≥95%, p95 <500ms, 95% de atualização em 30 s; testes de falha do consolidado, rollback, duplicação, concorrência, replay e integração JWT.
-6. **Infra/entrega:** GitHub Environments com aprovação real, TLS/Ingress, rede egress, AKS/HPA/PDB/quorum, PostgreSQL HA, armazenamento persistente, backups e **restore documentado antes de PROD**.
-7. **Diagramas:** regenerar PNGs depois das alterações nas fontes PlantUML. Imagens antigas não demonstram a nova semântica até substituição.
+**Não implantar Azure agora.** 
+O cenário AKS DEV/HOM/PROD, custos, GitHub Environments para PROD e políticas cloud são planejamento futuro, não tarefas bloqueadoras do desenvolvimento local.
 
 **Escopo:** estorno é evolução futura. Auditoria de operações financeiras confirmadas, histórico paginado e multicomerciante entram no MVP por decisão do projeto.
 
