@@ -1,10 +1,5 @@
 # ADR-010: GitHub Actions para integração e entrega contínuas
 
-> **Status:** decidida  
-> **Data:** 2026-11-15  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-001](ADR-001-language-framework.md), [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-007](ADR-007-clients-api-gateway.md), [ADR-008](ADR-008-observability.md), [ADR-009](ADR-009-deployment-cloud.md)
-
 ## Contexto e problema
 
 O CashFlow mantém o **backlog (GitHub Issues)** e o **código (GitHub)** no mesmo repositório. A ADR-002 definiu **monorepo** com **Transactions** e **Consolidation** independentes, e a ADR-009 definiu LOCAL com Docker Compose, DEV/HOM em clusters AKS separados e econômicos, e PROD em AKS Standard com PostgreSQL gerenciado.
@@ -81,20 +76,6 @@ A estratégia detalhada de **testes, ferramentas de teste e meta de cobertura** 
 5. Deploy de PROD só ocorre com controles de autorização e aprovação definidos.
 6. Uma falha de build, testes exigidos ou deploy interrompe o pipeline e preserva evidências de diagnóstico.
 7. Existe procedimento documentado para reversão de versão, observando as limitações de migrations.
-
-## Complemento de governança, 15/11/2026
-
-O gate de produção via **GitHub Environments com aprovação manual** é obrigatório na arquitetura aprovada. Disponibilidade/configuração do recurso ainda não foram verificadas, portanto o deploy PROD permanece bloqueado até que o ambiente protegido funcione e seja testado. A liberação exige **backups automáticos e execução documentada de teste de restauração** dos dados críticos. [Decisões do MVP](../mvp-decisions.md).
-
-## Detalhes de implantação ainda pendentes
-
-- Definir os nomes concretos dos workflows, estrutura das pastas, gatilhos e filtros de dependências compartilhadas.
-- Selecionar scripts ou Helm/Kustomize/manifests para implantação no AKS e estratégia para migrations.
-- Configurar a federação OIDC entre GitHub e Microsoft Entra ID, permissões ACR/AKS e proteções do ambiente PROD.
-- Definir a política de branches, pull requests e aprovações em PROD.
-- Avaliar runners GitHub-hosted ou self-hosted, suas necessidades de rede e orçamento.
-- Configurar checks e suítes de testes de acordo com o plano de desenvolvimento. O objetivo de cobertura e testes de carga/resiliência **não foi decidido nesta ADR**.
-- Implementar os workflows e testar promoções/rollback. Esta ADR registra a escolha da ferramenta, não atesta execução.
 
 ## Referências
 
