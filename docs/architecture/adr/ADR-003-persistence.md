@@ -1,10 +1,5 @@
 # ADR-003: PostgreSQL e Entity Framework Core para persistência
 
-> **Status:** decidida  
-> **Data:** 2026-11-14  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-001](ADR-001-language-framework.md), [ADR-002](ADR-002-architecture-style-clean-architecture.md), ADR-005 (Outbox e consistência)
-
 ## Contexto e requisitos
 
 O CashFlow mantém lançamentos de crédito/débito, Outbox transacional, projeções de saldo diário e identificadores de eventos consumidos. O desafio requer que o registro continue quando o consolidado estiver indisponível (RNF-01) e que consultas ao consolidado suportem 50 RPS, com até 5% de perda de requisições conforme interpretação pendente (RNF-02/RNF-03).
