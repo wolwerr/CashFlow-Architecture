@@ -1,12 +1,5 @@
 # ADR-009: Implantação LOCAL e Azure AKS em DEV, HOM e PROD
 
-> **Status:** decidida  
-> **Data:** 2026-11-15  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Orçamento detalhado de referência:** [CashFlow | Orçamento Azure dos quatro ambientes](../four-environment-total-cost-plan.md)  
-> **Deployment View:** [Distribuição dos ambientes e portabilidade](../deployment-view.md)  
-> **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), [ADR-004](ADR-004-async-messaging.md), [ADR-005](ADR-005-outbox-consistency-idempotency.md), [ADR-006](ADR-006-identity-and-access.md), [ADR-007](ADR-007-clients-api-gateway.md), [ADR-008](ADR-008-observability.md)
-
 ## Contexto e problema
 
 O CashFlow deve registrar créditos/débitos sem depender da disponibilidade de Consolidation, disponibilizar consultas de saldos diários e suportar pico de 50 RPS na consulta, respeitando o requisito de perda a esclarecer. A arquitetura contempla dois serviços independentes em .NET 10, Transactions com Transactional Outbox, Consolidation com consumidor idempotente, RabbitMQ, PostgreSQL, Keycloak, frontend React + NGINX e OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana.
@@ -39,7 +32,9 @@ A decisão foi tomada após avaliar o **modelo de operação**, as dependências
 
 A escolha é de **arquitetura e orçamento-base**. Não significa que já exista implantação, que a HA tenha sido testada ou que os custos reais não possam variar.
 
-## Sequenciamento de execução decidido após a ADR\n\n**Fase atual do CashFlow: executar exclusivamente em LOCAL usando Docker Compose, sem provisionar Azure.** A decisão de usar AKS como alvo de implantação em DEV/HOM/PROD permanece registrada aqui, mas **essa implantação foi adiada para uma fase futura**. O dimensionamento e os custos citados abaixo são apenas estimativas de planejamento, não recursos ativos nem compromissos de gasto agora. Os testes iniciais de aplicação, resiliência e carga serão locais; não demonstram HA/SLA/capacidade de produção no AKS.\n\n## Orçamento de referência da Azure Pricing Calculator
+## Sequenciamento de execução decidido após a ADR
+
+**Fase atual do CashFlow: executar exclusivamente em LOCAL usando Docker Compose, sem provisionar Azure.** A decisão de usar AKS como alvo de implantação em DEV/HOM/PROD permanece registrada aqui, mas **essa implantação foi adiada para uma fase futura**. O dimensionamento e os custos citados abaixo são apenas estimativas de planejamento, não recursos ativos nem compromissos de gasto agora. Os testes iniciais de aplicação, resiliência e carga serão locais; não demonstram HA/SLA/capacidade de produção no AKS.\n\n## Orçamento de referência da Azure Pricing Calculator
 
 | Grupo | Mensal (USD) | Configuração de referência |
 | --- | ---: | --- |
@@ -116,7 +111,3 @@ A ADR-009 permanece **Decidida**. Estas verificações são tarefas de implement
 - [Azure AKS](https://azure.microsoft.com/en-us/pricing/details/kubernetes-service/)
 - [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/pricing/details/postgresql/flexible-server/)
 - [Building Block View](../building-block-view.md)
-
-## Complemento do MVP, 15/11/2026
-
-Além dos bancos lógicos Transactions, Consolidation e Keycloak, cada ambiente precisa de **banco lógico de autorização CashFlow** para Merchant/Membership/RBAC, sem novo microsserviço financeiro presumido. Não afirmar impacto de custo zero: o servidor físico cotado pode abrigar o novo banco lógico, mas recursos, conexões, backups e privilégios precisam ser validados. **Backups automáticos e restauração testada/documentada são pré-condições para liberar PROD**, juntamente com aprovação manual via GitHub Environments. Incluir bancos e estados críticos como RabbitMQ/volumes no planejamento, sem considerar a cotação atual prova de restore/HA. [Decisões do MVP](../mvp-decisions.md).
