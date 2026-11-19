@@ -1,10 +1,5 @@
 # ADR-004: RabbitMQ para comunicação assíncrona entre serviços financeiros
 
-> **Status:** decidida  
-> **Data:** 2026-11-14  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), ADR-005 (Outbox, consistência e idempotência)
-
 ## Contexto e requisitos
 
 O CashFlow registra débitos/créditos no serviço Transactions e mantém o saldo diário no Consolidation. A indisponibilidade do consolidado não deve bloquear o registro (**RNF-01**). O consolidado precisa suportar **50 RPS de consultas**, com limite de até 5% de requisições sem resposta útil segundo interpretação pendente (**RNF-02/RNF-03**); **50 RPS de consultas não é uma medida de vazão de mensagens nem prova necessidade de Kafka**.
