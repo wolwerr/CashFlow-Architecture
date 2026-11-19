@@ -1,10 +1,5 @@
 # Requisitos não funcionais e metas de qualidade
 
-> **Projeto:** CashFlow Architecture  
-> **Issue:** #4 | **Milestone:** M1 - Descoberta e requisitos  
-> **Situação:** interpretação e SLOs do MVP aprovados em 15/11/2026; execução de testes pendente  
-> **Base:** enunciado do desafio de Arquitetura de Soluções e [requisitos funcionais](functional-requirements.md)
-
 ## 1. O que precisamos garantir
 
 O sistema permite que o comerciante registre débitos e créditos e consulte o consolidado diário. Além de funcionar corretamente, ele precisa continuar útil quando algum componente falhar e suportar as consultas em períodos de maior movimento.
