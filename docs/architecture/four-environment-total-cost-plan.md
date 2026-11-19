@@ -1,11 +1,5 @@
 # CashFlow | Orçamento Azure dos quatro ambientes
 
-> **Status:** **estimativa para implantação Azure futura**, mantida como referência da [ADR-009](adr/ADR-009-deployment-cloud.md). **A fase atual é exclusivamente LOCAL, sem uso ou provisionamento de Azure.**  
-> **Fonte dos valores:** telas da Azure Pricing Calculator configuradas para o CashFlow pelo responsável pelo projeto.  
-> **Região:** East US. **Moeda:** USD. **Cobrança:** referência de 730 horas/mês e Pay as you go, sem descontos contratuais.  
-> **Escopo:** LOCAL, DEV, HOM, PROD e serviços SHARED. Este documento substitui os estudos preliminares AKS/EKS e ACA/AKS/ECS.  
-> **Visão de implantação:** [Deployment View, ambientes e portabilidade](deployment-view.md).
-
 ## Visão de implantação e arquitetura multi-cloud
 
 A distribuição dos workloads, clusters, bancos, registry e serviços compartilhados está documentada na **[Deployment View](deployment-view.md)**, com [diagrama PlantUML editável](plantuml/deployment-view.puml). Azure AKS em East US permanece a plataforma **decidida**; a tabela de equivalência AWS/GCP mostra **alternativas conceituais**, não custos cotados ou migração já planejada. O detalhamento financeiro continua nesta página.
