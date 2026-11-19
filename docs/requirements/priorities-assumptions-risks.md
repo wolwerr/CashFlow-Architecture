@@ -1,10 +1,5 @@
 # Priorização de requisitos, premissas e riscos
 
-> **Projeto:** CashFlow Architecture  
-> **Issue:** #5 | **Milestone:** M1 - Descoberta e requisitos  
-> **Situação:** priorização inicial preservada; premissas do MVP aprovadas em 15/11/2026  
-> **Referências:** [Requisitos funcionais](functional-requirements.md), [Requisitos não funcionais](non-functional-requirements.md) e [domínios de negócio](../domain/business-capabilities-and-context-map.md)
-
 ## 1. Por que este documento existe
 
 Precisamos decidir o que é essencial para demonstrar o fluxo de caixa, o que pode ser acrescentado depois e quais problemas merecem atenção antes de implementar.
