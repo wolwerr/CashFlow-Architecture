@@ -27,12 +27,3 @@ plantuml -tpng docs/architecture/plantuml/*.puml
 
 O comando gera PNGs na pasta das fontes; para atualizar as imagens referenciadas, mova ou copie os PNGs para `docs/architecture/images/`. Os arquivos PlantUML são a referência de edição. Renderizações devem ser atualizadas sempre que as fontes mudarem.
 
-## Pendências e validação
-
-- **Issue #3:** definição da regra financeira do saldo diário, histórico e correção/estorno.
-- **Issue #7:** ADRs para linguagem, banco de dados, mensageria, autenticação e observabilidade.
-- **Issue #8:** política de falhas, retentativas, DLQ e reconciliação.
-- **Issue #9:** controles de segurança, retenção, acesso à auditoria e proteção de dados.
-- **Issue #10:** custo, implantação e impactos operacionais.
-
-As [24 decisões do MVP](mvp-decisions.md) foram aprovadas em 15/11/2026. As pendências históricas nas Issues permanecem como itens de implementação, detalhamento de contratos ou validação, e não como ausência de decisão de escopo. A descrição da arquitetura não comprova, por si só, implementação ou execução de testes. A Issue #6 foi concluída. O **C4 Nível 3** possui fontes editáveis para frontend React e os dois microsserviços. Toda a documentação de componentes está consolidada na [Building Block View](building-block-view.md); os PNGs precisam estar atualizados na pasta `images/`. Após a [ADR-008](adr/ADR-008-observability.md), o C4 Nível 2 passou a mostrar a stack de observabilidade escolhida (OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana). É necessário **regenerar `images/c4-containers.png`** para refletir a fonte PlantUML atualizada.
