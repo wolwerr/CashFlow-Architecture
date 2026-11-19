@@ -1,10 +1,5 @@
 # ADR-011: Arquitetura modular por funcionalidades no frontend React
 
-> **Status:** decidida  
-> **Data:** 2026-11-16  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-002: Clean Architecture nos serviços financeiros](ADR-002-architecture-style-clean-architecture.md), [ADR-006: identidade e acesso](ADR-006-identity-and-access.md), [ADR-007: React, NGINX e sessão Web](ADR-007-clients-api-gateway.md), [ADR-010: CI/CD](ADR-010-ci-cd-github-actions.md)
-
 ## 1. Contexto
 
 A [ADR-007](ADR-007-clients-api-gateway.md) já definiu **React + TypeScript** para a interface Web do CashFlow. Esta ADR **não reabre a escolha do framework**; decide **como organizar o código-fonte do frontend**.
