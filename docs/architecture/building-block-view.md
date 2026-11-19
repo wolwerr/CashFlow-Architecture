@@ -1,7 +1,5 @@
 # Visão de Blocos de Construção (Building Block View)
 
-> **Issue #6 · Milestone M2** | Arquitetura proposta
-
 Esta visão mostra **de que partes o CashFlow é composto** e o papel de cada uma. Os diagramas utilizam o **C4 Model** com PlantUML.
 
 ## C4 Nível 1: Contexto
