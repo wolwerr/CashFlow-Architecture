@@ -1,10 +1,5 @@
 # Deployment View | CashFlow
 
-> **Status:** **LOCAL é o único ambiente de execução inicial**. DEV/HOM/PROD/SHARED Azure são **arquitetura futura**, sem provisionamento previsto nesta fase.  
-> **Decisão de referência:** [ADR-009: Azure AKS e isolamento entre ambientes](adr/ADR-009-deployment-cloud.md)  
-> **Custo-base:** [Orçamento Azure dos quatro ambientes](four-environment-total-cost-plan.md)  
-> **Diagramas lógicos:** [Building Block View, C4 Níveis 1, 2 e 3](building-block-view.md)
-
 ## Objetivo
 
 Esta visão distingue **a execução LOCAL desta primeira etapa** do **desenho futuro de implantação em Azure** e como se distribuem entre **LOCAL, DEV, HOM, PROD e SHARED**. Complementa os diagramas C4, que explicam responsabilidades, e o orçamento Azure, que explica custos dos recursos provisionados.
