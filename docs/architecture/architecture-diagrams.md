@@ -1,7 +1,5 @@
 # Documentação da arquitetura CashFlow
 
-> **Issue #6 · Milestone M2** | Arquitetura proposta para revisão
-
 A documentação foi dividida por objetivo para facilitar a leitura sem duplicar informações. **Fase atual: implementação e testes somente LOCAL com Docker Compose.** Azure AKS/DEV/HOM/PROD e seus custos são planejamento futuro. As decisões e os diagramas devem ser confrontados com a [matriz de requisitos do desafio](../requirements/challenge-compliance-matrix.md); testes de execução são documentados separadamente.
 
 | Documento | O que apresenta |
