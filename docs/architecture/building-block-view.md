@@ -12,7 +12,6 @@ O **Comerciante** usa o CashFlow para registrar lançamentos e consultar saldos.
 
 [Fonte PlantUML](plantuml/c4-context.puml)
 
-> **Atualização da imagem:** após alterações de portas na fonte, regenerar `images/c4-context.png` para que o PNG exibido nesta página reflita o protocolo HTTPS/TCP :443.
 
 ## C4 Nível 2: Contêineres
 
@@ -22,7 +21,6 @@ A **solução completa proposta** contém uma aplicação React responsiva, NGIN
 
 [Fonte PlantUML](plantuml/c4-containers.puml)
 
-> **Renderização pendente:** a fonte C4 Nível 2 foi atualizada para React + TypeScript e NGINX. Regenerar `images/c4-containers.png` para apresentar as portas, o token encaminhado pelo NGINX e a obtenção de JWKS por cada backend no PNG. O papel de API Gateway dedicado e o BFF são evoluções futuras, conforme [ADR-007](adr/ADR-007-clients-api-gateway.md). A [ADR-008](adr/ADR-008-observability.md) está **decidida**: OpenTelemetry Collector, Prometheus, Loki, Tempo e Grafana. A imagem do C4 precisa ser atualizada após alteração da fonte.
 
 | Bloco | Responsabilidade |
 | --- | --- |
@@ -125,29 +123,9 @@ A ADR-002 permite que o `BackgroundService` seja registrado no mesmo processo ho
 - **Contratos:** a comunicação entre serviços financeiros ocorre por eventos versionáveis no RabbitMQ; nenhuma dependência síncrona de Transactions para Consolidation no registro.
 - **Fronteira não fechada:** localização da persistência de `Merchant`/`Membership`, política exata de permissões, regra do saldo diário, estornos e algumas convenções de retries/DLQ seguem os documentos de requisitos e issues em aberto. Os componentes indicam responsabilidades, **não tabelas ou classes definitivas**.
 
-### Como renderizar os diagramas
-
-As três fontes usam a biblioteca **C4-PlantUML** (`!include <C4/C4_Component>`). Em um ambiente com PlantUML instalado e suporte à biblioteca:
-
-```bash
-plantuml -tpng docs/architecture/plantuml/c4-components-frontend.puml
-plantuml -tpng docs/architecture/plantuml/c4-components-transactions.puml
-plantuml -tpng docs/architecture/plantuml/c4-components-consolidation.puml
-```
-
-As imagens acima devem ser colocadas em `docs/architecture/images/` com os nomes `c4-components-frontend.png`, `c4-components-transactions.png` e `c4-components-consolidation.png`. **As fontes PlantUML são a referência editável**. Os links de imagem funcionarão após adicionar os PNGs ao repositório.
-
 ### Protocolos e portas de destino
 
 A tabela completa está na [Building Block View](building-block-view.md#protocolos-e-portas-de-referência). Nos diagramas Nível 3 foram identificadas as principais portas: **443** (HTTPS de entrada previsto), **8080** (NGINX interno confirmado, APIs como exemplo), **5432** (PostgreSQL), **5672** (AMQP privado, ou **5671** com TLS) e **4317/4318** (OTLP, conforme transporte). As portas-padrão não são garantia de configuração implantada; todo acesso público além do HTTPS previsto depende de decisão de segurança e infraestrutura.
-
-### Observações que saíram dos diagramas
-
-As notas amarelas foram retiradas apenas para melhorar a legibilidade, sem eliminar as decisões técnicas:
-
-- **Frontend:** React não abre uma porta de servidor própria. O NGINX serve o build estático, e o JavaScript roda no navegador. O template atual do NGINX escuta HTTP interno em **8080**; **HTTPS público em 443** depende da configuração de Ingress/TLS no AKS. A SPA não deve guardar tokens em `localStorage` e não substitui a autorização do backend.
-- **Transactions:** Keycloak autentica, mas o acesso por `merchant_id` pertence às APIs CashFlow. O armazenamento do vínculo ainda depende de definição. O Outbox worker pertence ao serviço Transactions, pode compartilhar o host da API e nunca precisa aguardar Consolidation para confirmar o lançamento.
-- **Consolidation:** o banco de Transactions **não** é consultado diretamente. O saldo pode ficar temporariamente desatualizado. A deduplicação por `event_id` e a atualização de `DailyBalance` devem ocorrer na mesma transação para impedir contagem dupla.
 
 ## Protocolos e portas de referência
 
