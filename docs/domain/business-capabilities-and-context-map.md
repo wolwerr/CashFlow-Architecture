@@ -1,10 +1,5 @@
 # Entendimento do negócio e organização dos domínios
 
-> **Projeto:** CashFlow Architecture  
-> **Issue:** #2 | **Milestone:** M1 - Descoberta e requisitos  
-> **Situação:** proposta para revisão  
-> **Base:** enunciado do desafio de Arquitetura de Soluções
-
 ## 1. O problema que precisamos resolver
 
 Um comerciante precisa acompanhar a movimentação de dinheiro do negócio. Para isso, o sistema deverá:
