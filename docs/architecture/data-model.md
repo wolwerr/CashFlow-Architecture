@@ -11,8 +11,6 @@ Mostrar **quais informações cada domínio precisa manter**, seguindo a decisã
 
 ![Modelo lógico preliminar de dados do CashFlow](images/data-model.png)
 
-> **PNG a regenerar após a Validação 03:** a fonte `plantuml/data-model.puml` foi ajustada para representar `actor_id` como identificador textual OIDC e explicitar a unicidade de `ProcessedEvent.event_id`. Substituir `images/data-model.png` após a renderização.
-
 ## 2. Dados por contexto
 
 | Contexto | Entidade proposta | Para que serve |
