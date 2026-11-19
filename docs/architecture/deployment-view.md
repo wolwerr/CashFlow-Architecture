@@ -27,7 +27,14 @@ Cada ambiente mantém **três bancos lógicos PostgreSQL: Transactions, Consolid
 
 O compartilhamento de uma instância física de PostgreSQL por ambiente é apenas hipótese de custo e não comprova isolamento ou capacidade. PROD continua condicionado a backups automáticos, restauração comprovada e aprovação humana efetiva pelo GitHub Environments. O diagrama [PlantUML](plantuml/deployment-view.puml) contém uma legenda histórica inconsistente que ainda enumera quatro bancos sob o título de três; **corrigir a fonte e regenerar o PNG correspondente antes de declarar o conjunto de diagramas sincronizado**. Até lá, esta página e a ADR-006 expressam a decisão vigente. [Decisões consolidadas do MVP](mvp-decisions.md).
 
-## Sequência de implantação\n\n**Agora:** implementar e testar todo o MVP **somente com Docker Compose local**, incluindo três bancos lógicos PostgreSQL, RabbitMQ, Keycloak, React/NGINX e APIs .NET. Os critérios funcionais, resiliência, autorização e carga podem ser exercitados localmente, com resultados vinculados ao hardware do teste.\n\n**Futuro:** avaliar quando provisionar DEV/HOM/PROD/SHARED em Azure e executar então testes próprios de AKS, redes, HA, custos, recuperação, aprovação de PROD e desempenho em nuvem. O diagrama inclui os ambientes futuros para preservar a arquitetura-alvo, **não uma implantação realizada**.\n\n## Distribuição dos ambientes
+## Sequência de implantação
+
+**Agora:** implementar e testar todo o MVP **somente com Docker Compose local**, incluindo três bancos lógicos PostgreSQL, RabbitMQ, Keycloak, React/NGINX e APIs .NET. Os critérios funcionais, resiliência, autorização e carga podem ser exercitados localmente, com resultados vinculados ao hardware do teste.
+
+**Futuro:** avaliar quando provisionar DEV/HOM/PROD/SHARED em Azure e executar então testes próprios de AKS, redes, HA, custos, recuperação, aprovação de PROD e desempenho em nuvem. O diagrama inclui os ambientes futuros para preservar a arquitetura-alvo, 
+**não uma implantação realizada**.
+
+## Distribuição dos ambientes
 
 | Grupo | Topologia e função | Isolamento / custo de referência |
 | --- | --- | --- |
