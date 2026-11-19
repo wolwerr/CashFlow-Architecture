@@ -1,10 +1,5 @@
 # ADR-006: Identidade, autenticação e autorização por comerciante
 
-> **Status:** decidida  
-> **Data:** 2026-11-14; **revisão da autorização:** 2026-11-16  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [Building Block View](../building-block-view.md) e Issue #9 (segurança)
-
 ## Contexto
 
 A arquitetura do CashFlow contempla cliente Web responsivo, Keycloak para identidade e, NGINX como reverse proxy adotado no MVP. Um API Gateway dedicado e o BFF ficam para evolução futura conforme a ADR-007. Usuários podem estar vinculados a comerciantes distintos; autenticar um usuário não lhe concede autorização sobre qualquer `merchant_id`. O MVP de demonstração prioriza os dois serviços financeiros, mas a arquitetura deve evitar desenvolvimento de autenticação caseira e reduzir dependências de autorização sem comprometer a revogação de vínculos. Para o MVP, a verificação de vínculo atualizado no Keycloak pode exigir consulta interna síncrona por operação financeira.
@@ -115,14 +110,6 @@ Esta é uma decisão **documentada**, não comprovação de autorização pronta
 5. Validar JWT com chave pública em cache durante falha do IAM, mas **negar** operação financeira quando o vínculo atual não puder ser comprovado.
 6. Testar rotação/atualização de chaves e política de expiração/revogação.
 7. Documentar configuração local reproduzível se Keycloak fizer parte da demonstração do MVP; **não aceitar autenticação fictícia como garantia de produção**.
-
-## Pontos pendentes
-
-- Confirmar se o desafio requer implementação efetiva de login/gestão de usuários ou somente desenho-alvo (o enunciado prioriza os dois serviços financeiros).
-- a escolha do Keycloak está decidida; detalhar versão, hardening, operação, backup, HA e eventual migração para um serviço gerenciado conforme implantação e custo.
-- **Decidido:** vínculos no Keycloak Groups; implementar gateway seguro por comerciante com consulta atual e fail closed, avaliar dependência síncrona e medir impacto em latência.
-- Refinar administração de usuários, MFA, SSO, políticas de senha, revogação, auditoria e LGPD na Issue #9.
-- O C4 Nível 2 e a sequência de autenticação foram atualizados para nomear o Keycloak; atualizar as imagens PNG após renderização.
 
 ## Referências
 
