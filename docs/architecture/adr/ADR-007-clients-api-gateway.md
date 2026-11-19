@@ -1,10 +1,5 @@
 # ADR-007: Canais Web/Mobile, API Gateway e proteção da sessão
 
-> **Status:** decidida  
-> **Data:** 2026-11-14  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-001](ADR-001-language-framework.md), [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-006](ADR-006-identity-and-access.md)
-
 ## Contexto e escopo
 
 O desafio CashFlow exige APIs para registrar créditos/débitos e consultar o consolidado diário. A arquitetura-alvo no [C4 Nível 2](../building-block-view.md) apresentava Aplicação Web/Mobile, um Gateway genérico e Keycloak, mas **o enunciado não exige frontend Web, aplicativo mobile nativo nem Gateway**. Estas capacidades facilitam uso e evolução, mas não devem comprometer a comprovação do requisito central: Transactions continua registrando quando Consolidation está indisponível.
@@ -54,10 +49,6 @@ O BFF deve usar OIDC Authorization Code com cliente confidencial, cookies `HttpO
 **Mobile:** se futuramente houver aplicativo nativo, utilizar fluxo próprio para cliente público (Authorization Code + PKCE) e armazenamento seguro do sistema operacional. Não reutilizar automaticamente o desenho de cookie/BFF Web em apps nativos.
 
 O Keycloak é acessado pelo cliente (ou BFF) para login. **As APIs validam access tokens, não ID tokens**, usando issuer, audience, assinatura, expiração e permissões. `merchant_id` é autorizado por regras do CashFlow, não apenas pela identidade reconhecida no Keycloak.
-
-## Complemento do MVP, 15/11/2026
-
-A React SPA guarda access tokens **somente na memória da aplicação**, sem `localStorage` nem `sessionStorage`, mantendo Authorization Code + PKCE. O formulário de lançamento inicia na data atual de `America/Sao_Paulo` e é editável; a API continua validando competência futura e autorização. Prefixos REST públicos são **`/api/v1/transactions`** e **`/api/v1/consolidation`**, preservados pelo NGINX. Isso não implica BFF nem Gateway dedicado. Conferir XSS/CSP, login/reload/logout e refresh em teste. [Decisões consolidadas](../mvp-decisions.md).
 
 ## 4. Fluxo de referência no desenho-alvo
 
