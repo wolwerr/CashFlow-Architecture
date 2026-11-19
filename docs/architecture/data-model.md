@@ -1,8 +1,5 @@
 # Modelo de Dados (Data Model View)
 
-> **Projeto:** CashFlow Architecture · **Issue #6 / Milestone M2**  
-> **Estado:** modelo lógico alinhado às decisões do MVP de 15/11/2026; migrations e testes pendentes
-
 ## 1. Objetivo
 
 Mostrar **quais informações cada domínio precisa manter**, seguindo a decisão PostgreSQL/EF Core da ADR-003, sem apresentar tipos e índices do diagrama como migrations já executadas. O desafio exige lançamentos e consolidado diário; **auditoria, Outbox e processamento idempotente** foram adotados para proteger os dados financeiros e garantir resiliência. O **Keycloak** foi escolhido para identidade na ADR-006.
