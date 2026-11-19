@@ -111,7 +111,3 @@ Considerar **Kafka** se surgirem múltiplos consumidores independentes, necessid
 - [Requisitos não funcionais](../../requirements/non-functional-requirements.md)
 - [Building Block View](../building-block-view.md)
 - [Diagramas de sequência](../sequence-diagrams.md)
-
-## Complemento do MVP, 15/11/2026
-
-Aprovado envelope **JSON versionado** com `event_id`, `event_type`, `schema_version`, `correlation_id` e conteúdo financeiro/competência, preservando o mesmo `event_id` sob retries. Falhas persistentes seguem **retries limitados, backoff, DLQ e reprocessamento controlado**, com políticas concretas a definir na implementação. Retenção de Outbox e ProcessedEvent é **configurável**, sujeita a expurgo seguro e reconciliação para preservar idempotência. O requisito de 50 RPS mede **consultas à API** e não throughput de RabbitMQ. [Decisões do MVP](../mvp-decisions.md).
