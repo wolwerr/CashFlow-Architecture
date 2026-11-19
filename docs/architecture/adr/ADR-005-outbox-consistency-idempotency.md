@@ -1,10 +1,5 @@
 # ADR-005: Transactional Outbox, consistência eventual e consumidor idempotente
 
-> **Status:** decidida  
-> **Data:** 2026-11-14  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-003](ADR-003-persistence.md), [ADR-004](ADR-004-async-messaging.md)
-
 ## Contexto e problema
 
 O CashFlow deve aceitar lançamentos financeiros mesmo quando o Consolidation estiver indisponível (RNF-01). Um registro confirmado deve permanecer durável; o consolidado diário pode ficar temporariamente desatualizado e recuperar os eventos pendentes. O broker escolhido na ADR-004 é RabbitMQ, e a persistência na ADR-003 é PostgreSQL com EF Core 10.
