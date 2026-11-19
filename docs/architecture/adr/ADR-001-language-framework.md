@@ -1,10 +1,5 @@
 # ADR-001: C# e ASP.NET Core para os serviços financeiros
 
-> **Status:** decidida  
-> **Data:** 2026-11-14  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Escopo da decisão:** linguagem e framework dos serviços de Lançamentos e Consolidado, não dos clientes Web/Mobile.
-
 ## Contexto
 
 O desafio requer serviços de **registro de créditos e débitos** e **consulta ao consolidado diário**. O registro deve continuar disponível quando o consolidado estiver indisponível. O consolidado deve suportar **50 requisições por segundo**, com **até 5% de perda de requisições** segundo a interpretação ainda a validar.
