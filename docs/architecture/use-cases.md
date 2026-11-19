@@ -1,9 +1,5 @@
 # Casos de Uso (Use Case View)
 
-> **Projeto:** CashFlow Architecture · **Milestone:** M2  
-> **Base:** requisitos funcionais da Issue #3 e mapeamento de negócio da Issue #2  
-> **Situação:** escopo funcional do MVP decidido em 15/11/2026; testes pendentes
-
 ## 1. Objetivo
 
 Esta visão descreve **o que o comerciante deseja fazer no CashFlow**, independentemente de linguagem, framework ou tecnologia de integração.
@@ -94,10 +90,6 @@ O diagrama diferencia os casos de uso exigidos dos sugeridos. Atores externos ad
 **Fluxo resumido:** o comerciante identifica o lançamento original, solicita o estorno e recebe a confirmação do ajuste.
 
 **Situação:** fora do MVP, previsto para próxima versão. Regra de autorização, dia de efeito e política de estorno serão definidos quando implementado.
-
-## 5. Escopo aprovado em 15/11/2026
-
-Além de UC-01 a UC-03, **UC-04 integra o MVP**. A auditoria básica de registros financeiros confirmados é mecanismo interno aprovado, sem caso de uso público de administração. O sistema é multicomerciante, com papéis ADMIN e OPERATOR por estabelecimento. O formulário inicia na data atual de `America/Sao_Paulo`, editável; lançamentos retroativos são admitidos sem limite de dias com autorização. O acumulado deriva de totais diários persistidos. **UC-05 fica fora do MVP.** Consulte [Decisões consolidadas](mvp-decisions.md).
 
 ## 6. Relação com a documentação
 
