@@ -1,10 +1,5 @@
 # ADR-002: Microsserviços financeiros com Clean Architecture
 
-> **Status:** decidida  
-> **Data:** 2026-11-14  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Decisão relacionada:** [ADR-001: C# / ASP.NET Core / .NET 10 LTS](ADR-001-language-framework.md)
-
 ## 1. Contexto
 
 O CashFlow precisa registrar créditos e débitos e disponibilizar o consolidado diário. O serviço de lançamentos **deve continuar operando quando o serviço de consolidado estiver indisponível** (RNF-01). O consolidado deve atender pico de **50 RPS**, com limite de até **5% de requisições perdidas**, de acordo com a interpretação ainda aberta (RNF-02/RNF-03).
