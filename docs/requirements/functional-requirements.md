@@ -1,10 +1,5 @@
 # Requisitos funcionais do fluxo de caixa
 
-> **Projeto:** CashFlow Architecture  
-> **Issue:** #3 | **Milestone:** M1 - Descoberta e requisitos  
-> **Status:** requisitos do desafio identificados; decisões adicionais do MVP aprovadas em 15/11/2026  
-> **Referências:** enunciado do desafio e [mapeamento de domínios](../domain/business-capabilities-and-context-map.md)
-
 ## 1. Objetivo
 
 Descrever, de forma simples e verificável, o que o sistema precisa fazer para que um comerciante registre lançamentos financeiros e consulte o saldo diário consolidado.
