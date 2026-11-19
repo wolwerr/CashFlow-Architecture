@@ -203,7 +203,3 @@ A indisponibilidade do Keycloak **não deve parar o registro de movimentações 
 - [Diagramas de sequência](sequence-diagrams.md), para ver as interações passo a passo.
 - [Casos de Uso](use-cases.md), para entender as ações do comerciante e os fluxos de negócio.
 - [Modelo de Dados](data-model.md), para entender os registros financeiros, a Outbox, a projeção e a auditoria.
-
-## Complemento aprovado do MVP, 15/11/2026
-
-As [24 decisões consolidadas](mvp-decisions.md) especificam o escopo do MVP além das decisões técnicas já registradas. O CashFlow terá **banco lógico próprio de autorização** para Merchant, Membership e papéis ADMIN/OPERATOR por comerciante, com consulta de vínculos por cache curto invalidável, sem presumir novo microsserviço financeiro nem leitura cruzada indevida dos bancos. **Transactions** registra com Idempotency-Key obrigatória, responde HTTP 201 após commit, audita criação confirmada e oferece histórico paginado. **Consolidation** persiste agregações diárias por comerciante/competência e **calcula o acumulado na leitura** pela soma dos movimentos líquidos, inclusive após lançamentos retroativos. O React mantém tokens apenas em memória e o NGINX encaminha `/api/v1/transactions` e `/api/v1/consolidation`. Estorno fica para próxima versão. Os C4 PlantUML foram alterados e suas imagens PNG precisam ser regeneradas antes de considerar os gráficos sincronizados.
