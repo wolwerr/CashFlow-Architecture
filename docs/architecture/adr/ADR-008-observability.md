@@ -1,10 +1,5 @@
 # ADR-008: Observabilidade com OpenTelemetry
 
-> **Status:** decidida  
-> **Data:** 2026-11-14  
-> **Issue:** [#7, Documentar ADRs e trade-offs](https://github.com/wolwerr/CashFlow-Architecture/issues/7)  
-> **Relacionadas:** [ADR-002](ADR-002-architecture-style-clean-architecture.md), [ADR-004](ADR-004-async-messaging.md), [ADR-005](ADR-005-outbox-consistency-idempotency.md), [ADR-007](ADR-007-clients-api-gateway.md)
-
 ## Contexto e problema
 
 O desafio exige que Transactions permaneça disponível quando Consolidation falhar e que Consolidation suporte **50 RPS de consultas com no máximo 5% de perda de requisições**, conforme interpretação documentada em [requisitos não funcionais](../../requirements/non-functional-requirements.md). Os componentes assíncronos incluem **Outbox worker**, **RabbitMQ**, **Consolidation consumer** e **PostgreSQL**.
@@ -142,17 +137,3 @@ Reenviar evento existente; registrar ocorrência de duplicata e comprovar que o 
 - [Grafana Tempo](https://grafana.com/docs/tempo/latest/)
 - [RNFs do CashFlow](../../requirements/non-functional-requirements.md)
 - [Building Block View](../building-block-view.md)
-
-## Complemento do MVP, 15/11/2026
-
-Metas **aprovadas pelo projeto e medidas localmente em 17/11/2026** (consulte evidências da matriz de atendimento): 50 consultas/s por 5 minutos após aquecimento, até 5% de consultas válidas enviadas terminando em erro, timeout ou sem resposta útil; latência p95 inferior a 500 ms e 95% dos lançamentos visíveis no consolidado em até 30 segundos em operação saudável. Instrumentar commit de Transactions, processamento Consolidation, latência de consulta e backlog. Auditoria financeira básica de registros confirmados é separada de logs técnicos, com retenção inicial de 365 dias sujeita a revisão legal. [Decisões do MVP](../mvp-decisions.md).
-
-## Estado atual da implementação (17/11/2026)
-
-O [Compose principal](../../../compose.yaml) inclui 11 serviços: PostgreSQL, RabbitMQ, Keycloak, Transactions, Consolidation, NGINX, Collector, Prometheus, Loki, Tempo e Grafana. As APIs exportam sinais OpenTelemetry por OTLP para o Collector. Grafana provisiona as três fontes de dados automaticamente, com senha local obrigatória.
-
-Após esta PR, o `traceparent` W3C da requisição HTTP de lançamento é persistido com a Outbox e propagado pelo worker RabbitMQ até o consumer. A migration `202611170001_AddOutboxTraceParent` acrescenta uma coluna opcional, sem remover dados ou exigir reinstalação. O `correlation_id` de negócio continua separado. Para registros históricos sem `trace_parent`, o publisher inicia um trace independente, preservando compatibilidade.
-
-**Evidência disponível:** o operador relatou conseguir visualizar traces no Grafana, mas isso não comprova ainda a cadeia completa nem os três sinais nos dois serviços. O cenário `observability` permanece `NOT_RUN` no manifesto até comprovação com data, SHA, um trace HTTP → Outbox → consumer, métricas no Prometheus, logs no Loki e tolerância à falha do Collector. Ver [runbook de homologação](../../validation/local-observability-stack.md).
-
-**Fora do MVP local:** dashboards avançados, exporters para PostgreSQL/RabbitMQ/NGINX, métricas específicas de workers, alta disponibilidade e implantação Azure. Os relatórios de carga e resiliência existentes continuam válidos como evidência **das execuções históricas**, sem transferência automática ao SHA novo.
