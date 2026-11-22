@@ -43,7 +43,7 @@ package "HOM | Azure East US" as HOM #E8F3FF {
     rectangle "NGINX + React\nTransactions + Outbox\nConsolidation + consumer\nRabbitMQ + Keycloak\nOTel + Prometheus + Loki\nTempo + Grafana" as homPods #FFFFFF
     database "PVCs\n3 x P4" as homPvc #FFFFFF
   }
-  database "PostgreSQL Flexible Server\nB1ms | 32 GiB" as homPg #FFFFFF
+  database "PostgreSQL Flexible Server\nB1ms | 32 GiB\n3 bancos logicos" as homPg #FFFFFF
   rectangle "Blob Hot LRS\n20 GB" as homBlob #FFFFFF
   rectangle "Key Vault" as homKv #FFFFFF
 }
